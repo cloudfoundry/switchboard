@@ -14,6 +14,7 @@ func TestSwitchboard(t *testing.T) {
 }
 
 var switchboardBinPath string
+var switchboardPort int
 
 var _ = SynchronizedBeforeSuite(
 	func() []byte {
@@ -23,6 +24,7 @@ var _ = SynchronizedBeforeSuite(
 	},
 	func(switchboardConfig []byte) {
 		switchboardBinPath = string(switchboardConfig)
+		switchboardPort = 9900 + GinkgoParallelNode()
 	},
 )
 

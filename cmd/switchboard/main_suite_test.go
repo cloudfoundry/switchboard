@@ -18,7 +18,7 @@ var switchboardPort int
 
 var _ = SynchronizedBeforeSuite(
 	func() []byte {
-		switchboardConfig, err := gexec.Build("github.com/pivotal-cf-experimental/switchboard", "-race")
+		switchboardConfig, err := gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard", "-race")
 		Ω(err).ShouldNot(HaveOccurred())
 		return []byte(switchboardConfig)
 	},

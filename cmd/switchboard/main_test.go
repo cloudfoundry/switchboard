@@ -21,7 +21,6 @@ func startMainWithArgs(args ...string) *gexec.Session {
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(session).Should(gbytes.Say("started on port"))
-	fmt.Printf("Switchboard started with args:%v\n", args)
 	return session
 }
 
@@ -30,7 +29,6 @@ func startBackendWithArgs(args ...string) *gexec.Session {
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(session).Should(gbytes.Say("Backend listening on"))
-	fmt.Printf("Backend started with args:%v\n", args)
 	return session
 }
 
@@ -85,6 +83,70 @@ var _ = Describe("Switchboard", func() {
 					}).Should(ContainSubstring(fmt.Sprintf("Echo: test%d", i)))
 				}(i, conn)
 			}
+		})
+
+		It("can maintain a long-lived connection when other clients disconnect", func() {
+
+			backendSession := startBackendWithArgs([]string{
+				fmt.Sprintf("-port=%d", backendPort),
+			}...)
+			defer backendSession.Terminate()
+
+			session := startMainWithArgs([]string{
+				fmt.Sprintf("-port=%d", switchboardPort),
+				fmt.Sprintf("-backendIp=%s", BACKEND_IP),
+				fmt.Sprintf("-backendPort=%d", backendPort),
+			}...)
+			defer session.Terminate()
+
+			var longConnection net.Conn
+			var shortConnection net.Conn
+
+			Eventually(func() error {
+				var err error
+				longConnection, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+				return err
+			}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+
+			Eventually(func() error {
+				var err error
+				shortConnection, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+				return err
+			}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+
+			longBuffer := make([]byte, 1024)
+			shortBuffer := make([]byte, 1024)
+
+			longConnection.Write([]byte("longdata"))
+			var n int
+			var err error
+			go func() {
+				n, err = longConnection.Read(longBuffer)
+			}()
+
+			Eventually(func() string {
+				return string(longBuffer[:n])
+			}).Should(ContainSubstring("longdata"))
+
+			shortConnection.Write([]byte("shortdata"))
+			go func() {
+				n, err = shortConnection.Read(shortBuffer)
+			}()
+
+			Eventually(func() string {
+				return string(longBuffer[:n])
+			}).Should(ContainSubstring("longdata"))
+
+			shortConnection.Close()
+
+			longConnection.Write([]byte("longdata1"))
+			go func() {
+				n, err = longConnection.Read(longBuffer)
+			}()
+
+			Eventually(func() string {
+				return string(longBuffer[:n])
+			}).Should(ContainSubstring("longdata1"))
 		})
 	})
 })

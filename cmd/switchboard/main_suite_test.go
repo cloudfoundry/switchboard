@@ -14,21 +14,21 @@ func TestSwitchboard(t *testing.T) {
 }
 
 var switchboardBinPath string
-var switchboardPort int
+var dummyListenerBinPath string
+var switchboardPort uint
+var backendPort uint
 
-var _ = SynchronizedBeforeSuite(
-	func() []byte {
-		switchboardConfig, err := gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard", "-race")
-		Ω(err).ShouldNot(HaveOccurred())
-		return []byte(switchboardConfig)
-	},
-	func(switchboardConfig []byte) {
-		switchboardBinPath = string(switchboardConfig)
-		switchboardPort = 9900 + GinkgoParallelNode()
-	},
-)
+var _ = BeforeSuite(func() {
+	var err error
+	switchboardBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard", "-race")
+	Ω(err).ShouldNot(HaveOccurred())
+	dummyListenerBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/dummy_listener", "-race")
+	Ω(err).ShouldNot(HaveOccurred())
 
-var _ = SynchronizedAfterSuite(func() {
-}, func() {
+	switchboardPort = uint(39900 + GinkgoParallelNode())
+	backendPort = uint(45000 + GinkgoParallelNode())
+})
+
+var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 })

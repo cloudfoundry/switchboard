@@ -15,6 +15,30 @@ var (
 	backendPort = flag.Uint("backendPort", 3306, "Port of backend")
 )
 
+func Connect(frontend, backend net.Conn) {
+	defer frontend.Close()
+	defer backend.Close()
+
+	select {
+	case <-safeCopy(frontend, backend):
+	case <-safeCopy(backend, frontend):
+	}
+}
+
+func safeCopy(from, to net.Conn) chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		_, err := io.Copy(from, to)
+		if err != nil {
+			fmt.Printf("Error copying from 'from' to 'to': %v\n", err.Error())
+		} else {
+			fmt.Printf("Copying from 'from' to 'to' completed without an error\n")
+		}
+		close(done)
+	}()
+	return done
+}
+
 func main() {
 	flag.Parse()
 
@@ -40,7 +64,6 @@ func main() {
 			log.Fatal("Error opening backend connection: %v", err)
 		}
 
-		go io.Copy(clientConn, backendConn)
-		go io.Copy(backendConn, clientConn)
+		go Connect(clientConn, backendConn)
 	}
 }

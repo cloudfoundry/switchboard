@@ -49,39 +49,25 @@ var _ = Describe("Switchboard", func() {
 			defer session.Terminate()
 
 			count := 10
-			buffers := make([][]byte, count)
-			conns := make([]net.Conn, count)
 
 			for i := 0; i < count; i++ {
-				var conn net.Conn
-				Eventually(func() error {
-					var err error
-					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-					return err
-				}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
-
-				buffers[i] = make([]byte, 1024)
-				conns[i] = conn
-			}
-
-			for i, conn := range conns {
 				// Run the clients in parallel via goroutines
-				go func(i int, conn net.Conn) {
-					data := buffers[i]
-					var n int
-					var err error
+				go func(i int) {
+					var conn net.Conn
+					Eventually(func() error {
+						var err error
+						conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+						return err
+					}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+
+					data := make([]byte, 1024)
 
 					conn.Write([]byte(fmt.Sprintf("test%d", i)))
-					// Read is a blocking method so we background it in a goroutine.
-					go func() {
-						n, err = conn.Read(data)
-					}()
+					n, err := conn.Read(data)
 
-					// Read is asynchronous so we need to use Eventually
-					Eventually(func() string {
-						return string(data[:n])
-					}).Should(ContainSubstring(fmt.Sprintf("Echo: test%d", i)))
-				}(i, conn)
+					Ω(err).ToNot(HaveOccurred())
+					Ω(string(data[:n])).Should(ContainSubstring(fmt.Sprintf("Echo: test%d", i)))
+				}(i)
 			}
 		})
 
@@ -118,35 +104,24 @@ var _ = Describe("Switchboard", func() {
 			shortBuffer := make([]byte, 1024)
 
 			longConnection.Write([]byte("longdata"))
-			var n int
-			var err error
-			go func() {
-				n, err = longConnection.Read(longBuffer)
-			}()
+			n, err := longConnection.Read(longBuffer)
 
-			Eventually(func() string {
-				return string(longBuffer[:n])
-			}).Should(ContainSubstring("longdata"))
+			Ω(err).ToNot(HaveOccurred())
+			Ω(string(longBuffer[:n])).Should(ContainSubstring("longdata"))
 
 			shortConnection.Write([]byte("shortdata"))
-			go func() {
-				n, err = shortConnection.Read(shortBuffer)
-			}()
+			n, err = shortConnection.Read(shortBuffer)
 
-			Eventually(func() string {
-				return string(longBuffer[:n])
-			}).Should(ContainSubstring("longdata"))
+			Ω(err).ToNot(HaveOccurred())
+			Ω(string(shortBuffer[:n])).Should(ContainSubstring("shortdata"))
 
 			shortConnection.Close()
 
 			longConnection.Write([]byte("longdata1"))
-			go func() {
-				n, err = longConnection.Read(longBuffer)
-			}()
+			n, err = longConnection.Read(longBuffer)
 
-			Eventually(func() string {
-				return string(longBuffer[:n])
-			}).Should(ContainSubstring("longdata1"))
+			Ω(err).ToNot(HaveOccurred())
+			Ω(string(longBuffer[:n])).Should(ContainSubstring("longdata1"))
 		})
 	})
 })

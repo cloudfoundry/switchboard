@@ -47,7 +47,7 @@ func handleRequest(conn net.Conn) {
 		for {
 			data := make([]byte, 1024)
 			n, err := conn.Read(data)
-			fmt.Println("Received on connection: " + string(data))
+			fmt.Println("Dummy listener received on connection: " + string(data))
 			if err != nil {
 				eCh <- err
 				return
@@ -59,7 +59,7 @@ func handleRequest(conn net.Conn) {
 	for {
 		select {
 		case data := <-dataCh:
-			fmt.Println("Writing to connection: Echo: " + string(data))
+			fmt.Println("Dummy listener writing to connection: Echo: " + string(data))
 			conn.Write([]byte("Echo: " + string(data)))
 		case err := <-errCh:
 			fmt.Println("Error: " + err.Error())

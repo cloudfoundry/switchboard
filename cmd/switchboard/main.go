@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net"
 )
@@ -11,32 +10,17 @@ import (
 var (
 	port = flag.Uint("port", 3306, "Port to listen on")
 
-	backendIp   = flag.String("backendIp", "", "IP address of backend")
-	backendPort = flag.Uint("backendPort", 3306, "Port of backend")
+	backendIp       = flag.String("backendIp", "", "IP address of backend")
+	backendPort     = flag.Uint("backendPort", 3306, "Port of backend")
+	healthcheckPort = flag.Uint("healthcheckPort", 9200, "Port for healthcheck endpoints")
 )
 
-func Connect(frontend, backend net.Conn) {
-	defer frontend.Close()
-	defer backend.Close()
-
-	select {
-	case <-safeCopy(frontend, backend):
-	case <-safeCopy(backend, frontend):
+func acceptClientConnection(l net.Listener) net.Conn {
+	clientConn, err := l.Accept()
+	if err != nil {
+		log.Fatal("Error accepting client connection: %v", err)
 	}
-}
-
-func safeCopy(from, to net.Conn) chan struct{} {
-	done := make(chan struct{})
-	go func() {
-		_, err := io.Copy(from, to)
-		if err != nil {
-			fmt.Printf("Error copying from 'from' to 'to': %v\n", err.Error())
-		} else {
-			fmt.Printf("Copying from 'from' to 'to' completed without an error\n")
-		}
-		close(done)
-	}()
-	return done
+	return clientConn
 }
 
 func main() {
@@ -45,25 +29,32 @@ func main() {
 	l, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	defer l.Close()
 	if err != nil {
-		fmt.Printf("Error was: %v\n", err.Error())
+		log.Fatal("Error listening on port %d: %v\n", *port, err.Error())
 	}
 
 	fmt.Printf("Proxy started on port %d\n", *port)
 
+	backend := NewBackend("backend1", *backendIp, *backendPort)
+
+	healthcheck := NewHttpHealthCheck(*backendIp, *healthcheckPort)
+	healthcheck.Start(backend.RemoveAllBridges)
+
 	for {
-		clientConn, err := l.Accept()
+		clientConn := acceptClientConnection(l)
 		defer clientConn.Close()
-		if err != nil {
-			log.Fatal("Error accepting client connection: %v", err)
-		}
 
-		addr := fmt.Sprintf("%s:%d", *backendIp, *backendPort)
-		backendConn, err := net.Dial("tcp", addr)
+		backendConn, err := backend.Dial()
+		if err != nil {
+			log.Fatal("Error connection to backend: %s", err.Error())
+		}
 		defer backendConn.Close()
-		if err != nil {
-			log.Fatal("Error opening backend connection: %v", err)
-		}
 
-		go Connect(clientConn, backendConn)
+		bridge := NewBridge(clientConn, backendConn)
+		backend.AddBridge(bridge)
+
+		go func() {
+			bridge.Connect()
+			backend.RemoveBridge(bridge)
+		}()
 	}
 }

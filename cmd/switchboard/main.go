@@ -3,12 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
+	"os"
+	"strconv"
 )
 
 var (
-	port = flag.Uint("port", 3306, "Port to listen on")
+	pidfile = flag.String("pidfile", "", "The location for the pidfile")
+	port    = flag.Uint("port", 3306, "Port to listen on")
 
 	backendIp       = flag.String("backendIp", "", "IP address of backend")
 	backendPort     = flag.Uint("backendPort", 3306, "Port of backend")
@@ -29,7 +33,12 @@ func main() {
 	l, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	defer l.Close()
 	if err != nil {
-		log.Fatal("Error listening on port %d: %v\n", *port, err.Error())
+		log.Fatal(fmt.Sprintf("Error listening on port %d: %v\n", *port, err.Error()))
+	}
+
+	err = ioutil.WriteFile(*pidfile, []byte(strconv.Itoa(os.Getpid())), 0644)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Cannot write pid to file: %s", *pidfile))
 	}
 
 	fmt.Printf("Proxy started on port %d\n", *port)

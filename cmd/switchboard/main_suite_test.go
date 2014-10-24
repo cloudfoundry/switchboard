@@ -19,6 +19,7 @@ var dummyHealthCheckBinPath string
 var switchboardPort uint
 var backendPort uint
 var dummyHealthCheckPort uint
+var pidfile string
 
 var _ = BeforeSuite(func() {
 	var err error
@@ -34,6 +35,7 @@ var _ = BeforeSuite(func() {
 	switchboardPort = uint(39900 + GinkgoParallelNode())
 	backendPort = uint(45000 + GinkgoParallelNode())
 	dummyHealthCheckPort = uint(46000 + GinkgoParallelNode())
+	pidfile = "/tmp/switchboard.pid"
 })
 
 var _ = AfterSuite(func() {

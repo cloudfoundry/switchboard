@@ -55,6 +55,7 @@ var _ = Describe("Switchboard", func() {
 				fmt.Sprintf("-backendIp=%s", BACKEND_IP),
 				fmt.Sprintf("-backendPort=%d", backendPort),
 				fmt.Sprintf("-healthcheckPort=%d", dummyHealthCheckPort),
+				fmt.Sprintf("-pidfile=%s", pidfile),
 			}...)
 			defer session.Terminate()
 
@@ -99,6 +100,7 @@ var _ = Describe("Switchboard", func() {
 				fmt.Sprintf("-backendIp=%s", BACKEND_IP),
 				fmt.Sprintf("-backendPort=%d", backendPort),
 				fmt.Sprintf("-healthcheckPort=%d", dummyHealthCheckPort),
+				fmt.Sprintf("-pidfile=%s", pidfile),
 			}...)
 			defer session.Terminate()
 
@@ -162,6 +164,7 @@ var _ = Describe("Switchboard", func() {
 				fmt.Sprintf("-backendIp=%s", BACKEND_IP),
 				fmt.Sprintf("-backendPort=%d", backendPort),
 				fmt.Sprintf("-healthcheckPort=%d", dummyHealthCheckPort),
+				fmt.Sprintf("-pidfile=%s", pidfile),
 			)
 			defer proxySession.Terminate()
 

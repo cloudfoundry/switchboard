@@ -34,6 +34,7 @@ func (h *HttpHealthcheck) Start(errorCallback func()) {
 			if err != nil {
 				fmt.Printf("Error dialing healthchecker at %s: %v\n", h.getEndpoint(), err.Error())
 			} else {
+				defer resp.Body.Close()
 				switch resp.StatusCode {
 				case http.StatusServiceUnavailable:
 					errorCallback()

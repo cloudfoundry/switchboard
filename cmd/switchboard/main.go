@@ -42,6 +42,9 @@ func main() {
 	}
 
 	fmt.Printf("Proxy started on port %d\n", *port)
+	fmt.Printf("Backend ipAddress: %s\n", *backendIp)
+	fmt.Printf("Backend port: %d\n", *port)
+	fmt.Printf("Healthcheck port: %d\n", *healthcheckPort)
 
 	backend := NewBackend("backend1", *backendIp, *backendPort)
 

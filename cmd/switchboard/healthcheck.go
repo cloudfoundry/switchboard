@@ -22,10 +22,16 @@ func NewHttpHealthCheck(ipAddress string, port uint) *HttpHealthcheck {
 	}
 }
 
+func (h HttpHealthcheck) getEndpoint() string {
+	endpoint := fmt.Sprintf("http://%s:%d", h.ipAddress, h.port)
+	fmt.Println("Healthchecker endpoint: " + endpoint)
+	return endpoint
+}
+
 func (h *HttpHealthcheck) Start(errorCallback func()) {
 	go func() {
 		for {
-			resp, err := http.Get(fmt.Sprintf("http://%s:%d", h.ipAddress, h.port))
+			resp, err := http.Get(h.getEndpoint())
 			if err != nil {
 				fmt.Printf("Error dialing healthchecker: %v\n", err.Error())
 			} else {
@@ -35,8 +41,8 @@ func (h *HttpHealthcheck) Start(errorCallback func()) {
 				case http.StatusOK:
 					fmt.Printf("Healthcheck at %d succeeded\n", h.port)
 				}
-				time.Sleep(1 * time.Second)
 			}
+			time.Sleep(1 * time.Second)
 		}
 	}()
 }

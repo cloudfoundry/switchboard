@@ -33,10 +33,10 @@ func main() {
 	flag.Parse()
 
 	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *port))
-	defer l.Close()
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Error listening on port %d: %v\n", *port, err.Error()))
 	}
+	defer l.Close()
 
 	err = ioutil.WriteFile(*pidfile, []byte(strconv.Itoa(os.Getpid())), 0644)
 	if err != nil {

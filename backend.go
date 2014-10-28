@@ -1,4 +1,4 @@
-package main
+package switchboard
 
 import (
 	"errors"
@@ -22,8 +22,8 @@ func NewBackend(desc, ipAddress string, port uint) Backend {
 	}
 }
 
-func (b Backend) RemoveBridge(bridge Bridge) error {
-	index, err := b.indexOfBridge(bridge)
+func (b *Backend) RemoveBridge(bridge Bridge) error {
+	index, err := b.IndexOfBridge(bridge)
 	if err != nil {
 		return err
 	}
@@ -31,27 +31,7 @@ func (b Backend) RemoveBridge(bridge Bridge) error {
 	return nil
 }
 
-func (b Backend) indexOfBridge(bridge Bridge) (int, error) {
-	index := -1
-	for i, aBridge := range b.bridges {
-		if aBridge == bridge {
-			index = i
-			break
-		}
-	}
-	if index == -1 {
-		return -1, errors.New("Bridge not found in backend")
-	}
-	return index, nil
-}
-
-func (b *Backend) removeBridgeAt(index int) {
-	copy(b.bridges[index:], b.bridges[index+1:])
-	b.bridges[len(b.bridges)-1] = Bridge{} // or the zero value of T
-	b.bridges = b.bridges[:len(b.bridges)-1]
-}
-
-func (b *Backend) RemoveAllBridges() {
+func (b *Backend) RemoveAndCloseAllBridges() {
 	for _, bridge := range b.bridges {
 		bridge.Close()
 	}
@@ -69,4 +49,27 @@ func (b *Backend) Dial() (net.Conn, error) {
 		return nil, err
 	}
 	return backendConn, nil
+}
+
+func (b *Backend) Bridges() []Bridge {
+	return b.bridges
+}
+
+func (b *Backend) IndexOfBridge(bridge Bridge) (int, error) {
+	index := -1
+	for i, aBridge := range b.bridges {
+		if aBridge == bridge {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return -1, errors.New("Bridge not found in backend")
+	}
+	return index, nil
+}
+
+func (b *Backend) removeBridgeAt(index int) {
+	copy(b.bridges[index:], b.bridges[index+1:])
+	b.bridges = b.bridges[:len(b.bridges)-1]
 }

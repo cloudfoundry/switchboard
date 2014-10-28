@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"strconv"
+
+	. "github.com/pivotal-cf-experimental/switchboard"
 )
 
 var (
@@ -49,7 +51,7 @@ func main() {
 	backend := NewBackend("backend1", *backendIp, *backendPort)
 
 	healthcheck := NewHttpHealthCheck(*backendIp, *healthcheckPort)
-	healthcheck.Start(backend.RemoveAllBridges)
+	healthcheck.Start(backend.RemoveAndCloseAllBridges)
 
 	for {
 		clientConn := acceptClientConnection(l)
@@ -61,7 +63,7 @@ func main() {
 		}
 		defer backendConn.Close()
 
-		bridge := NewBridge(clientConn, backendConn)
+		bridge := NewConnectionBridge(clientConn, backendConn)
 		backend.AddBridge(bridge)
 
 		go func() {

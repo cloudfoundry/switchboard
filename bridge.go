@@ -1,26 +1,30 @@
-package main
+package switchboard
 
 import (
 	"fmt"
 	"io"
-	"net"
 )
 
-type Bridge struct {
-	done    chan struct{}
-	Client  net.Conn
-	Backend net.Conn
+type Bridge interface {
+	Connect()
+	Close()
 }
 
-func NewBridge(client, backend net.Conn) Bridge {
-	return Bridge{
+type ConnectionBridge struct {
+	done    chan struct{}
+	Client  io.ReadWriteCloser
+	Backend io.ReadWriteCloser
+}
+
+func NewConnectionBridge(client, backend io.ReadWriteCloser) *ConnectionBridge {
+	return &ConnectionBridge{
 		done:    make(chan struct{}),
 		Client:  client,
 		Backend: backend,
 	}
 }
 
-func (b Bridge) Connect() {
+func (b *ConnectionBridge) Connect() {
 	defer b.Client.Close()
 	defer b.Backend.Close()
 
@@ -31,7 +35,7 @@ func (b Bridge) Connect() {
 	}
 }
 
-func safeCopy(from, to net.Conn) chan struct{} {
+func safeCopy(from, to io.ReadWriteCloser) chan struct{} {
 	done := make(chan struct{})
 	go func() {
 		_, err := io.Copy(from, to)
@@ -45,6 +49,6 @@ func safeCopy(from, to net.Conn) chan struct{} {
 	return done
 }
 
-func (b Bridge) Close() {
+func (b *ConnectionBridge) Close() {
 	close(b.done)
 }

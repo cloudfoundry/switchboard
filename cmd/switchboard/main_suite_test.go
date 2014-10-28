@@ -10,7 +10,7 @@ import (
 
 func TestSwitchboard(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Switchboard Main Suite")
+	RunSpecs(t, "Switchboard Executable Suite")
 }
 
 var switchboardBinPath string
@@ -26,10 +26,10 @@ var _ = BeforeSuite(func() {
 	switchboardBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard", "-race")
 	Ω(err).ShouldNot(HaveOccurred())
 
-	dummyListenerBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/dummy_listener", "-race")
+	dummyListenerBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/internal/dummy_listener", "-race")
 	Ω(err).ShouldNot(HaveOccurred())
 
-	dummyHealthCheckBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/dummy_healthcheck", "-race")
+	dummyHealthCheckBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/internal/dummy_healthcheck", "-race")
 	Ω(err).ShouldNot(HaveOccurred())
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())

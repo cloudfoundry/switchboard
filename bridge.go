@@ -36,7 +36,7 @@ func (b *ConnectionBridge) Connect() {
 }
 
 func safeCopy(from, to io.ReadWriteCloser) chan struct{} {
-	done := make(chan struct{})
+	copyDone := make(chan struct{})
 	go func() {
 		_, err := io.Copy(from, to)
 		if err != nil {
@@ -44,9 +44,9 @@ func safeCopy(from, to io.ReadWriteCloser) chan struct{} {
 		} else {
 			fmt.Printf("Copying from 'from' to 'to' completed without an error\n")
 		}
-		close(done)
+		close(copyDone)
 	}()
-	return done
+	return copyDone
 }
 
 func (b *ConnectionBridge) Close() {

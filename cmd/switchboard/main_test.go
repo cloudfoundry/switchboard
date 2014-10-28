@@ -17,7 +17,7 @@ const (
 	BACKEND_IP = "localhost"
 )
 
-func startMainWithArgs(args ...string) *gexec.Session {
+func startSwitchboard(args ...string) *gexec.Session {
 	command := exec.Command(switchboardBinPath, args...)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
@@ -25,7 +25,7 @@ func startMainWithArgs(args ...string) *gexec.Session {
 	return session
 }
 
-func startBackendWithArgs(args ...string) *gexec.Session {
+func startBackend(args ...string) *gexec.Session {
 	command := exec.Command(dummyListenerBinPath, args...)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
@@ -33,7 +33,7 @@ func startBackendWithArgs(args ...string) *gexec.Session {
 	return session
 }
 
-func startHealthCheckWithArgs(args ...string) *gexec.Session {
+func startHealthCheck(args ...string) *gexec.Session {
 	command := exec.Command(dummyHealthCheckBinPath, args...)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
@@ -42,32 +42,41 @@ func startHealthCheckWithArgs(args ...string) *gexec.Session {
 }
 
 var _ = Describe("Switchboard", func() {
-	Context("with a single backend node", func() {
-		It("forwards multiple client connections to the backend", func() {
+	var (
+		backendSession     *gexec.Session
+		healthcheckSession *gexec.Session
+		proxySession       *gexec.Session
+	)
 
-			backendSession := startBackendWithArgs([]string{
-				fmt.Sprintf("-port=%d", backendPort),
-			}...)
-			defer backendSession.Terminate()
+	BeforeEach(func() {
+		backendSession = startBackend(
+			fmt.Sprintf("-port=%d", backendPort),
+		)
 
-			session := startMainWithArgs([]string{
-				fmt.Sprintf("-port=%d", switchboardPort),
-				fmt.Sprintf("-backendIp=%s", BACKEND_IP),
-				fmt.Sprintf("-backendPort=%d", backendPort),
-				fmt.Sprintf("-healthcheckPort=%d", dummyHealthCheckPort),
-				fmt.Sprintf("-pidfile=%s", pidfile),
-			}...)
-			defer session.Terminate()
+		healthcheckSession = startHealthCheck(
+			fmt.Sprintf("-port=%d", dummyHealthCheckPort),
+		)
 
-			healthcheckSession := startHealthCheckWithArgs(
-				fmt.Sprintf("-port=%d", dummyHealthCheckPort),
-			)
-			defer healthcheckSession.Terminate()
+		proxySession = startSwitchboard(
+			fmt.Sprintf("-port=%d", switchboardPort),
+			fmt.Sprintf("-backendIp=%s", BACKEND_IP),
+			fmt.Sprintf("-backendPort=%d", backendPort),
+			fmt.Sprintf("-healthcheckPort=%d", dummyHealthCheckPort),
+			fmt.Sprintf("-pidfile=%s", pidfile),
+		)
+	})
 
+	AfterEach(func() {
+		proxySession.Terminate()
+		healthcheckSession.Terminate()
+		backendSession.Terminate()
+	})
+
+	Context("when there are multiple concurrent clients", func() {
+		It("proxies all the connections to the backend", func() {
 			count := 10
 
 			for i := 0; i < count; i++ {
-				// Run the clients in parallel via goroutines
 				go func(i int) {
 					defer GinkgoRecover()
 					var conn net.Conn
@@ -82,36 +91,18 @@ var _ = Describe("Switchboard", func() {
 					conn.Write([]byte(fmt.Sprintf("test%d", i)))
 					n, err := conn.Read(data)
 
-					Ω(err).ToNot(HaveOccurred())
-					Ω(string(data[:n])).Should(ContainSubstring(fmt.Sprintf("Echo: test%d", i)))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(data[:n])).Should(ContainSubstring(fmt.Sprintf("Echo: test%d", i)))
 				}(i)
 			}
 		})
+	})
 
-		It("can maintain a long-lived connection when other clients disconnect", func() {
+	Context("when other clients disconnect", func() {
+		var longConnection net.Conn
+		var shortConnection net.Conn
 
-			backendSession := startBackendWithArgs([]string{
-				fmt.Sprintf("-port=%d", backendPort),
-			}...)
-			defer backendSession.Terminate()
-
-			session := startMainWithArgs([]string{
-				fmt.Sprintf("-port=%d", switchboardPort),
-				fmt.Sprintf("-backendIp=%s", BACKEND_IP),
-				fmt.Sprintf("-backendPort=%d", backendPort),
-				fmt.Sprintf("-healthcheckPort=%d", dummyHealthCheckPort),
-				fmt.Sprintf("-pidfile=%s", pidfile),
-			}...)
-			defer session.Terminate()
-
-			healthcheckSession := startHealthCheckWithArgs(
-				fmt.Sprintf("-port=%d", dummyHealthCheckPort),
-			)
-			defer healthcheckSession.Terminate()
-
-			var longConnection net.Conn
-			var shortConnection net.Conn
-
+		It("maintains a long-lived connection when other clients disconnect", func() {
 			Eventually(func() error {
 				var err error
 				longConnection, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
@@ -130,43 +121,27 @@ var _ = Describe("Switchboard", func() {
 			longConnection.Write([]byte("longdata"))
 			n, err := longConnection.Read(longBuffer)
 
-			Ω(err).ToNot(HaveOccurred())
-			Ω(string(longBuffer[:n])).Should(ContainSubstring("longdata"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(longBuffer[:n])).Should(ContainSubstring("longdata"))
 
 			shortConnection.Write([]byte("shortdata"))
 			n, err = shortConnection.Read(shortBuffer)
 
-			Ω(err).ToNot(HaveOccurred())
-			Ω(string(shortBuffer[:n])).Should(ContainSubstring("shortdata"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(shortBuffer[:n])).Should(ContainSubstring("shortdata"))
 
 			shortConnection.Close()
 
 			longConnection.Write([]byte("longdata1"))
 			n, err = longConnection.Read(longBuffer)
 
-			Ω(err).ToNot(HaveOccurred())
-			Ω(string(longBuffer[:n])).Should(ContainSubstring("longdata1"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(longBuffer[:n])).Should(ContainSubstring("longdata1"))
 		})
+	})
 
-		It("severs client connections when healthcheck reports 503", func() {
-			backendSession := startBackendWithArgs(
-				fmt.Sprintf("-port=%d", backendPort),
-			)
-			defer backendSession.Terminate()
-
-			healthcheckSession := startHealthCheckWithArgs(
-				fmt.Sprintf("-port=%d", dummyHealthCheckPort),
-			)
-			defer healthcheckSession.Terminate()
-
-			proxySession := startMainWithArgs(
-				fmt.Sprintf("-port=%d", switchboardPort),
-				fmt.Sprintf("-backendIp=%s", BACKEND_IP),
-				fmt.Sprintf("-backendPort=%d", backendPort),
-				fmt.Sprintf("-healthcheckPort=%d", dummyHealthCheckPort),
-				fmt.Sprintf("-pidfile=%s", pidfile),
-			)
-			defer proxySession.Terminate()
+	Context("when the healthcheck reports a 503", func() {
+		It("disconnects client connections", func() {
 
 			var conn net.Conn
 			Eventually(func() error {
@@ -180,8 +155,8 @@ var _ = Describe("Switchboard", func() {
 			conn.Write([]byte("data1"))
 			n, err := conn.Read(buf)
 
-			Ω(err).ToNot(HaveOccurred())
-			Ω(string(buf[:n])).Should(ContainSubstring("data1"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(buf[:n])).Should(ContainSubstring("data1"))
 
 			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/set503", dummyHealthCheckPort))
 			Expect(httpErr).NotTo(HaveOccurred())
@@ -191,13 +166,11 @@ var _ = Describe("Switchboard", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
 			Expect(httpErr).NotTo(HaveOccurred())
 
-			time.Sleep(1 * time.Second)
-
-			conn.Write([]byte("data2"))
-			n, err = conn.Read(buf)
-
-			Ω(err).To(HaveOccurred())
-
+			Eventually(func() error {
+				conn.Write([]byte("data2"))
+				_, err = conn.Read(buf)
+				return err
+			}, 5*time.Second).Should(HaveOccurred())
 		})
 	})
 })

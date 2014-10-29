@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"time"
 
 	. "github.com/pivotal-cf-experimental/switchboard"
 )
@@ -16,9 +17,10 @@ var (
 	pidfile = flag.String("pidfile", "", "The location for the pidfile")
 	port    = flag.Uint("port", 3306, "Port to listen on")
 
-	backendIp       = flag.String("backendIp", "", "IP address of backend")
-	backendPort     = flag.Uint("backendPort", 3306, "Port of backend")
-	healthcheckPort = flag.Uint("healthcheckPort", 9200, "Port for healthcheck endpoints")
+	backendIp          = flag.String("backendIp", "", "IP address of backend")
+	backendPort        = flag.Uint("backendPort", 3306, "Port of backend")
+	healthcheckPort    = flag.Uint("healthcheckPort", 9200, "Port for healthcheck endpoints")
+	healthcheckTimeout = flag.Duration("healthcheckTimeout", 5*time.Second, "Timeout for healthcheck")
 )
 
 func acceptClientConnection(l net.Listener) net.Conn {
@@ -50,7 +52,7 @@ func main() {
 
 	backend := NewBackend("backend1", *backendIp, *backendPort)
 
-	healthcheck := NewHttpHealthCheck(*backendIp, *healthcheckPort)
+	healthcheck := NewHttpHealthCheck(*backendIp, *healthcheckPort, *healthcheckTimeout)
 	healthcheck.Start(backend.RemoveAndCloseAllBridges)
 
 	for {

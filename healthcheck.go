@@ -2,6 +2,7 @@ package switchboard
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -11,14 +12,20 @@ type Healthcheck interface {
 }
 
 type HttpHealthcheck struct {
-	ipAddress string
-	port      uint
+	ipAddress   string
+	port        uint
+	timeout     time.Duration
+	healthyChan chan bool
+	errorChan   chan interface{}
 }
 
-func NewHttpHealthCheck(ipAddress string, port uint) *HttpHealthcheck {
+func NewHttpHealthCheck(ipAddress string, port uint, timeout time.Duration) *HttpHealthcheck {
 	return &HttpHealthcheck{
-		ipAddress: ipAddress,
-		port:      port,
+		ipAddress:   ipAddress,
+		port:        port,
+		timeout:     timeout,
+		errorChan:   make(chan interface{}),
+		healthyChan: make(chan bool),
 	}
 }
 
@@ -30,19 +37,39 @@ func (h HttpHealthcheck) getEndpoint() string {
 func (h *HttpHealthcheck) Start(errorCallback func()) {
 	go func() {
 		for {
-			resp, err := http.Get(h.getEndpoint())
-			if err != nil {
-				fmt.Printf("Error dialing healthchecker at %s: %v\n", h.getEndpoint(), err.Error())
-			} else {
-				switch resp.StatusCode {
-				case http.StatusServiceUnavailable:
-					errorCallback()
-				case http.StatusOK:
-					fmt.Printf("Healthcheck at %s succeeded\n", h.getEndpoint())
-				}
-				resp.Body.Close()
-			}
-			time.Sleep(1 * time.Second)
+			h.check()
+			time.Sleep(h.timeout / 5)
 		}
 	}()
+
+	go func() {
+		timeout := time.After(h.timeout)
+
+		for {
+			select {
+			case <-h.healthyChan:
+				timeout = time.After(h.timeout)
+			case <-h.errorChan:
+				errorCallback()
+			case <-timeout:
+				errorCallback()
+			}
+		}
+	}()
+}
+
+func (h *HttpHealthcheck) check() {
+	resp, err := http.Get(h.getEndpoint())
+	if err != nil {
+		fmt.Printf("Error dialing healthchecker at %s: %v\n", h.getEndpoint(), err.Error())
+		close(h.errorChan)
+	} else {
+		resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			log.Printf("Healthcheck at %s succeeded\n", h.getEndpoint())
+			h.healthyChan <- true
+		} else {
+			close(h.errorChan)
+		}
+	}
 }

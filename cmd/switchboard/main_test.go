@@ -74,28 +74,67 @@ var _ = Describe("Switchboard", func() {
 	})
 
 	Context("when there are multiple concurrent clients", func() {
+		var conn1, conn2, conn3 net.Conn
+
+		var sendData = func(conn net.Conn, buffer []byte, data string) error {
+			conn.Write([]byte(data))
+			_, err := conn.Read(buffer)
+			return err
+		}
+
 		It("proxies all the connections to the backend", func() {
-			count := 10
+			done1 := make(chan interface{})
+			buffer1 := make([]byte, 1024)
+			go func() {
+				defer GinkgoRecover()
+				defer close(done1)
 
-			for i := 0; i < count; i++ {
-				go func(i int) {
-					defer GinkgoRecover()
-					var conn net.Conn
-					Eventually(func() error {
-						var err error
-						conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-						return err
-					}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+				Eventually(func() (err error) {
+					conn1, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					return err
+				}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
 
-					data := make([]byte, 1024)
+				err := sendData(conn1, buffer1, "test1")
+				Expect(err).ToNot(HaveOccurred())
+			}()
 
-					conn.Write([]byte(fmt.Sprintf("test%d", i)))
-					n, err := conn.Read(data)
+			done2 := make(chan interface{})
+			buffer2 := make([]byte, 1024)
+			go func() {
+				defer GinkgoRecover()
+				defer close(done2)
 
-					Expect(err).ToNot(HaveOccurred())
-					Expect(string(data[:n])).Should(ContainSubstring(fmt.Sprintf("Echo: test%d", i)))
-				}(i)
-			}
+				Eventually(func() (err error) {
+					conn2, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					return err
+				}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+
+				err := sendData(conn2, buffer2, "test2")
+				Expect(err).ToNot(HaveOccurred())
+			}()
+
+			done3 := make(chan interface{})
+			buffer3 := make([]byte, 1024)
+			go func() {
+				defer GinkgoRecover()
+				defer close(done3)
+
+				Eventually(func() (err error) {
+					conn3, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					return err
+				}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+
+				err := sendData(conn3, buffer3, "test3")
+				Expect(err).ToNot(HaveOccurred())
+			}()
+
+			<-done1
+			<-done2
+			<-done3
+
+			Expect(string(buffer1)).Should(ContainSubstring("Echo: test1"))
+			Expect(string(buffer2)).Should(ContainSubstring("Echo: test2"))
+			Expect(string(buffer3)).Should(ContainSubstring("Echo: test3"))
 		})
 	})
 

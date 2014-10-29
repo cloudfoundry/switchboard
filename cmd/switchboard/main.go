@@ -10,7 +10,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cloudfoundry-incubator/cf-lager"
 	. "github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-golang/lager"
 )
 
 var (
@@ -34,25 +36,30 @@ func acceptClientConnection(l net.Listener) net.Conn {
 func main() {
 	flag.Parse()
 
+	logger := cf_lager.New("switchboard")
+	logger.Info("Logging for the switchbord")
+
+	fmt.Println("printing")
+
 	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *port))
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Error listening on port %d: %v\n", *port, err.Error()))
+		logger.Fatal("Error listening on port.", err, lager.Data{"port": *port})
 	}
 	defer l.Close()
 
 	err = ioutil.WriteFile(*pidfile, []byte(strconv.Itoa(os.Getpid())), 0644)
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Cannot write pid to file: %s", *pidfile))
+		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidfile": *pidfile})
 	}
 
-	fmt.Printf("Proxy started on port %d\n", *port)
-	fmt.Printf("Backend ipAddress: %s\n", *backendIp)
-	fmt.Printf("Backend port: %d\n", *port)
-	fmt.Printf("Healthcheck port: %d\n", *healthcheckPort)
+	logger.Info(fmt.Sprintf("Proxy started on port %d\n", *port))
+	logger.Info(fmt.Sprintf("Backend ipAddress: %s\n", *backendIp))
+	logger.Info(fmt.Sprintf("Backend port: %d\n", *port))
+	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", *healthcheckPort))
 
 	backend := NewBackend("backend1", *backendIp, *backendPort)
 
-	healthcheck := NewHttpHealthCheck(*backendIp, *healthcheckPort, *healthcheckTimeout)
+	healthcheck := NewHttpHealthCheck(*backendIp, *healthcheckPort, *healthcheckTimeout, logger)
 	healthcheck.Start(backend.RemoveAndCloseAllBridges)
 
 	for {
@@ -61,11 +68,11 @@ func main() {
 
 		backendConn, err := backend.Dial()
 		if err != nil {
-			log.Fatal("Error connection to backend: %s", err.Error())
+			logger.Fatal("Error connection to backend.", err)
 		}
 		defer backendConn.Close()
 
-		bridge := NewConnectionBridge(clientConn, backendConn)
+		bridge := NewConnectionBridge(clientConn, backendConn, logger)
 		backend.AddBridge(bridge)
 
 		go func() {

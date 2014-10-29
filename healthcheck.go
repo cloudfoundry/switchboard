@@ -2,9 +2,10 @@ package switchboard
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"time"
+
+	"github.com/pivotal-golang/lager"
 )
 
 type Healthcheck interface {
@@ -17,15 +18,17 @@ type HttpHealthcheck struct {
 	timeout     time.Duration
 	healthyChan chan bool
 	errorChan   chan interface{}
+	logger      lager.Logger
 }
 
-func NewHttpHealthCheck(ipAddress string, port uint, timeout time.Duration) *HttpHealthcheck {
+func NewHttpHealthCheck(ipAddress string, port uint, timeout time.Duration, logger lager.Logger) *HttpHealthcheck {
 	return &HttpHealthcheck{
 		ipAddress:   ipAddress,
 		port:        port,
 		timeout:     timeout,
 		errorChan:   make(chan interface{}),
 		healthyChan: make(chan bool),
+		logger:      logger,
 	}
 }
 
@@ -60,12 +63,12 @@ func (h *HttpHealthcheck) Start(errorCallback func()) {
 func (h *HttpHealthcheck) check() {
 	resp, err := http.Get(h.getEndpoint())
 	if err != nil {
-		fmt.Printf("Error dialing healthchecker at %s: %v\n", h.getEndpoint(), err.Error())
+		h.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": h.getEndpoint()})
 		close(h.errorChan)
 	} else {
 		resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
-			log.Printf("Healthcheck at %s succeeded\n", h.getEndpoint())
+			h.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": h.getEndpoint()})
 			h.healthyChan <- true
 		} else {
 			close(h.errorChan)

@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-golang/lager"
 )
 
 type FakeConnection struct{}
@@ -42,9 +43,9 @@ var _ = Describe("Backend", func() {
 		var bridge3 *ConnectionBridge
 
 		BeforeEach(func() {
-			bridge1 = NewConnectionBridge(&FakeConnection{}, &FakeConnection{})
-			bridge2 = NewConnectionBridge(&FakeConnection{}, &FakeConnection{})
-			bridge3 = NewConnectionBridge(&FakeConnection{}, &FakeConnection{})
+			bridge1 = NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test"))
+			bridge2 = NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test"))
+			bridge3 = NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test"))
 			backend.AddBridge(bridge1)
 			backend.AddBridge(bridge2)
 			backend.AddBridge(bridge3)
@@ -70,7 +71,7 @@ var _ = Describe("Backend", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := backend.RemoveBridge(NewConnectionBridge(&FakeConnection{}, &FakeConnection{}))
+				err := backend.RemoveBridge(NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test")))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found in backend"))
 			})
@@ -126,7 +127,7 @@ var _ = Describe("Backend", func() {
 		})
 
 		It("returns -1 and an error when the bridge is not present", func() {
-			index, err := backend.IndexOfBridge(NewConnectionBridge(&FakeConnection{}, &FakeConnection{}))
+			index, err := backend.IndexOfBridge(NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test")))
 			Expect(index).To(Equal(-1))
 			Expect(err).To(HaveOccurred())
 		})

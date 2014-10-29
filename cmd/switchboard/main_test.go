@@ -46,9 +46,18 @@ var _ = Describe("Switchboard", func() {
 		backendSession     *gexec.Session
 		healthcheckSession *gexec.Session
 		proxySession       *gexec.Session
+		healthCheckTimeout time.Duration
 	)
 
+	var sendData = func(conn net.Conn, buffer []byte, data string) error {
+		conn.Write([]byte(data))
+		_, err := conn.Read(buffer)
+		return err
+	}
+
 	BeforeEach(func() {
+		healthCheckTimeout = 500 * time.Millisecond
+
 		backendSession = startBackend(
 			fmt.Sprintf("-port=%d", backendPort),
 		)
@@ -62,7 +71,7 @@ var _ = Describe("Switchboard", func() {
 			fmt.Sprintf("-backendIp=%s", BACKEND_IP),
 			fmt.Sprintf("-backendPort=%d", backendPort),
 			fmt.Sprintf("-healthcheckPort=%d", dummyHealthCheckPort),
-			fmt.Sprintf("-healthcheckTimeout=%s", "500ms"),
+			fmt.Sprintf("-healthcheckTimeout=%s", healthCheckTimeout),
 			fmt.Sprintf("-pidfile=%s", pidfile),
 		)
 	})
@@ -75,12 +84,6 @@ var _ = Describe("Switchboard", func() {
 
 	Context("when there are multiple concurrent clients", func() {
 		var conn1, conn2, conn3 net.Conn
-
-		var sendData = func(conn net.Conn, buffer []byte, data string) error {
-			conn.Write([]byte(data))
-			_, err := conn.Read(buffer)
-			return err
-		}
 
 		It("proxies all the connections to the backend", func() {
 			done1 := make(chan interface{})
@@ -232,33 +235,53 @@ var _ = Describe("Switchboard", func() {
 	})
 
 	Context("when the healthcheck hangs", func() {
-		It("disconnects client connections", func(done Done) {
+		It("disconnects existing client connections", func(done Done) {
 			defer close(done)
 			defer GinkgoRecover()
 
 			var conn net.Conn
-			Eventually(func() error {
-				var err error
+			Eventually(func() (err error) {
 				conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 				return err
 			}).ShouldNot(HaveOccurred())
 
-			buf := make([]byte, 1024)
+			buffer := make([]byte, 1024)
 
-			conn.Write([]byte("data1"))
-			n, err := conn.Read(buf)
+			err := sendData(conn, buffer, "data before hang")
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(buf[:n])).Should(ContainSubstring("data1"))
+			Expect(string(buffer)).Should(ContainSubstring("data before hang"))
+			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthCheckPort))
+
+			Expect(httpErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			Eventually(func() error {
+				err := sendData(conn, buffer, "data after hang")
+				return err
+			}, healthCheckTimeout*4).Should(HaveOccurred())
+		}, 5)
+
+		It("disconnects any new connections that are made", func(done Done) {
+			defer close(done)
+			defer GinkgoRecover()
 
 			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthCheckPort))
 			Expect(httpErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			Eventually(func() error {
-				conn.Write([]byte("data2"))
-				_, err = conn.Read(buf)
+			time.Sleep(healthCheckTimeout)
+
+			var conn net.Conn
+			Eventually(func() (err error) {
+				conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 				return err
-			}, 2*time.Second).Should(HaveOccurred())
+			}, 1*time.Second).ShouldNot(HaveOccurred())
+
+			Eventually(func() error {
+				buffer := make([]byte, 1024)
+				err := sendData(conn, buffer, "data after hang")
+				return err
+			}, healthCheckTimeout*4, healthCheckTimeout/2).Should(HaveOccurred())
 		}, 5)
 	})
 })

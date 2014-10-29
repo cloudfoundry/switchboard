@@ -43,9 +43,8 @@ func (h *HttpHealthcheck) Start(errorCallback func()) {
 	}()
 
 	go func() {
-		timeout := time.After(h.timeout)
-
 		for {
+			timeout := time.After(h.timeout)
 			select {
 			case <-h.healthyChan:
 				timeout = time.After(h.timeout)

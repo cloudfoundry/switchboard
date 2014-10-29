@@ -92,7 +92,7 @@ var _ = Describe("Switchboard", func() {
 				Eventually(func() (err error) {
 					conn1, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
-				}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+				}).ShouldNot(HaveOccurred())
 
 				err := sendData(conn1, buffer1, "test1")
 				Expect(err).ToNot(HaveOccurred())
@@ -107,7 +107,7 @@ var _ = Describe("Switchboard", func() {
 				Eventually(func() (err error) {
 					conn2, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
-				}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+				}).ShouldNot(HaveOccurred())
 
 				err := sendData(conn2, buffer2, "test2")
 				Expect(err).ToNot(HaveOccurred())
@@ -122,7 +122,7 @@ var _ = Describe("Switchboard", func() {
 				Eventually(func() (err error) {
 					conn3, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
-				}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+				}).ShouldNot(HaveOccurred())
 
 				err := sendData(conn3, buffer3, "test3")
 				Expect(err).ToNot(HaveOccurred())
@@ -147,13 +147,13 @@ var _ = Describe("Switchboard", func() {
 				var err error
 				conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 				return err
-			}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+			}).ShouldNot(HaveOccurred())
 
 			Eventually(func() error {
 				var err error
 				connToDisconnect, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 				return err
-			}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+			}).ShouldNot(HaveOccurred())
 
 			buffer := make([]byte, 1024)
 
@@ -181,7 +181,7 @@ var _ = Describe("Switchboard", func() {
 				var err error
 				client, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 				return err
-			}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+			}).ShouldNot(HaveOccurred())
 
 			buffer := make([]byte, 1024)
 
@@ -200,13 +200,12 @@ var _ = Describe("Switchboard", func() {
 
 	Context("when the healthcheck reports a 503", func() {
 		It("disconnects client connections", func() {
-
 			var conn net.Conn
 			Eventually(func() error {
 				var err error
 				conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 				return err
-			}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+			}).ShouldNot(HaveOccurred())
 
 			buf := make([]byte, 1024)
 
@@ -242,7 +241,7 @@ var _ = Describe("Switchboard", func() {
 				var err error
 				conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 				return err
-			}, 1*time.Second, 10*time.Millisecond).ShouldNot(HaveOccurred())
+			}).ShouldNot(HaveOccurred())
 
 			buf := make([]byte, 1024)
 

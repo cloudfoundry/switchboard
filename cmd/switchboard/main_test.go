@@ -49,10 +49,15 @@ var _ = Describe("Switchboard", func() {
 		healthCheckTimeout time.Duration
 	)
 
-	var sendData = func(conn net.Conn, buffer []byte, data string) error {
+	var sendData = func(conn net.Conn, data string) (string, error) {
 		conn.Write([]byte(data))
+		buffer := make([]byte, 1024)
 		_, err := conn.Read(buffer)
-		return err
+		if err != nil {
+			return "", err
+		} else {
+			return string(buffer), nil
+		}
 	}
 
 	BeforeEach(func() {
@@ -84,50 +89,51 @@ var _ = Describe("Switchboard", func() {
 
 	Context("when there are multiple concurrent clients", func() {
 		var conn1, conn2, conn3 net.Conn
+		var data1, data2, data3 string
 
 		It("proxies all the connections to the backend", func() {
 			done1 := make(chan interface{})
-			buffer1 := make([]byte, 1024)
 			go func() {
 				defer GinkgoRecover()
 				defer close(done1)
 
-				Eventually(func() (err error) {
+				var err error
+				Eventually(func() error {
 					conn1, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
 				}).ShouldNot(HaveOccurred())
 
-				err := sendData(conn1, buffer1, "test1")
+				data1, err = sendData(conn1, "test1")
 				Expect(err).ToNot(HaveOccurred())
 			}()
 
 			done2 := make(chan interface{})
-			buffer2 := make([]byte, 1024)
 			go func() {
 				defer GinkgoRecover()
 				defer close(done2)
 
-				Eventually(func() (err error) {
+				var err error
+				Eventually(func() error {
 					conn2, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
 				}).ShouldNot(HaveOccurred())
 
-				err := sendData(conn2, buffer2, "test2")
+				data2, err = sendData(conn2, "test2")
 				Expect(err).ToNot(HaveOccurred())
 			}()
 
 			done3 := make(chan interface{})
-			buffer3 := make([]byte, 1024)
 			go func() {
 				defer GinkgoRecover()
 				defer close(done3)
 
-				Eventually(func() (err error) {
+				var err error
+				Eventually(func() error {
 					conn3, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
 				}).ShouldNot(HaveOccurred())
 
-				err := sendData(conn3, buffer3, "test3")
+				data3, err = sendData(conn3, "test3")
 				Expect(err).ToNot(HaveOccurred())
 			}()
 
@@ -135,9 +141,9 @@ var _ = Describe("Switchboard", func() {
 			<-done2
 			<-done3
 
-			Expect(string(buffer1)).Should(ContainSubstring("Echo: test1"))
-			Expect(string(buffer2)).Should(ContainSubstring("Echo: test2"))
-			Expect(string(buffer3)).Should(ContainSubstring("Echo: test3"))
+			Expect(data1).Should(ContainSubstring("Echo: test1"))
+			Expect(data2).Should(ContainSubstring("Echo: test2"))
+			Expect(data3).Should(ContainSubstring("Echo: test3"))
 		})
 	})
 
@@ -158,21 +164,15 @@ var _ = Describe("Switchboard", func() {
 				return err
 			}).ShouldNot(HaveOccurred())
 
-			buffer := make([]byte, 1024)
-
-			conn.Write([]byte("data before disconnect"))
-			n, err := conn.Read(buffer)
-
+			dataBeforeDisconnect, err := sendData(conn, "data before disconnect")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(buffer[:n])).Should(ContainSubstring("data before disconnect"))
+			Expect(dataBeforeDisconnect).Should(ContainSubstring("data before disconnect"))
 
 			connToDisconnect.Close()
 
-			conn.Write([]byte("data after disconnect"))
-			n, err = conn.Read(buffer)
-
+			dataAfterDisconnect, err := sendData(conn, "data after disconnect")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(buffer[:n])).Should(ContainSubstring("data after disconnect"))
+			Expect(dataAfterDisconnect).Should(ContainSubstring("data after disconnect"))
 		})
 	})
 
@@ -210,13 +210,9 @@ var _ = Describe("Switchboard", func() {
 				return err
 			}).ShouldNot(HaveOccurred())
 
-			buf := make([]byte, 1024)
-
-			conn.Write([]byte("data1"))
-			n, err := conn.Read(buf)
-
+			dataWhileHealthy, err := sendData(conn, "data while healthy")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(buf[:n])).Should(ContainSubstring("data1"))
+			Expect(dataWhileHealthy).Should(ContainSubstring("data while healthy"))
 
 			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/set503", dummyHealthCheckPort))
 			Expect(httpErr).NotTo(HaveOccurred())
@@ -227,8 +223,7 @@ var _ = Describe("Switchboard", func() {
 			Expect(httpErr).NotTo(HaveOccurred())
 
 			Eventually(func() error {
-				conn.Write([]byte("data2"))
-				_, err = conn.Read(buf)
+				_, err := sendData(conn, "data when unhealthy")
 				return err
 			}, 5*time.Second).Should(HaveOccurred())
 		})
@@ -245,18 +240,16 @@ var _ = Describe("Switchboard", func() {
 				return err
 			}).ShouldNot(HaveOccurred())
 
-			buffer := make([]byte, 1024)
-
-			err := sendData(conn, buffer, "data before hang")
+			data, err := sendData(conn, "data before hang")
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(buffer)).Should(ContainSubstring("data before hang"))
+			Expect(data).Should(ContainSubstring("data before hang"))
 			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthCheckPort))
 
 			Expect(httpErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 			Eventually(func() error {
-				err := sendData(conn, buffer, "data after hang")
+				_, err := sendData(conn, "data after hang")
 				return err
 			}, healthCheckTimeout*4).Should(HaveOccurred())
 		}, 5)
@@ -278,8 +271,7 @@ var _ = Describe("Switchboard", func() {
 			}, 1*time.Second).ShouldNot(HaveOccurred())
 
 			Eventually(func() error {
-				buffer := make([]byte, 1024)
-				err := sendData(conn, buffer, "data after hang")
+				_, err := sendData(conn, "data after hang")
 				return err
 			}, healthCheckTimeout*4, healthCheckTimeout/2).Should(HaveOccurred())
 		}, 5)

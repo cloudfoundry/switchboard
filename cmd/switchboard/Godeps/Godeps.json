@@ -1,0 +1,24 @@
+{
+	"ImportPath": "github.com/pivotal-cf-experimental/switchboard/cmd/switchboard",
+	"GoVersion": "go1.3.3",
+	"Deps": [
+		{
+			"ImportPath": "github.com/cloudfoundry-incubator/cf-lager",
+			"Rev": "94308c799cf61ac0818667ddcc25046c8c5659d1"
+		},
+		{
+			"ImportPath": "github.com/onsi/ginkgo",
+			"Comment": "v1.1.0-20-g75d0cd9",
+			"Rev": "75d0cd9c7ee52e99b13e6ccfd9e58b4f92b7795e"
+		},
+		{
+			"ImportPath": "github.com/onsi/gomega",
+			"Comment": "v1.0-19-g835b5e4",
+			"Rev": "835b5e4242c715976b98ed6bc6ece1d9c7879f66"
+		},
+		{
+			"ImportPath": "github.com/pivotal-golang/lager",
+			"Rev": "a106931abed5afe3043eae8851be8b33a4bdfa3f"
+		}
+	]
+}

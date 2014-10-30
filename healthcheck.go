@@ -1,6 +1,7 @@
 package switchboard
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -64,14 +65,14 @@ func (h *HttpHealthcheck) check() {
 	resp, err := http.Get(h.getEndpoint())
 	if err != nil {
 		h.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": h.getEndpoint()})
-		close(h.errorChan)
+		h.errorChan <- err
 	} else {
 		resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			h.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": h.getEndpoint()})
 			h.healthyChan <- true
 		} else {
-			close(h.errorChan)
+			h.errorChan <- errors.New("Non-200 exit code from healthcheck")
 		}
 	}
 }

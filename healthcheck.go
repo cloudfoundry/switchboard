@@ -72,6 +72,7 @@ func (h *HttpHealthcheck) check() {
 			h.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": h.getEndpoint()})
 			h.healthyChan <- true
 		} else {
+			h.logger.Error("Non-200 exit code from healthcheck", errors.New("Non-200 exit code from healthcheck"))
 			h.errorChan <- errors.New("Non-200 exit code from healthcheck")
 		}
 	}

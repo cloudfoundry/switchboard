@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -25,14 +24,6 @@ var (
 	healthcheckTimeout = flag.Duration("healthcheckTimeout", 5*time.Second, "Timeout for healthcheck")
 )
 
-func acceptClientConnection(l net.Listener) net.Conn {
-	clientConn, err := l.Accept()
-	if err != nil {
-		log.Fatal("Error accepting client connection: %v", err)
-	}
-	return clientConn
-}
-
 func main() {
 	flag.Parse()
 
@@ -41,11 +32,11 @@ func main() {
 
 	fmt.Println("printing")
 
-	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *port))
 	if err != nil {
 		logger.Fatal("Error listening on port.", err, lager.Data{"port": *port})
 	}
-	defer l.Close()
+	defer listener.Close()
 
 	err = ioutil.WriteFile(*pidfile, []byte(strconv.Itoa(os.Getpid())), 0644)
 	if err != nil {
@@ -57,27 +48,7 @@ func main() {
 	logger.Info(fmt.Sprintf("Backend port: %d\n", *port))
 	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", *healthcheckPort))
 
-	backend := NewBackend("backend1", *backendIp, *backendPort)
-
-	healthcheck := NewHttpHealthCheck(*backendIp, *healthcheckPort, *healthcheckTimeout, logger)
-	healthcheck.Start(backend.RemoveAndCloseAllBridges)
-
-	for {
-		clientConn := acceptClientConnection(l)
-		defer clientConn.Close()
-
-		backendConn, err := backend.Dial()
-		if err != nil {
-			logger.Fatal("Error connection to backend.", err)
-		}
-		defer backendConn.Close()
-
-		bridge := NewConnectionBridge(clientConn, backendConn, logger)
-		backend.AddBridge(bridge)
-
-		go func() {
-			bridge.Connect()
-			backend.RemoveBridge(bridge)
-		}()
-	}
+	backendInfo := BackendInfo{*backendPort, *healthcheckPort, *backendIp}
+	backendManager := BackendManager{logger, *healthcheckTimeout, backendInfo, listener}
+	backendManager.Run()
 }

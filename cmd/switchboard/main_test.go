@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	BACKEND_IP = "localhost"
+	BACKEND_IPS = "localhost"
 )
 
 func startSwitchboard(args ...string) *gexec.Session {
@@ -73,9 +73,9 @@ var _ = Describe("Switchboard", func() {
 
 		proxySession = startSwitchboard(
 			fmt.Sprintf("-port=%d", switchboardPort),
-			fmt.Sprintf("-backendIp=%s", BACKEND_IP),
-			fmt.Sprintf("-backendPort=%d", backendPort),
-			fmt.Sprintf("-healthcheckPort=%d", dummyHealthCheckPort),
+			fmt.Sprintf("-backendIPs=%s", BACKEND_IPS),
+			fmt.Sprintf("-backendPorts=%d", backendPort),
+			fmt.Sprintf("-healthcheckPorts=%d", dummyHealthCheckPort),
 			fmt.Sprintf("-healthcheckTimeout=%s", healthCheckTimeout),
 			fmt.Sprintf("-pidfile=%s", pidfile),
 		)

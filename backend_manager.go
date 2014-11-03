@@ -25,7 +25,7 @@ type BackendManager struct {
 func acceptClientConnection(l net.Listener) net.Conn {
 	clientConn, err := l.Accept()
 	if err != nil {
-		log.Fatal("Error accepting client connection: %v", err)
+		log.Fatal(fmt.Sprintf("Error accepting client connection: %v", err))
 	}
 	return clientConn
 }
@@ -44,11 +44,11 @@ func (bm *BackendManager) Run() {
 	healthcheck.Start(backend.RemoveAndCloseAllBridges)
 
 	// for {
-	bm.ProxyToBackend(&backend)
+	bm.proxyToBackend(&backend)
 	// }
 }
 
-func (bm *BackendManager) ProxyToBackend(backend *Backend) {
+func (bm *BackendManager) proxyToBackend(backend *Backend) {
 	for {
 		clientConn := acceptClientConnection(bm.Listener)
 		defer clientConn.Close()

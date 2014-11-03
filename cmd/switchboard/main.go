@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cloudfoundry-incubator/cf-lager"
@@ -18,10 +20,10 @@ var (
 	pidfile = flag.String("pidfile", "", "The location for the pidfile")
 	port    = flag.Uint("port", 3306, "Port to listen on")
 
-	backendIp          = flag.String("backendIp", "", "IP address of backend")
-	backendPort        = flag.Uint("backendPort", 3306, "Port of backend")
-	healthcheckPort    = flag.Uint("healthcheckPort", 9200, "Port for healthcheck endpoints")
-	healthcheckTimeout = flag.Duration("healthcheckTimeout", 5*time.Second, "Timeout for healthcheck")
+	backendIPsFlag       = flag.String("backendIPs", "", "Comma-separated list of backend IP addresses")
+	backendPortsFlag     = flag.String("backendPorts", "3306", "Comma-separated list of backend ports")
+	healthcheckPortsFlag = flag.String("healthcheckPorts", "9200", "Comma-separated list of healthcheck ports")
+	healthcheckTimeout   = flag.Duration("healthcheckTimeout", 5*time.Second, "Timeout for healthcheck")
 )
 
 func main() {
@@ -43,12 +45,36 @@ func main() {
 		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidfile": *pidfile})
 	}
 
-	logger.Info(fmt.Sprintf("Proxy started on port %d\n", *port))
-	logger.Info(fmt.Sprintf("Backend ipAddress: %s\n", *backendIp))
-	logger.Info(fmt.Sprintf("Backend port: %d\n", *port))
-	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", *healthcheckPort))
+	backendIPs := strings.Split(*backendIPsFlag, ",")
 
-	backendInfo := BackendInfo{*backendPort, *healthcheckPort, *backendIp}
+	backendPorts, err := stringsToUints(strings.Split(*backendPortsFlag, ","))
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Error parsing backendPorts: %v", err))
+	}
+
+	healthcheckPorts, err := stringsToUints(strings.Split(*healthcheckPortsFlag, ","))
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Error parsing healthcheckPorts: %v", err))
+	}
+
+	logger.Info(fmt.Sprintf("Proxy started on port %d\n", *port))
+	logger.Info(fmt.Sprintf("Backend ipAddress: %s\n", backendIPs[0]))
+	logger.Info(fmt.Sprintf("Backend port: %d\n", backendPorts[0]))
+	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", healthcheckPorts[0]))
+
+	backendInfo := BackendInfo{backendPorts[0], healthcheckPorts[0], backendIPs[0]}
 	backendManager := BackendManager{logger, *healthcheckTimeout, backendInfo, listener}
 	backendManager.Run()
+}
+
+func stringsToUints(s []string) ([]uint, error) {
+	dest_slice := make([]uint, len(s))
+	for i, val := range s {
+		intVal, err := strconv.ParseUint(val, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		dest_slice[i] = uint(intVal)
+	}
+	return dest_slice, nil
 }

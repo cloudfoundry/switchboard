@@ -30,11 +30,17 @@ func (fb *FakeBridge) Close() {
 	fb.wasClosed = true
 }
 
+type FakeHealthcheck struct{}
+
+func (f FakeHealthcheck) Start(errorCallback func()) {
+	return
+}
+
 var _ = Describe("Backend", func() {
-	var backend Backend
+	var backend *Backend
 
 	BeforeEach(func() {
-		backend = NewBackend("node 0", "10.244.1.2", 3306)
+		backend = NewBackend("node 0", "10.244.1.2", 3306, FakeHealthcheck{})
 	})
 
 	Describe("RemoveBridge", func() {

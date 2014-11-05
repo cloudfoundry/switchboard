@@ -11,14 +11,16 @@ type Backend struct {
 	Desc      string
 	ipAddress string
 	port      uint
+	hc        Healthcheck
 }
 
-func NewBackend(desc, ipAddress string, port uint) Backend {
-	return Backend{
+func NewBackend(desc, ipAddress string, port uint, hc Healthcheck) *Backend {
+	return &Backend{
 		Desc:      desc,
 		bridges:   []Bridge{},
 		ipAddress: ipAddress,
 		port:      port,
+		hc:        hc,
 	}
 }
 
@@ -29,6 +31,10 @@ func (b *Backend) RemoveBridge(bridge Bridge) error {
 	}
 	b.removeBridgeAt(index)
 	return nil
+}
+
+func (b *Backend) StartHealthcheck() {
+	b.hc.Start(b.RemoveAndCloseAllBridges)
 }
 
 func (b *Backend) RemoveAndCloseAllBridges() {

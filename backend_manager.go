@@ -4,22 +4,14 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 
 	"github.com/pivotal-golang/lager"
 )
 
-type BackendInfo struct {
-	Port            uint
-	HealthcheckPort uint
-	Ip              string
-}
-
 type BackendManager struct {
-	Logger             lager.Logger
-	HealthcheckTimeout time.Duration
-	BackendInfo        BackendInfo
-	Listener           net.Listener
+	Logger   lager.Logger
+	Listener net.Listener
+	Backends []*Backend
 }
 
 func acceptClientConnection(l net.Listener) net.Conn {
@@ -31,31 +23,22 @@ func acceptClientConnection(l net.Listener) net.Conn {
 }
 
 func (bm *BackendManager) Run() {
-	fmt.Printf("backend info: %v", bm.BackendInfo)
-
-	backend := NewBackend("backend1", bm.BackendInfo.Ip, bm.BackendInfo.Port)
-
-	healthcheck := NewHttpHealthCheck(
-		bm.BackendInfo.Ip,
-		bm.BackendInfo.HealthcheckPort,
-		bm.HealthcheckTimeout,
-		bm.Logger,
-	)
-	healthcheck.Start(backend.RemoveAndCloseAllBridges)
-
-	// for {
-	bm.proxyToBackend(&backend)
-	// }
+	for _, backend := range bm.Backends {
+		backend.StartHealthcheck()
+	}
+	bm.proxyToBackend()
 }
 
-func (bm *BackendManager) proxyToBackend(backend *Backend) {
+func (bm *BackendManager) proxyToBackend() {
 	for {
 		clientConn := acceptClientConnection(bm.Listener)
 		defer clientConn.Close()
 
+		backend := bm.getCurrentBackend()
 		backendConn, err := backend.Dial()
 		if err != nil {
-			bm.Logger.Fatal("Error connection to backend.", err)
+			bm.Logger.Error("Error connection to backend.", err)
+			return
 		}
 		defer backendConn.Close()
 
@@ -67,4 +50,13 @@ func (bm *BackendManager) proxyToBackend(backend *Backend) {
 			backend.RemoveBridge(bridge)
 		}()
 	}
+}
+
+func (bm *BackendManager) getCurrentBackend() *Backend {
+	currentBackendIndex := 0
+	backend := bm.Backends[currentBackendIndex]
+	// bm.Logger.Info(fmt.Sprintf("Failing over from %s to next available backend", backend.Desc))
+	// currentBackendIndex++
+	// currentBackendIndex = currentBackendIndex % len(backends)
+	return backend
 }

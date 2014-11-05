@@ -225,7 +225,7 @@ var _ = Describe("Switchboard", func() {
 			Eventually(func() error {
 				_, err := sendData(conn, "data when unhealthy")
 				return err
-			}, 5*time.Second).Should(HaveOccurred())
+			}, 2*time.Second).Should(HaveOccurred())
 		})
 	})
 

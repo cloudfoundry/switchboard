@@ -24,12 +24,16 @@ var (
 	backendPortsFlag     = flag.String("backendPorts", "3306", "Comma-separated list of backend ports")
 	healthcheckPortsFlag = flag.String("healthcheckPorts", "9200", "Comma-separated list of healthcheck ports")
 	healthcheckTimeout   = flag.Duration("healthcheckTimeout", 5*time.Second, "Timeout for healthcheck")
+
+	backendIPs                     []string
+	backendPorts, healthcheckPorts []uint
+	logger                         lager.Logger
 )
 
 func main() {
 	flag.Parse()
 
-	logger := cf_lager.New("switchboard")
+	logger = cf_lager.New("switchboard")
 	logger.Info("Logging for the switchbord")
 
 	fmt.Println("printing")
@@ -45,25 +49,29 @@ func main() {
 		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidfile": *pidfile})
 	}
 
-	backendIPs := strings.Split(*backendIPsFlag, ",")
+	backendIPs = strings.Split(*backendIPsFlag, ",")
 
-	backendPorts, err := stringsToUints(strings.Split(*backendPortsFlag, ","))
+	backendPorts, err = stringsToUints(strings.Split(*backendPortsFlag, ","))
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Error parsing backendPorts: %v", err))
 	}
 
-	healthcheckPorts, err := stringsToUints(strings.Split(*healthcheckPortsFlag, ","))
+	healthcheckPorts, err = stringsToUints(strings.Split(*healthcheckPortsFlag, ","))
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Error parsing healthcheckPorts: %v", err))
 	}
+
+	replicatePorts()
 
 	logger.Info(fmt.Sprintf("Proxy started on port %d\n", *port))
 	logger.Info(fmt.Sprintf("Backend ipAddress: %s\n", backendIPs[0]))
 	logger.Info(fmt.Sprintf("Backend port: %d\n", backendPorts[0]))
 	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", healthcheckPorts[0]))
 
-	backendInfo := BackendInfo{backendPorts[0], healthcheckPorts[0], backendIPs[0]}
-	backendManager := BackendManager{logger, *healthcheckTimeout, backendInfo, listener}
+	healthchecks := makeHealthchecks()
+	backends := makeBackends(healthchecks)
+	backendManager := BackendManager{logger, listener, backends}
+
 	backendManager.Run()
 }
 
@@ -77,4 +85,41 @@ func stringsToUints(s []string) ([]uint, error) {
 		dest_slice[i] = uint(intVal)
 	}
 	return dest_slice, nil
+}
+
+func replicatePorts() {
+	if len(backendPorts) != len(backendIPs) {
+		port := backendPorts[0]
+		backendPorts = make([]uint, len(backendIPs))
+		for i, _ := range backendIPs {
+			backendPorts[i] = port
+		}
+	}
+	if len(healthcheckPorts) != len(backendIPs) {
+		port := healthcheckPorts[0]
+		healthcheckPorts = make([]uint, len(backendIPs))
+		for i, _ := range backendIPs {
+			healthcheckPorts[i] = port
+		}
+	}
+}
+
+func makeBackends(healthchecks []Healthcheck) []*Backend {
+	backends := make([]*Backend, len(backendIPs))
+	for i, ip := range backendIPs {
+		backends[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthchecks[i])
+	}
+	return backends
+}
+
+func makeHealthchecks() []Healthcheck {
+	healthchecks := make([]Healthcheck, len(backendIPs))
+	for i, ip := range backendIPs {
+		healthchecks[i] = NewHttpHealthCheck(
+			ip,
+			healthcheckPorts[i],
+			*healthcheckTimeout,
+			logger)
+	}
+	return healthchecks
 }

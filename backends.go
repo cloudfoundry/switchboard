@@ -12,7 +12,10 @@ type Backends interface {
 	CurrentBackend() Backend
 }
 
-type backends []Backend
+type backends struct {
+	backends            []Backend
+	currentBackendIndex int
+}
 
 func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, healthcheckTimeout time.Duration, logger lager.Logger) Backends {
 	healthchecks := newHealthchecks(backendIPs, healthcheckPorts, healthcheckTimeout, logger)
@@ -20,7 +23,10 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 	for i, ip := range backendIPs {
 		backendSlice[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthchecks[i])
 	}
-	return backends(backendSlice)
+	return backends{
+		backends:            backendSlice,
+		currentBackendIndex: 0,
+	}
 }
 
 func newHealthchecks(backendIPs []string, healthcheckPorts []uint, timeout time.Duration, logger lager.Logger) []Healthcheck {
@@ -35,13 +41,12 @@ func newHealthchecks(backendIPs []string, healthcheckPorts []uint, timeout time.
 	return healthchecks
 }
 
-func (backends backends) StartHealthchecks() {
-	for _, backend := range backends {
+func (b backends) StartHealthchecks() {
+	for _, backend := range b.backends {
 		backend.StartHealthcheck()
 	}
 }
 
-func (backends backends) CurrentBackend() Backend {
-	currentBackendIndex := 0
-	return backends[currentBackendIndex]
+func (b backends) CurrentBackend() Backend {
+	return b.backends[b.currentBackendIndex]
 }

@@ -7,15 +7,20 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-type Backends []Backend
+type Backends interface {
+	StartHealthchecks()
+	CurrentBackend() Backend
+}
+
+type backends []Backend
 
 func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, healthcheckTimeout time.Duration, logger lager.Logger) Backends {
 	healthchecks := newHealthchecks(backendIPs, healthcheckPorts, healthcheckTimeout, logger)
-	backends := make([]Backend, len(backendIPs))
+	backendSlice := make([]Backend, len(backendIPs))
 	for i, ip := range backendIPs {
-		backends[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthchecks[i])
+		backendSlice[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthchecks[i])
 	}
-	return backends
+	return backends(backendSlice)
 }
 
 func newHealthchecks(backendIPs []string, healthcheckPorts []uint, timeout time.Duration, logger lager.Logger) []Healthcheck {
@@ -30,13 +35,13 @@ func newHealthchecks(backendIPs []string, healthcheckPorts []uint, timeout time.
 	return healthchecks
 }
 
-func (backends Backends) StartHealthchecks() {
+func (backends backends) StartHealthchecks() {
 	for _, backend := range backends {
 		backend.StartHealthcheck()
 	}
 }
 
-func (backends Backends) CurrentBackend() Backend {
+func (backends backends) CurrentBackend() Backend {
 	currentBackendIndex := 0
 	return backends[currentBackendIndex]
 }

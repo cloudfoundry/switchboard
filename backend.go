@@ -44,7 +44,7 @@ func (b *backend) RemoveBridge(bridge Bridge) error {
 }
 
 func (b *backend) StartHealthcheck() {
-	b.hc.Start(b.RemoveAndCloseAllBridges)
+	b.hc.Start(b)
 }
 
 func (b *backend) RemoveAndCloseAllBridges() {

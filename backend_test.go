@@ -32,7 +32,7 @@ func (fb *FakeBridge) Close() {
 
 type FakeHealthcheck struct{}
 
-func (f FakeHealthcheck) Start(errorCallback func()) {
+func (f FakeHealthcheck) Start(backend Backend) {
 	return
 }
 

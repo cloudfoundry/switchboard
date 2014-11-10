@@ -10,7 +10,7 @@ import (
 )
 
 type Healthcheck interface {
-	Start(errorCallback func())
+	Start(backend Backend)
 }
 
 type HttpHealthcheck struct {
@@ -38,7 +38,7 @@ func (h HttpHealthcheck) getEndpoint() string {
 	return endpoint
 }
 
-func (h *HttpHealthcheck) Start(errorCallback func()) {
+func (h *HttpHealthcheck) Start(backend Backend) {
 	go func() {
 		for {
 			h.check()
@@ -53,9 +53,9 @@ func (h *HttpHealthcheck) Start(errorCallback func()) {
 			case <-h.healthyChan:
 				timeout = time.After(h.timeout)
 			case <-h.errorChan:
-				errorCallback()
+				backend.RemoveAndCloseAllBridges()
 			case <-timeout:
-				errorCallback()
+				backend.RemoveAndCloseAllBridges()
 			}
 		}
 	}()

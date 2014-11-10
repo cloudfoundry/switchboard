@@ -68,10 +68,15 @@ func main() {
 	logger.Info(fmt.Sprintf("Backend port: %d\n", backendPorts[0]))
 	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", healthcheckPorts[0]))
 
-	healthchecks := makeHealthchecks()
-	backends := makeBackends(healthchecks)
+	backends := NewBackends(
+		backendIPs,
+		backendPorts,
+		healthcheckPorts,
+		*healthcheckTimeout,
+		logger,
+	)
 
-	switchboard := Switchboard{logger, listener, backends}
+	switchboard := New(listener, backends, logger)
 	switchboard.Run()
 }
 
@@ -102,24 +107,4 @@ func replicatePorts() {
 			healthcheckPorts[i] = port
 		}
 	}
-}
-
-func makeBackends(healthchecks []Healthcheck) []Backend {
-	backends := make([]Backend, len(backendIPs))
-	for i, ip := range backendIPs {
-		backends[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthchecks[i])
-	}
-	return backends
-}
-
-func makeHealthchecks() []Healthcheck {
-	healthchecks := make([]Healthcheck, len(backendIPs))
-	for i, ip := range backendIPs {
-		healthchecks[i] = NewHttpHealthCheck(
-			ip,
-			healthcheckPorts[i],
-			*healthcheckTimeout,
-			logger)
-	}
-	return healthchecks
 }

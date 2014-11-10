@@ -9,40 +9,37 @@ import (
 )
 
 type Switchboard struct {
-	Logger   lager.Logger
-	Listener net.Listener
-	Backends []Backend
+	logger   lager.Logger
+	listener net.Listener
+	backends Backends
 }
 
-func acceptClientConnection(l net.Listener) net.Conn {
-	clientConn, err := l.Accept()
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Error accepting client connection: %v", err))
+func New(listener net.Listener, backends Backends, logger lager.Logger) Switchboard {
+	return Switchboard{
+		logger:   logger,
+		listener: listener,
+		backends: backends,
 	}
-	return clientConn
 }
 
 func (bm *Switchboard) Run() {
-	for _, backend := range bm.Backends {
-		backend.StartHealthcheck()
-	}
-	bm.proxyToBackend()
-}
-
-func (bm *Switchboard) proxyToBackend() {
+	bm.backends.StartHealthchecks()
 	for {
-		clientConn := acceptClientConnection(bm.Listener)
+		clientConn, err := bm.listener.Accept()
+		if err != nil {
+			log.Fatal(fmt.Sprintf("Error accepting client connection: %v", err))
+		}
 		defer clientConn.Close()
 
-		backend := bm.getCurrentBackend()
+		backend := bm.backends.CurrentBackend()
 		backendConn, err := backend.Dial()
 		if err != nil {
-			bm.Logger.Error("Error connection to backend.", err)
+			bm.logger.Error("Error connection to backend.", err)
 			return
 		}
 		defer backendConn.Close()
 
-		bridge := NewConnectionBridge(clientConn, backendConn, bm.Logger)
+		bridge := NewConnectionBridge(clientConn, backendConn, bm.logger)
 		backend.AddBridge(bridge)
 
 		go func() {
@@ -50,13 +47,4 @@ func (bm *Switchboard) proxyToBackend() {
 			backend.RemoveBridge(bridge)
 		}()
 	}
-}
-
-func (bm *Switchboard) getCurrentBackend() Backend {
-	currentBackendIndex := 0
-	backend := bm.Backends[currentBackendIndex]
-	// bm.Logger.Info(fmt.Sprintf("Failing over from %s to next available backend", backend.Desc))
-	// currentBackendIndex++
-	// currentBackendIndex = currentBackendIndex % len(backends)
-	return backend
 }

@@ -2,30 +2,33 @@ package switchboard
 
 import (
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/pivotal-golang/lager"
 )
 
-type Backends interface {
+type Cluster interface {
 	StartHealthchecks()
-	CurrentBackend() Backend
+	RouteToBackend(clientConn net.Conn)
 }
 
-type backends struct {
+type cluster struct {
 	backends            []Backend
 	currentBackendIndex int
+	logger              lager.Logger
 }
 
-func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, healthcheckTimeout time.Duration, logger lager.Logger) Backends {
+func NewCluster(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, healthcheckTimeout time.Duration, logger lager.Logger) Cluster {
 	healthchecks := newHealthchecks(backendIPs, healthcheckPorts, healthcheckTimeout, logger)
 	backendSlice := make([]Backend, len(backendIPs))
 	for i, ip := range backendIPs {
 		backendSlice[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthchecks[i])
 	}
-	return backends{
+	return cluster{
 		backends:            backendSlice,
 		currentBackendIndex: 0,
+		logger:              logger,
 	}
 }
 
@@ -41,12 +44,29 @@ func newHealthchecks(backendIPs []string, healthcheckPorts []uint, timeout time.
 	return healthchecks
 }
 
-func (b backends) StartHealthchecks() {
-	for _, backend := range b.backends {
+func (c cluster) StartHealthchecks() {
+	for _, backend := range c.backends {
 		backend.StartHealthcheck()
 	}
 }
 
-func (b backends) CurrentBackend() Backend {
-	return b.backends[b.currentBackendIndex]
+func (c cluster) RouteToBackend(clientConn net.Conn) {
+	backend := c.currentBackend()
+	backendConn, err := backend.Dial()
+	if err != nil {
+		c.logger.Error("Error connection to backend.", err)
+		return
+	}
+
+	bridge := NewConnectionBridge(clientConn, backendConn, c.logger)
+	backend.AddBridge(bridge)
+
+	go func() {
+		bridge.Connect()
+		backend.RemoveBridge(bridge)
+	}()
+}
+
+func (c cluster) currentBackend() Backend {
+	return c.backends[c.currentBackendIndex]
 }

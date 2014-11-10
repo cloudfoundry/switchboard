@@ -68,7 +68,7 @@ func main() {
 	logger.Info(fmt.Sprintf("Backend port: %d\n", backendPorts[0]))
 	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", healthcheckPorts[0]))
 
-	backends := NewBackends(
+	backends := NewCluster(
 		backendIPs,
 		backendPorts,
 		healthcheckPorts,

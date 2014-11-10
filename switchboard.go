@@ -1,8 +1,6 @@
 package switchboard
 
 import (
-	"fmt"
-	"log"
 	"net"
 
 	"github.com/pivotal-golang/lager"
@@ -11,38 +9,25 @@ import (
 type Switchboard struct {
 	logger   lager.Logger
 	listener net.Listener
-	backends Backends
+	cluster  Cluster
 }
 
-func New(listener net.Listener, backends Backends, logger lager.Logger) Switchboard {
+func New(listener net.Listener, cluster Cluster, logger lager.Logger) Switchboard {
 	return Switchboard{
 		logger:   logger,
 		listener: listener,
-		backends: backends,
+		cluster:  cluster,
 	}
 }
 
 func (bm *Switchboard) Run() {
-	bm.backends.StartHealthchecks()
+	bm.cluster.StartHealthchecks()
 	for {
 		clientConn, err := bm.listener.Accept()
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Error accepting client connection: %v", err))
+			bm.logger.Error("Error accepting client connection", err)
+		} else {
+			bm.cluster.RouteToBackend(clientConn)
 		}
-
-		backend := bm.backends.CurrentBackend()
-		backendConn, err := backend.Dial()
-		if err != nil {
-			bm.logger.Error("Error connection to backend.", err)
-			return
-		}
-
-		bridge := NewConnectionBridge(clientConn, backendConn, bm.logger)
-		backend.AddBridge(bridge)
-
-		go func() {
-			bridge.Connect()
-			backend.RemoveBridge(bridge)
-		}()
 	}
 }

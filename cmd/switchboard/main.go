@@ -70,9 +70,9 @@ func main() {
 
 	healthchecks := makeHealthchecks()
 	backends := makeBackends(healthchecks)
-	backendManager := BackendManager{logger, listener, backends}
 
-	backendManager.Run()
+	switchboard := Switchboard{logger, listener, backends}
+	switchboard.Run()
 }
 
 func stringsToUints(s []string) ([]uint, error) {

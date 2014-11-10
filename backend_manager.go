@@ -8,7 +8,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-type BackendManager struct {
+type Switchboard struct {
 	Logger   lager.Logger
 	Listener net.Listener
 	Backends []*Backend
@@ -22,14 +22,14 @@ func acceptClientConnection(l net.Listener) net.Conn {
 	return clientConn
 }
 
-func (bm *BackendManager) Run() {
+func (bm *Switchboard) Run() {
 	for _, backend := range bm.Backends {
 		backend.StartHealthcheck()
 	}
 	bm.proxyToBackend()
 }
 
-func (bm *BackendManager) proxyToBackend() {
+func (bm *Switchboard) proxyToBackend() {
 	for {
 		clientConn := acceptClientConnection(bm.Listener)
 		defer clientConn.Close()
@@ -52,7 +52,7 @@ func (bm *BackendManager) proxyToBackend() {
 	}
 }
 
-func (bm *BackendManager) getCurrentBackend() *Backend {
+func (bm *Switchboard) getCurrentBackend() *Backend {
 	currentBackendIndex := 0
 	backend := bm.Backends[currentBackendIndex]
 	// bm.Logger.Info(fmt.Sprintf("Failing over from %s to next available backend", backend.Desc))

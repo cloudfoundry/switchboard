@@ -37,7 +37,7 @@ func (f FakeHealthcheck) Start(errorCallback func()) {
 }
 
 var _ = Describe("Backend", func() {
-	var backend *Backend
+	var backend Backend
 
 	BeforeEach(func() {
 		backend = NewBackend("node 0", "10.244.1.2", 3306, FakeHealthcheck{})

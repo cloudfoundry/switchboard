@@ -104,8 +104,8 @@ func replicatePorts() {
 	}
 }
 
-func makeBackends(healthchecks []Healthcheck) []*Backend {
-	backends := make([]*Backend, len(backendIPs))
+func makeBackends(healthchecks []Healthcheck) []Backend {
+	backends := make([]Backend, len(backendIPs))
 	for i, ip := range backendIPs {
 		backends[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthchecks[i])
 	}

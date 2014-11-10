@@ -6,7 +6,17 @@ import (
 	"net"
 )
 
-type Backend struct {
+type Backend interface {
+	RemoveBridge(bridge Bridge) error
+	StartHealthcheck()
+	RemoveAndCloseAllBridges()
+	AddBridge(bridge Bridge)
+	Dial() (net.Conn, error)
+	Bridges() []Bridge
+	IndexOfBridge(bridge Bridge) (int, error)
+}
+
+type backend struct {
 	bridges   []Bridge
 	Desc      string
 	ipAddress string
@@ -14,8 +24,8 @@ type Backend struct {
 	hc        Healthcheck
 }
 
-func NewBackend(desc, ipAddress string, port uint, hc Healthcheck) *Backend {
-	return &Backend{
+func NewBackend(desc, ipAddress string, port uint, hc Healthcheck) Backend {
+	return &backend{
 		Desc:      desc,
 		bridges:   []Bridge{},
 		ipAddress: ipAddress,
@@ -24,7 +34,7 @@ func NewBackend(desc, ipAddress string, port uint, hc Healthcheck) *Backend {
 	}
 }
 
-func (b *Backend) RemoveBridge(bridge Bridge) error {
+func (b *backend) RemoveBridge(bridge Bridge) error {
 	index, err := b.IndexOfBridge(bridge)
 	if err != nil {
 		return err
@@ -33,22 +43,22 @@ func (b *Backend) RemoveBridge(bridge Bridge) error {
 	return nil
 }
 
-func (b *Backend) StartHealthcheck() {
+func (b *backend) StartHealthcheck() {
 	b.hc.Start(b.RemoveAndCloseAllBridges)
 }
 
-func (b *Backend) RemoveAndCloseAllBridges() {
+func (b *backend) RemoveAndCloseAllBridges() {
 	for _, bridge := range b.bridges {
 		bridge.Close()
 	}
 	b.bridges = []Bridge{}
 }
 
-func (b *Backend) AddBridge(bridge Bridge) {
+func (b *backend) AddBridge(bridge Bridge) {
 	b.bridges = append(b.bridges, bridge)
 }
 
-func (b *Backend) Dial() (net.Conn, error) {
+func (b *backend) Dial() (net.Conn, error) {
 	addr := fmt.Sprintf("%s:%d", b.ipAddress, b.port)
 	backendConn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -57,11 +67,11 @@ func (b *Backend) Dial() (net.Conn, error) {
 	return backendConn, nil
 }
 
-func (b *Backend) Bridges() []Bridge {
+func (b *backend) Bridges() []Bridge {
 	return b.bridges
 }
 
-func (b *Backend) IndexOfBridge(bridge Bridge) (int, error) {
+func (b *backend) IndexOfBridge(bridge Bridge) (int, error) {
 	index := -1
 	for i, aBridge := range b.bridges {
 		if aBridge == bridge {
@@ -75,7 +85,7 @@ func (b *Backend) IndexOfBridge(bridge Bridge) (int, error) {
 	return index, nil
 }
 
-func (b *Backend) removeBridgeAt(index int) {
+func (b *backend) removeBridgeAt(index int) {
 	copy(b.bridges[index:], b.bridges[index+1:])
 	b.bridges = b.bridges[:len(b.bridges)-1]
 }

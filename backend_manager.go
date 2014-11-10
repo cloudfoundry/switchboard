@@ -11,7 +11,7 @@ import (
 type Switchboard struct {
 	Logger   lager.Logger
 	Listener net.Listener
-	Backends []*Backend
+	Backends []Backend
 }
 
 func acceptClientConnection(l net.Listener) net.Conn {
@@ -52,7 +52,7 @@ func (bm *Switchboard) proxyToBackend() {
 	}
 }
 
-func (bm *Switchboard) getCurrentBackend() *Backend {
+func (bm *Switchboard) getCurrentBackend() Backend {
 	currentBackendIndex := 0
 	backend := bm.Backends[currentBackendIndex]
 	// bm.Logger.Info(fmt.Sprintf("Failing over from %s to next available backend", backend.Desc))

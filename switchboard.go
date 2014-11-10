@@ -29,7 +29,6 @@ func (bm *Switchboard) Run() {
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Error accepting client connection: %v", err))
 		}
-		defer clientConn.Close()
 
 		backend := bm.backends.CurrentBackend()
 		backendConn, err := backend.Dial()
@@ -37,7 +36,6 @@ func (bm *Switchboard) Run() {
 			bm.logger.Error("Error connection to backend.", err)
 			return
 		}
-		defer backendConn.Close()
 
 		bridge := NewConnectionBridge(clientConn, backendConn, bm.logger)
 		backend.AddBridge(bridge)

@@ -20,16 +20,16 @@ func New(listener net.Listener, cluster Cluster, logger lager.Logger) Switchboar
 	}
 }
 
-func (bm *Switchboard) Run() {
-	bm.cluster.StartHealthchecks()
+func (s *Switchboard) Run() {
+	s.cluster.StartHealthchecks()
 	for {
-		clientConn, err := bm.listener.Accept()
+		clientConn, err := s.listener.Accept()
 		if err != nil {
-			bm.logger.Error("Error accepting client connection", err)
+			s.logger.Error("Error accepting client connection", err)
 		} else {
-			err := bm.cluster.RouteToBackend(clientConn)
+			err := s.cluster.RouteToBackend(clientConn)
 			if err != nil {
-				bm.logger.Error("Error routing to backend", err)
+				s.logger.Error("Error routing to backend", err)
 			}
 		}
 	}

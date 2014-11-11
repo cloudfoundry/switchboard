@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/cf-lager"
-	. "github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -35,8 +35,6 @@ func main() {
 
 	logger = cf_lager.New("switchboard")
 	logger.Info("Logging for the switchbord")
-
-	fmt.Println("printing")
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *port))
 	if err != nil {
@@ -68,7 +66,7 @@ func main() {
 	logger.Info(fmt.Sprintf("Backend port: %d\n", backendPorts[0]))
 	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", healthcheckPorts[0]))
 
-	backends := NewCluster(
+	backends := switchboard.NewCluster(
 		backendIPs,
 		backendPorts,
 		healthcheckPorts,
@@ -76,7 +74,7 @@ func main() {
 		logger,
 	)
 
-	switchboard := New(listener, backends, logger)
+	switchboard := switchboard.New(listener, backends, logger)
 	switchboard.Run()
 }
 

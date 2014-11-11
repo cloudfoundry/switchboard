@@ -33,8 +33,8 @@ func startBackend(args ...string) *gexec.Session {
 	return session
 }
 
-func startHealthCheck(args ...string) *gexec.Session {
-	command := exec.Command(dummyHealthCheckBinPath, args...)
+func startHealthcheck(args ...string) *gexec.Session {
+	command := exec.Command(dummyHealthcheckBinPath, args...)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(session).Should(gbytes.Say("Healthcheck listening on"))
@@ -67,15 +67,15 @@ var _ = Describe("Switchboard", func() {
 			fmt.Sprintf("-port=%d", backendPort),
 		)
 
-		healthcheckSession = startHealthCheck(
-			fmt.Sprintf("-port=%d", dummyHealthCheckPort),
+		healthcheckSession = startHealthcheck(
+			fmt.Sprintf("-port=%d", dummyHealthcheckPort),
 		)
 
 		proxySession = startSwitchboard(
 			fmt.Sprintf("-port=%d", switchboardPort),
 			fmt.Sprintf("-backendIPs=%s", BACKEND_IPS),
 			fmt.Sprintf("-backendPorts=%d", backendPort),
-			fmt.Sprintf("-healthcheckPorts=%d", dummyHealthCheckPort),
+			fmt.Sprintf("-healthcheckPorts=%d", dummyHealthcheckPort),
 			fmt.Sprintf("-healthcheckTimeout=%s", healthCheckTimeout),
 			fmt.Sprintf("-pidfile=%s", pidfile),
 		)
@@ -214,11 +214,11 @@ var _ = Describe("Switchboard", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dataWhileHealthy).Should(ContainSubstring("data while healthy"))
 
-			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/set503", dummyHealthCheckPort))
+			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/set503", dummyHealthcheckPort))
 			Expect(httpErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/", dummyHealthCheckPort))
+			resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/", dummyHealthcheckPort))
 			Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
 			Expect(httpErr).NotTo(HaveOccurred())
 
@@ -243,7 +243,7 @@ var _ = Describe("Switchboard", func() {
 			data, err := sendData(conn, "data before hang")
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(data).Should(ContainSubstring("data before hang"))
-			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthCheckPort))
+			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
 
 			Expect(httpErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -258,7 +258,7 @@ var _ = Describe("Switchboard", func() {
 			defer close(done)
 			defer GinkgoRecover()
 
-			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthCheckPort))
+			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
 			Expect(httpErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 

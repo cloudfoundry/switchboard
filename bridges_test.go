@@ -104,6 +104,10 @@ var _ = Describe("Bridges", func() {
 			}
 		})
 
+		AfterEach(func() {
+			switchboard.BridgeProvider = switchboard.NewConnectionBridge
+		})
+
 		It("closes all bridges", func() {
 			bridges.RemoveAndCloseAll()
 

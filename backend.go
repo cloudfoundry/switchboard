@@ -38,14 +38,13 @@ func (b backend) HealthcheckUrl() string {
 }
 
 func (b backend) Bridge(clientConn net.Conn) error {
-	backendConn, err := b.dial()
+	backendConn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", b.ipAddress, b.port))
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error connection to backend: %v", err))
 	}
 
-	bridge := b.bridges.Create(clientConn, backendConn)
-
 	go func() {
+		bridge := b.bridges.Create(clientConn, backendConn)
 		bridge.Connect()
 		b.bridges.Remove(bridge)
 	}()
@@ -55,13 +54,4 @@ func (b backend) Bridge(clientConn net.Conn) error {
 
 func (b backend) SeverConnections() {
 	b.bridges.RemoveAndCloseAll()
-}
-
-func (b backend) dial() (net.Conn, error) {
-	addr := fmt.Sprintf("%s:%d", b.ipAddress, b.port)
-	backendConn, err := net.Dial("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-	return backendConn, nil
 }

@@ -26,6 +26,56 @@ var _ = Describe("Bridges", func() {
 		bridges.Add(bridge3)
 	})
 
+	Describe("Concurrent operations", func() {
+		It("do not result in a race", func() {
+			readySetGo := make(chan interface{})
+
+			doneChans := []chan interface{}{
+				make(chan interface{}),
+				make(chan interface{}),
+				make(chan interface{}),
+				make(chan interface{}),
+				make(chan interface{}),
+			}
+
+			go func() {
+				<-readySetGo
+				bridges.Add(&fakes.FakeBridge{})
+				close(doneChans[0])
+			}()
+
+			go func() {
+				<-readySetGo
+				bridges.Contains(bridge1)
+				close(doneChans[1])
+			}()
+
+			go func() {
+				<-readySetGo
+				bridges.Remove(bridge2)
+				close(doneChans[2])
+			}()
+
+			go func() {
+				<-readySetGo
+				bridges.Size()
+				close(doneChans[3])
+			}()
+
+			go func() {
+				<-readySetGo
+				bridges.RemoveAndCloseAll()
+				close(doneChans[4])
+			}()
+
+			close(readySetGo)
+
+			for _, done := range doneChans {
+				<-done
+			}
+		})
+	})
+
 	Describe("Remove", func() {
 		It("removes only the given bridge", func() {
 			err := bridges.Remove(bridge2)

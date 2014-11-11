@@ -1,6 +1,9 @@
 package switchboard
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
 
 type Bridges interface {
 	Add(bridge Bridge)
@@ -10,46 +13,66 @@ type Bridges interface {
 	Contains(bridge Bridge) bool
 }
 
-type bridges struct {
+type concurrentBridges struct {
+	mutex   sync.Mutex
 	bridges []Bridge
 }
 
 func NewBridges() Bridges {
-	return &bridges{}
+	return &concurrentBridges{}
 }
 
-func (b *bridges) Add(bridge Bridge) {
+func (b *concurrentBridges) Add(bridge Bridge) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
 	b.bridges = append(b.bridges, bridge)
 }
 
-func (b *bridges) Remove(bridge Bridge) error {
-	if !b.Contains(bridge) {
+func (b *concurrentBridges) Remove(bridge Bridge) error {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	if !b.unsafeContains(bridge) {
 		return errors.New("Bridge not found")
 	}
 
-	index := b.indexOf(bridge)
+	index := b.unsafeIndexOf(bridge)
 	copy(b.bridges[index:], b.bridges[index+1:])
 	b.bridges = b.bridges[:len(b.bridges)-1]
 
 	return nil
 }
 
-func (b *bridges) RemoveAndCloseAll() {
+func (b *concurrentBridges) RemoveAndCloseAll() {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
 	for _, bridge := range b.bridges {
 		bridge.Close()
 	}
 	b.bridges = []Bridge{}
 }
 
-func (b *bridges) Size() int {
+func (b *concurrentBridges) Size() int {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
 	return len(b.bridges)
 }
 
-func (b *bridges) Contains(bridge Bridge) bool {
-	return b.indexOf(bridge) != -1
+func (b *concurrentBridges) Contains(bridge Bridge) bool {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	return b.unsafeContains(bridge)
 }
 
-func (b *bridges) indexOf(bridge Bridge) int {
+func (b *concurrentBridges) unsafeContains(bridge Bridge) bool {
+	return b.unsafeIndexOf(bridge) != -1
+}
+
+func (b *concurrentBridges) unsafeIndexOf(bridge Bridge) int {
 	index := -1
 	for i, aBridge := range b.bridges {
 		if aBridge == bridge {

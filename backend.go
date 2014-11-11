@@ -11,7 +11,6 @@ import (
 type Backend interface {
 	HealthcheckUrl() string
 	Bridge(clientConn net.Conn) error
-	Dial() (net.Conn, error)
 	SeverConnections()
 }
 
@@ -39,7 +38,7 @@ func (b backend) HealthcheckUrl() string {
 }
 
 func (b backend) Bridge(clientConn net.Conn) error {
-	backendConn, err := b.Dial()
+	backendConn, err := b.dial()
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error connection to backend: %v", err))
 	}
@@ -55,15 +54,15 @@ func (b backend) Bridge(clientConn net.Conn) error {
 	return nil
 }
 
-func (b backend) Dial() (net.Conn, error) {
+func (b backend) SeverConnections() {
+	b.bridges.RemoveAndCloseAll()
+}
+
+func (b backend) dial() (net.Conn, error) {
 	addr := fmt.Sprintf("%s:%d", b.ipAddress, b.port)
 	backendConn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 	return backendConn, nil
-}
-
-func (b backend) SeverConnections() {
-	b.bridges.RemoveAndCloseAll()
 }

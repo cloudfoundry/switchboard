@@ -27,7 +27,7 @@ func NewConnectionBridge(client, backend io.ReadWriteCloser, logger lager.Logger
 	}
 }
 
-func (b *ConnectionBridge) Connect() {
+func (b ConnectionBridge) Connect() {
 	defer b.Client.Close()
 	defer b.Backend.Close()
 
@@ -36,6 +36,10 @@ func (b *ConnectionBridge) Connect() {
 	case <-b.safeCopy(b.Backend, b.Client):
 	case <-b.done:
 	}
+}
+
+func (b ConnectionBridge) Close() {
+	close(b.done)
 }
 
 func (b ConnectionBridge) safeCopy(from, to io.ReadWriteCloser) chan struct{} {
@@ -50,8 +54,4 @@ func (b ConnectionBridge) safeCopy(from, to io.ReadWriteCloser) chan struct{} {
 		close(copyDone)
 	}()
 	return copyDone
-}
-
-func (b *ConnectionBridge) Close() {
-	close(b.done)
 }

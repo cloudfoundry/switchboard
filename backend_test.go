@@ -73,9 +73,9 @@ var _ = Describe("Backend", func() {
 		It("closes all bridges", func() {
 			backend.RemoveAndCloseAllBridges()
 
-			Expect(bridge1.WasClosed).To(BeTrue())
-			Expect(bridge2.WasClosed).To(BeTrue())
-			Expect(bridge3.WasClosed).To(BeTrue())
+			Expect(bridge1.CloseCallCount()).To(Equal(1))
+			Expect(bridge2.CloseCallCount()).To(Equal(1))
+			Expect(bridge3.CloseCallCount()).To(Equal(1))
 		})
 
 		It("removes all bridges", func() {

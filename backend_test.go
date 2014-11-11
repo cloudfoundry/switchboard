@@ -4,31 +4,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/fakes"
 	"github.com/pivotal-golang/lager"
 )
-
-type FakeConnection struct{}
-
-func (fc *FakeConnection) Read(buf []byte) (n int, err error) {
-	return 0, nil
-}
-
-func (fc *FakeConnection) Write(buf []byte) (n int, err error) {
-	return 0, nil
-}
-
-func (fc *FakeConnection) Close() (err error) {
-	return nil
-}
-
-type FakeBridge struct {
-	wasClosed bool
-}
-
-func (fb *FakeBridge) Connect() {}
-func (fb *FakeBridge) Close() {
-	fb.wasClosed = true
-}
 
 var _ = Describe("Backend", func() {
 	var backend Backend
@@ -43,9 +21,9 @@ var _ = Describe("Backend", func() {
 		var bridge3 *ConnectionBridge
 
 		BeforeEach(func() {
-			bridge1 = NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test"))
-			bridge2 = NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test"))
-			bridge3 = NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test"))
+			bridge1 = NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test"))
+			bridge2 = NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test"))
+			bridge3 = NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test"))
 			backend.AddBridge(bridge1)
 			backend.AddBridge(bridge2)
 			backend.AddBridge(bridge3)
@@ -71,7 +49,7 @@ var _ = Describe("Backend", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := backend.RemoveBridge(NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test")))
+				err := backend.RemoveBridge(NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test")))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found in backend"))
 			})
@@ -79,14 +57,14 @@ var _ = Describe("Backend", func() {
 	})
 
 	Describe("RemoveAndCloseAllBridges", func() {
-		var bridge1 *FakeBridge
-		var bridge2 *FakeBridge
-		var bridge3 *FakeBridge
+		var bridge1 *fakes.FakeBridge
+		var bridge2 *fakes.FakeBridge
+		var bridge3 *fakes.FakeBridge
 
 		BeforeEach(func() {
-			bridge1 = &FakeBridge{}
-			bridge2 = &FakeBridge{}
-			bridge3 = &FakeBridge{}
+			bridge1 = &fakes.FakeBridge{}
+			bridge2 = &fakes.FakeBridge{}
+			bridge3 = &fakes.FakeBridge{}
 			backend.AddBridge(bridge1)
 			backend.AddBridge(bridge2)
 			backend.AddBridge(bridge3)
@@ -95,9 +73,9 @@ var _ = Describe("Backend", func() {
 		It("closes all bridges", func() {
 			backend.RemoveAndCloseAllBridges()
 
-			Expect(bridge1.wasClosed).To(BeTrue())
-			Expect(bridge2.wasClosed).To(BeTrue())
-			Expect(bridge3.wasClosed).To(BeTrue())
+			Expect(bridge1.WasClosed).To(BeTrue())
+			Expect(bridge2.WasClosed).To(BeTrue())
+			Expect(bridge3.WasClosed).To(BeTrue())
 		})
 
 		It("removes all bridges", func() {
@@ -108,13 +86,13 @@ var _ = Describe("Backend", func() {
 	})
 
 	Describe("IndexOfBridge", func() {
-		var bridge1 *FakeBridge
-		var bridge2 *FakeBridge
-		var bridge3 *FakeBridge
+		var bridge1 *fakes.FakeBridge
+		var bridge2 *fakes.FakeBridge
+		var bridge3 *fakes.FakeBridge
 		BeforeEach(func() {
-			bridge1 = &FakeBridge{}
-			bridge2 = &FakeBridge{}
-			bridge3 = &FakeBridge{}
+			bridge1 = &fakes.FakeBridge{}
+			bridge2 = &fakes.FakeBridge{}
+			bridge3 = &fakes.FakeBridge{}
 			backend.AddBridge(bridge1)
 			backend.AddBridge(bridge2)
 			backend.AddBridge(bridge3)
@@ -127,7 +105,7 @@ var _ = Describe("Backend", func() {
 		})
 
 		It("returns -1 and an error when the bridge is not present", func() {
-			index, err := backend.IndexOfBridge(NewConnectionBridge(&FakeConnection{}, &FakeConnection{}, lager.NewLogger("test")))
+			index, err := backend.IndexOfBridge(NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test")))
 			Expect(index).To(Equal(-1))
 			Expect(err).To(HaveOccurred())
 		})

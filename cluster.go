@@ -21,12 +21,12 @@ type cluster struct {
 }
 
 func NewCluster(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, healthcheckTimeout time.Duration, logger lager.Logger) Cluster {
-	backendSlice := make([]Backend, len(backendIPs))
+	backends := make([]Backend, len(backendIPs))
 	for i, ip := range backendIPs {
-		backendSlice[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthcheckPorts[i])
+		backends[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthcheckPorts[i])
 	}
 	return cluster{
-		backends:            backendSlice,
+		backends:            backends,
 		currentBackendIndex: 0,
 		logger:              logger,
 		healthcheckTimeout:  healthcheckTimeout,

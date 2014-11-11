@@ -20,7 +20,7 @@ func New(listener net.Listener, cluster Cluster, logger lager.Logger) Switchboar
 	}
 }
 
-func (s *Switchboard) Run() {
+func (s Switchboard) Run() {
 	s.cluster.StartHealthchecks()
 	for {
 		clientConn, err := s.listener.Accept()

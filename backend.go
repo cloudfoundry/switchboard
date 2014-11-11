@@ -8,6 +8,8 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+var BridgesProvider = NewBridges
+
 type Backend interface {
 	HealthcheckUrl() string
 	Bridge(clientConn net.Conn) error
@@ -28,7 +30,7 @@ func NewBackend(ipAddress string, port uint, healthcheckPort uint, logger lager.
 		port:            port,
 		healthcheckPort: healthcheckPort,
 		logger:          logger,
-		bridges:         NewBridges(logger),
+		bridges:         BridgesProvider(logger),
 	}
 }
 

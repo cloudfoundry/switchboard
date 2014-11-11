@@ -5,7 +5,7 @@ import (
 	"io"
 	"sync"
 
-		"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager"
 )
 
 var BridgeProvider = NewConnectionBridge
@@ -21,13 +21,13 @@ type Bridges interface {
 type concurrentBridges struct {
 	mutex   sync.Mutex
 	bridges []Bridge
-  logger  lager.Logger
+	logger  lager.Logger
 }
 
 func NewBridges(logger lager.Logger) Bridges {
 	return &concurrentBridges{
-    logger:logger,
-  }
+		logger: logger,
+	}
 }
 
 func (b *concurrentBridges) Create(clientConn, backendConn io.ReadWriteCloser) Bridge {

@@ -30,9 +30,9 @@ func NewHttpHealthCheck(timeout time.Duration, logger lager.Logger) *HttpHealthc
 
 func (h *HttpHealthcheck) Start(backend Backend) {
 	go func() {
-		for {
+		healthCheckInterval := time.Tick(h.timeout / 5)
+		for _ = range healthCheckInterval {
 			h.check(backend.HealthcheckUrl())
-			time.Sleep(h.timeout / 5)
 		}
 	}()
 

@@ -41,7 +41,7 @@ func NewCluster(backendIPs []string, backendPorts []uint, healthcheckPorts []uin
 
 func (c cluster) StartHealthchecks() {
 	for _, backend := range c.backends {
-		healthcheck := NewHttpHealthCheck(c.healthcheckTimeout, c.logger)
+		healthcheck := NewHealthcheck(c.healthcheckTimeout, c.logger)
 		healthcheck.Start(backend)
 	}
 }

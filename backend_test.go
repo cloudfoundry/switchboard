@@ -21,9 +21,9 @@ var _ = Describe("Backend", func() {
 		var bridge3 *ConnectionBridge
 
 		BeforeEach(func() {
-			bridge1 = NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test"))
-			bridge2 = NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test"))
-			bridge3 = NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test"))
+			bridge1 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
+			bridge2 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
+			bridge3 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
 			backend.AddBridge(bridge1)
 			backend.AddBridge(bridge2)
 			backend.AddBridge(bridge3)
@@ -49,7 +49,7 @@ var _ = Describe("Backend", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := backend.RemoveBridge(NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test")))
+				err := backend.RemoveBridge(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found in backend"))
 			})
@@ -105,7 +105,7 @@ var _ = Describe("Backend", func() {
 		})
 
 		It("returns -1 and an error when the bridge is not present", func() {
-			index, err := backend.IndexOfBridge(NewConnectionBridge(&fakes.FakeConnection{}, &fakes.FakeConnection{}, lager.NewLogger("test")))
+			index, err := backend.IndexOfBridge(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
 			Expect(index).To(Equal(-1))
 			Expect(err).To(HaveOccurred())
 		})

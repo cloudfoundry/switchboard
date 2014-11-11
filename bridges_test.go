@@ -44,7 +44,7 @@ var _ = Describe("Bridges", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(index).To(Equal(1))
 
-			Expect(len(bridges.Bridges())).To(Equal(2))
+			Expect(bridges.Size()).To(Equal(2))
 		})
 
 		Context("when the bridge cannot be found", func() {
@@ -81,7 +81,7 @@ var _ = Describe("Bridges", func() {
 		It("removes all bridges", func() {
 			bridges.RemoveAndCloseAllBridges()
 
-			Expect(len(bridges.Bridges())).To(Equal(0))
+			Expect(bridges.Size()).To(Equal(0))
 		})
 	})
 

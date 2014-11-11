@@ -6,7 +6,7 @@ type Bridges interface {
 	RemoveBridge(bridge Bridge) error
 	RemoveAndCloseAllBridges()
 	AddBridge(bridge Bridge)
-	Bridges() []Bridge
+	Size() int
 	IndexOfBridge(bridge Bridge) (int, error)
 }
 
@@ -38,8 +38,8 @@ func (b *bridges) AddBridge(bridge Bridge) {
 	b.bridges = append(b.bridges, bridge)
 }
 
-func (b *bridges) Bridges() []Bridge {
-	return b.bridges
+func (b *bridges) Size() int {
+	return len(b.bridges)
 }
 
 func (b *bridges) IndexOfBridge(bridge Bridge) (int, error) {

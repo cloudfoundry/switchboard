@@ -16,22 +16,20 @@ type Backend interface {
 }
 
 type backend struct {
-	bridges         Bridges
-	Desc            string
 	ipAddress       string
 	port            uint
 	healthcheckPort uint
 	logger          lager.Logger
+	bridges         Bridges
 }
 
-func NewBackend(desc, ipAddress string, port uint, healthcheckPort uint, logger lager.Logger) Backend {
+func NewBackend(ipAddress string, port uint, healthcheckPort uint, logger lager.Logger) Backend {
 	return &backend{
-		Desc:            desc,
-		bridges:         NewBridges(),
 		ipAddress:       ipAddress,
 		port:            port,
 		healthcheckPort: healthcheckPort,
 		logger:          logger,
+		bridges:         NewBridges(),
 	}
 }
 

@@ -1,7 +1,6 @@
 package switchboard
 
 import (
-	"fmt"
 	"net"
 	"time"
 
@@ -24,7 +23,6 @@ func NewCluster(backendIPs []string, backendPorts []uint, healthcheckPorts []uin
 	backends := make([]Backend, len(backendIPs))
 	for i, ip := range backendIPs {
 		backends[i] = NewBackend(
-			fmt.Sprintf("Backend-%d", i),
 			ip,
 			backendPorts[i],
 			healthcheckPorts[i],

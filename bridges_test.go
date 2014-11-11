@@ -33,16 +33,9 @@ var _ = Describe("Bridges", func() {
 			err := bridges.Remove(bridge2)
 			Expect(err).NotTo(HaveOccurred())
 
-			index, err := bridges.Index(bridge2)
-			Expect(err).To(HaveOccurred())
-
-			index, err = bridges.Index(bridge1)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(index).To(Equal(0))
-
-			index, err = bridges.Index(bridge3)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(index).To(Equal(1))
+			Expect(bridges.Contains(bridge1)).To(BeTrue())
+			Expect(bridges.Contains(bridge2)).To(BeFalse())
+			Expect(bridges.Contains(bridge3)).To(BeTrue())
 
 			Expect(bridges.Size()).To(Equal(2))
 		})
@@ -82,32 +75,6 @@ var _ = Describe("Bridges", func() {
 			bridges.RemoveAndCloseAll()
 
 			Expect(bridges.Size()).To(Equal(0))
-		})
-	})
-
-	Describe("Index", func() {
-		var bridge1 *fakes.FakeBridge
-		var bridge2 *fakes.FakeBridge
-		var bridge3 *fakes.FakeBridge
-		BeforeEach(func() {
-			bridge1 = &fakes.FakeBridge{}
-			bridge2 = &fakes.FakeBridge{}
-			bridge3 = &fakes.FakeBridge{}
-			bridges.Add(bridge1)
-			bridges.Add(bridge2)
-			bridges.Add(bridge3)
-		})
-
-		It("returns the index of the requested bridge", func() {
-			index, err := bridges.Index(bridge2)
-			Expect(index).To(Equal(1))
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("returns -1 and an error when the bridge is not present", func() {
-			index, err := bridges.Index(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
-			Expect(index).To(Equal(-1))
-			Expect(err).To(HaveOccurred())
 		})
 	})
 })

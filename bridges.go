@@ -7,7 +7,7 @@ type Bridges interface {
 	Remove(bridge Bridge) error
 	RemoveAndCloseAll()
 	Size() int
-	Index(bridge Bridge) (int, error)
+	Contains(bridge Bridge) bool
 }
 
 type bridges struct {
@@ -23,11 +23,14 @@ func (b *bridges) Add(bridge Bridge) {
 }
 
 func (b *bridges) Remove(bridge Bridge) error {
-	index, err := b.Index(bridge)
-	if err != nil {
-		return err
+	if !b.Contains(bridge) {
+		return errors.New("Bridge not found")
 	}
-	b.removeBridgeAt(index)
+
+	index := b.indexOf(bridge)
+	copy(b.bridges[index:], b.bridges[index+1:])
+	b.bridges = b.bridges[:len(b.bridges)-1]
+
 	return nil
 }
 
@@ -42,7 +45,11 @@ func (b *bridges) Size() int {
 	return len(b.bridges)
 }
 
-func (b *bridges) Index(bridge Bridge) (int, error) {
+func (b *bridges) Contains(bridge Bridge) bool {
+	return b.indexOf(bridge) != -1
+}
+
+func (b *bridges) indexOf(bridge Bridge) int {
 	index := -1
 	for i, aBridge := range b.bridges {
 		if aBridge == bridge {
@@ -50,13 +57,5 @@ func (b *bridges) Index(bridge Bridge) (int, error) {
 			break
 		}
 	}
-	if index == -1 {
-		return -1, errors.New("Bridge not found")
-	}
-	return index, nil
-}
-
-func (b *bridges) removeBridgeAt(index int) {
-	copy(b.bridges[index:], b.bridges[index+1:])
-	b.bridges = b.bridges[:len(b.bridges)-1]
+	return index
 }

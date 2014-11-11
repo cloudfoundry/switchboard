@@ -19,7 +19,7 @@ type HttpHealthcheck struct {
 	logger      lager.Logger
 }
 
-func NewHttpHealthCheck(timeout time.Duration, logger lager.Logger) *HttpHealthcheck {
+func NewHttpHealthCheck(timeout time.Duration, logger lager.Logger) Healthcheck {
 	return &HttpHealthcheck{
 		timeout:     timeout,
 		errorChan:   make(chan interface{}),
@@ -28,7 +28,7 @@ func NewHttpHealthCheck(timeout time.Duration, logger lager.Logger) *HttpHealthc
 	}
 }
 
-func (h *HttpHealthcheck) Start(backend Backend) {
+func (h HttpHealthcheck) Start(backend Backend) {
 	go func() {
 		healthCheckInterval := time.Tick(h.timeout / 5)
 		for _ = range healthCheckInterval {
@@ -51,7 +51,7 @@ func (h *HttpHealthcheck) Start(backend Backend) {
 	}()
 }
 
-func (h *HttpHealthcheck) check(url string) {
+func (h HttpHealthcheck) check(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
 		h.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": url})

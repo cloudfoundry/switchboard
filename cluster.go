@@ -10,7 +10,7 @@ import (
 
 type Cluster interface {
 	StartHealthchecks()
-	RouteToBackend(clientConn net.Conn)
+	RouteToBackend(clientConn net.Conn) error
 }
 
 type cluster struct {
@@ -23,7 +23,13 @@ type cluster struct {
 func NewCluster(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, healthcheckTimeout time.Duration, logger lager.Logger) Cluster {
 	backends := make([]Backend, len(backendIPs))
 	for i, ip := range backendIPs {
-		backends[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthcheckPorts[i])
+		backends[i] = NewBackend(
+			fmt.Sprintf("Backend-%d", i),
+			ip,
+			backendPorts[i],
+			healthcheckPorts[i],
+			logger,
+		)
 	}
 	return cluster{
 		backends:            backends,
@@ -40,23 +46,7 @@ func (c cluster) StartHealthchecks() {
 	}
 }
 
-func (c cluster) RouteToBackend(clientConn net.Conn) {
-	backend := c.currentBackend()
-	backendConn, err := backend.Dial()
-	if err != nil {
-		c.logger.Error("Error connection to backend.", err)
-		return
-	}
-
-	bridge := NewConnectionBridge(clientConn, backendConn, c.logger)
-	backend.AddBridge(bridge)
-
-	go func() {
-		bridge.Connect()
-		backend.RemoveBridge(bridge)
-	}()
-}
-
-func (c cluster) currentBackend() Backend {
-	return c.backends[c.currentBackendIndex]
+func (c cluster) RouteToBackend(clientConn net.Conn) error {
+	backend := c.backends[c.currentBackendIndex]
+	return backend.Bridge(clientConn)
 }

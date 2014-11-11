@@ -27,7 +27,10 @@ func (bm *Switchboard) Run() {
 		if err != nil {
 			bm.logger.Error("Error accepting client connection", err)
 		} else {
-			bm.cluster.RouteToBackend(clientConn)
+			err := bm.cluster.RouteToBackend(clientConn)
+			if err != nil {
+				bm.logger.Error("Error routing to backend", err)
+			}
 		}
 	}
 }

@@ -4,10 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+
+	"github.com/pivotal-golang/lager"
 )
 
 type Backend interface {
 	HealthcheckUrl() string
+	Bridge(clientConn net.Conn) error
 	RemoveBridge(bridge Bridge) error
 	RemoveAndCloseAllBridges()
 	AddBridge(bridge Bridge)
@@ -22,21 +25,40 @@ type backend struct {
 	ipAddress       string
 	port            uint
 	healthcheckPort uint
+	logger          lager.Logger
 }
 
-func NewBackend(desc, ipAddress string, port uint, healthcheckPort uint) Backend {
+func NewBackend(desc, ipAddress string, port uint, healthcheckPort uint, logger lager.Logger) Backend {
 	return &backend{
 		Desc:            desc,
 		bridges:         []Bridge{},
 		ipAddress:       ipAddress,
 		port:            port,
 		healthcheckPort: healthcheckPort,
+		logger:          logger,
 	}
 }
 
 func (b *backend) HealthcheckUrl() string {
 	endpoint := fmt.Sprintf("http://%s:%d", b.ipAddress, b.healthcheckPort)
 	return endpoint
+}
+
+func (b *backend) Bridge(clientConn net.Conn) error {
+	backendConn, err := b.Dial()
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error connection to backend: %v", err))
+	}
+
+	bridge := NewConnectionBridge(clientConn, backendConn, b.logger)
+	b.AddBridge(bridge)
+
+	go func() {
+		bridge.Connect()
+		b.RemoveBridge(bridge)
+	}()
+
+	return nil
 }
 
 func (b *backend) RemoveBridge(bridge Bridge) error {

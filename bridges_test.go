@@ -10,25 +10,23 @@ import (
 
 var _ = Describe("Bridges", func() {
 	var bridges Bridges
+	var bridge1 *fakes.FakeBridge
+	var bridge2 *fakes.FakeBridge
+	var bridge3 *fakes.FakeBridge
 
 	BeforeEach(func() {
 		bridges = NewBridges()
+
+		bridge1 = &fakes.FakeBridge{}
+		bridge2 = &fakes.FakeBridge{}
+		bridge3 = &fakes.FakeBridge{}
+
+		bridges.Add(bridge1)
+		bridges.Add(bridge2)
+		bridges.Add(bridge3)
 	})
 
 	Describe("Remove", func() {
-		var bridge1 *ConnectionBridge
-		var bridge2 *ConnectionBridge
-		var bridge3 *ConnectionBridge
-
-		BeforeEach(func() {
-			bridge1 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
-			bridge2 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
-			bridge3 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
-			bridges.Add(bridge1)
-			bridges.Add(bridge2)
-			bridges.Add(bridge3)
-		})
-
 		It("removes only the given bridge", func() {
 			err := bridges.Remove(bridge2)
 			Expect(err).NotTo(HaveOccurred())
@@ -50,19 +48,6 @@ var _ = Describe("Bridges", func() {
 	})
 
 	Describe("RemoveAndCloseAll", func() {
-		var bridge1 *fakes.FakeBridge
-		var bridge2 *fakes.FakeBridge
-		var bridge3 *fakes.FakeBridge
-
-		BeforeEach(func() {
-			bridge1 = &fakes.FakeBridge{}
-			bridge2 = &fakes.FakeBridge{}
-			bridge3 = &fakes.FakeBridge{}
-			bridges.Add(bridge1)
-			bridges.Add(bridge2)
-			bridges.Add(bridge3)
-		})
-
 		It("closes all bridges", func() {
 			bridges.RemoveAndCloseAll()
 

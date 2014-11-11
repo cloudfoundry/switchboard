@@ -2,7 +2,6 @@ package switchboard
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -14,18 +13,14 @@ type Healthcheck interface {
 }
 
 type HttpHealthcheck struct {
-	ipAddress   string
-	port        uint
 	timeout     time.Duration
 	healthyChan chan bool
 	errorChan   chan interface{}
 	logger      lager.Logger
 }
 
-func NewHttpHealthCheck(ipAddress string, port uint, timeout time.Duration, logger lager.Logger) *HttpHealthcheck {
+func NewHttpHealthCheck(timeout time.Duration, logger lager.Logger) *HttpHealthcheck {
 	return &HttpHealthcheck{
-		ipAddress:   ipAddress,
-		port:        port,
 		timeout:     timeout,
 		errorChan:   make(chan interface{}),
 		healthyChan: make(chan bool),
@@ -33,15 +28,10 @@ func NewHttpHealthCheck(ipAddress string, port uint, timeout time.Duration, logg
 	}
 }
 
-func (h HttpHealthcheck) getEndpoint() string {
-	endpoint := fmt.Sprintf("http://%s:%d", h.ipAddress, h.port)
-	return endpoint
-}
-
 func (h *HttpHealthcheck) Start(backend Backend) {
 	go func() {
 		for {
-			h.check()
+			h.check(backend.HealthcheckUrl())
 			time.Sleep(h.timeout / 5)
 		}
 	}()
@@ -61,15 +51,15 @@ func (h *HttpHealthcheck) Start(backend Backend) {
 	}()
 }
 
-func (h *HttpHealthcheck) check() {
-	resp, err := http.Get(h.getEndpoint())
+func (h *HttpHealthcheck) check(url string) {
+	resp, err := http.Get(url)
 	if err != nil {
-		h.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": h.getEndpoint()})
+		h.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": url})
 		h.errorChan <- err
 	} else {
 		resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
-			h.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": h.getEndpoint()})
+			h.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
 			h.healthyChan <- true
 		} else {
 			h.logger.Error("Non-200 exit code from healthcheck", errors.New("Non-200 exit code from healthcheck"))

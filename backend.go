@@ -7,8 +7,8 @@ import (
 )
 
 type Backend interface {
+	HealthcheckUrl() string
 	RemoveBridge(bridge Bridge) error
-	StartHealthcheck()
 	RemoveAndCloseAllBridges()
 	AddBridge(bridge Bridge)
 	Dial() (net.Conn, error)
@@ -17,21 +17,26 @@ type Backend interface {
 }
 
 type backend struct {
-	bridges   []Bridge
-	Desc      string
-	ipAddress string
-	port      uint
-	hc        Healthcheck
+	bridges         []Bridge
+	Desc            string
+	ipAddress       string
+	port            uint
+	healthcheckPort uint
 }
 
-func NewBackend(desc, ipAddress string, port uint, hc Healthcheck) Backend {
+func NewBackend(desc, ipAddress string, port uint, healthcheckPort uint) Backend {
 	return &backend{
-		Desc:      desc,
-		bridges:   []Bridge{},
-		ipAddress: ipAddress,
-		port:      port,
-		hc:        hc,
+		Desc:            desc,
+		bridges:         []Bridge{},
+		ipAddress:       ipAddress,
+		port:            port,
+		healthcheckPort: healthcheckPort,
 	}
+}
+
+func (b *backend) HealthcheckUrl() string {
+	endpoint := fmt.Sprintf("http://%s:%d", b.ipAddress, b.healthcheckPort)
+	return endpoint
 }
 
 func (b *backend) RemoveBridge(bridge Bridge) error {
@@ -41,10 +46,6 @@ func (b *backend) RemoveBridge(bridge Bridge) error {
 	}
 	b.removeBridgeAt(index)
 	return nil
-}
-
-func (b *backend) StartHealthcheck() {
-	b.hc.Start(b)
 }
 
 func (b *backend) RemoveAndCloseAllBridges() {

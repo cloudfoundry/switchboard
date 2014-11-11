@@ -17,36 +17,26 @@ type cluster struct {
 	backends            []Backend
 	currentBackendIndex int
 	logger              lager.Logger
+	healthcheckTimeout  time.Duration
 }
 
 func NewCluster(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, healthcheckTimeout time.Duration, logger lager.Logger) Cluster {
-	healthchecks := newHealthchecks(backendIPs, healthcheckPorts, healthcheckTimeout, logger)
 	backendSlice := make([]Backend, len(backendIPs))
 	for i, ip := range backendIPs {
-		backendSlice[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthchecks[i])
+		backendSlice[i] = NewBackend(fmt.Sprintf("Backend-%d", i), ip, backendPorts[i], healthcheckPorts[i])
 	}
 	return cluster{
 		backends:            backendSlice,
 		currentBackendIndex: 0,
 		logger:              logger,
+		healthcheckTimeout:  healthcheckTimeout,
 	}
-}
-
-func newHealthchecks(backendIPs []string, healthcheckPorts []uint, timeout time.Duration, logger lager.Logger) []Healthcheck {
-	healthchecks := make([]Healthcheck, len(backendIPs))
-	for i, ip := range backendIPs {
-		healthchecks[i] = NewHttpHealthCheck(
-			ip,
-			healthcheckPorts[i],
-			timeout,
-			logger)
-	}
-	return healthchecks
 }
 
 func (c cluster) StartHealthchecks() {
 	for _, backend := range c.backends {
-		backend.StartHealthcheck()
+		healthcheck := NewHttpHealthCheck(c.healthcheckTimeout, c.logger)
+		healthcheck.Start(backend)
 	}
 }
 

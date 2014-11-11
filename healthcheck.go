@@ -43,9 +43,9 @@ func (h healthcheck) Start(backend Backend) {
 			case <-h.healthyChan:
 				timeout = time.After(h.timeout)
 			case <-h.errorChan:
-				backend.RemoveAndCloseAllBridges()
+				backend.SeverConnections()
 			case <-timeout:
-				backend.RemoveAndCloseAllBridges()
+				backend.SeverConnections()
 			}
 		}
 	}()

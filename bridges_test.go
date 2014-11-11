@@ -8,11 +8,11 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-var _ = Describe("Backend", func() {
-	var backend Backend
+var _ = Describe("Bridges", func() {
+	var bridges Bridges
 
 	BeforeEach(func() {
-		backend = NewBackend("node 0", "10.244.1.2", 3306, 9200, nil)
+		bridges = NewBridges()
 	})
 
 	Describe("RemoveBridge", func() {
@@ -24,34 +24,34 @@ var _ = Describe("Backend", func() {
 			bridge1 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
 			bridge2 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
 			bridge3 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
-			backend.AddBridge(bridge1)
-			backend.AddBridge(bridge2)
-			backend.AddBridge(bridge3)
+			bridges.AddBridge(bridge1)
+			bridges.AddBridge(bridge2)
+			bridges.AddBridge(bridge3)
 		})
 
 		It("removes only the given bridge", func() {
-			err := backend.RemoveBridge(bridge2)
+			err := bridges.RemoveBridge(bridge2)
 			Expect(err).NotTo(HaveOccurred())
 
-			index, err := backend.IndexOfBridge(bridge2)
+			index, err := bridges.IndexOfBridge(bridge2)
 			Expect(err).To(HaveOccurred())
 
-			index, err = backend.IndexOfBridge(bridge1)
+			index, err = bridges.IndexOfBridge(bridge1)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(index).To(Equal(0))
 
-			index, err = backend.IndexOfBridge(bridge3)
+			index, err = bridges.IndexOfBridge(bridge3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(index).To(Equal(1))
 
-			Expect(len(backend.Bridges())).To(Equal(2))
+			Expect(len(bridges.Bridges())).To(Equal(2))
 		})
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := backend.RemoveBridge(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
+				err := bridges.RemoveBridge(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError("Bridge not found in backend"))
+				Expect(err).To(MatchError("Bridge not found"))
 			})
 		})
 	})
@@ -65,13 +65,13 @@ var _ = Describe("Backend", func() {
 			bridge1 = &fakes.FakeBridge{}
 			bridge2 = &fakes.FakeBridge{}
 			bridge3 = &fakes.FakeBridge{}
-			backend.AddBridge(bridge1)
-			backend.AddBridge(bridge2)
-			backend.AddBridge(bridge3)
+			bridges.AddBridge(bridge1)
+			bridges.AddBridge(bridge2)
+			bridges.AddBridge(bridge3)
 		})
 
 		It("closes all bridges", func() {
-			backend.RemoveAndCloseAllBridges()
+			bridges.RemoveAndCloseAllBridges()
 
 			Expect(bridge1.CloseCallCount()).To(Equal(1))
 			Expect(bridge2.CloseCallCount()).To(Equal(1))
@@ -79,9 +79,9 @@ var _ = Describe("Backend", func() {
 		})
 
 		It("removes all bridges", func() {
-			backend.RemoveAndCloseAllBridges()
+			bridges.RemoveAndCloseAllBridges()
 
-			Expect(len(backend.Bridges())).To(Equal(0))
+			Expect(len(bridges.Bridges())).To(Equal(0))
 		})
 	})
 
@@ -93,19 +93,19 @@ var _ = Describe("Backend", func() {
 			bridge1 = &fakes.FakeBridge{}
 			bridge2 = &fakes.FakeBridge{}
 			bridge3 = &fakes.FakeBridge{}
-			backend.AddBridge(bridge1)
-			backend.AddBridge(bridge2)
-			backend.AddBridge(bridge3)
+			bridges.AddBridge(bridge1)
+			bridges.AddBridge(bridge2)
+			bridges.AddBridge(bridge3)
 		})
 
 		It("returns the index of the requested bridge", func() {
-			index, err := backend.IndexOfBridge(bridge2)
+			index, err := bridges.IndexOfBridge(bridge2)
 			Expect(index).To(Equal(1))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns -1 and an error when the bridge is not present", func() {
-			index, err := backend.IndexOfBridge(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
+			index, err := bridges.IndexOfBridge(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
 			Expect(index).To(Equal(-1))
 			Expect(err).To(HaveOccurred())
 		})

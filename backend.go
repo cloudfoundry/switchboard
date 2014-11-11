@@ -11,16 +11,12 @@ import (
 type Backend interface {
 	HealthcheckUrl() string
 	Bridge(clientConn net.Conn) error
-	RemoveBridge(bridge Bridge) error
-	RemoveAndCloseAllBridges()
-	AddBridge(bridge Bridge)
 	Dial() (net.Conn, error)
-	Bridges() []Bridge
-	IndexOfBridge(bridge Bridge) (int, error)
+	SeverConnections()
 }
 
 type backend struct {
-	bridges         []Bridge
+	bridges         Bridges
 	Desc            string
 	ipAddress       string
 	port            uint
@@ -31,7 +27,7 @@ type backend struct {
 func NewBackend(desc, ipAddress string, port uint, healthcheckPort uint, logger lager.Logger) Backend {
 	return &backend{
 		Desc:            desc,
-		bridges:         []Bridge{},
+		bridges:         NewBridges(),
 		ipAddress:       ipAddress,
 		port:            port,
 		healthcheckPort: healthcheckPort,
@@ -51,34 +47,14 @@ func (b *backend) Bridge(clientConn net.Conn) error {
 	}
 
 	bridge := NewConnectionBridge(clientConn, backendConn, b.logger)
-	b.AddBridge(bridge)
+	b.bridges.AddBridge(bridge)
 
 	go func() {
 		bridge.Connect()
-		b.RemoveBridge(bridge)
+		b.bridges.RemoveBridge(bridge)
 	}()
 
 	return nil
-}
-
-func (b *backend) RemoveBridge(bridge Bridge) error {
-	index, err := b.IndexOfBridge(bridge)
-	if err != nil {
-		return err
-	}
-	b.removeBridgeAt(index)
-	return nil
-}
-
-func (b *backend) RemoveAndCloseAllBridges() {
-	for _, bridge := range b.bridges {
-		bridge.Close()
-	}
-	b.bridges = []Bridge{}
-}
-
-func (b *backend) AddBridge(bridge Bridge) {
-	b.bridges = append(b.bridges, bridge)
 }
 
 func (b *backend) Dial() (net.Conn, error) {
@@ -90,25 +66,6 @@ func (b *backend) Dial() (net.Conn, error) {
 	return backendConn, nil
 }
 
-func (b *backend) Bridges() []Bridge {
-	return b.bridges
-}
-
-func (b *backend) IndexOfBridge(bridge Bridge) (int, error) {
-	index := -1
-	for i, aBridge := range b.bridges {
-		if aBridge == bridge {
-			index = i
-			break
-		}
-	}
-	if index == -1 {
-		return -1, errors.New("Bridge not found in backend")
-	}
-	return index, nil
-}
-
-func (b *backend) removeBridgeAt(index int) {
-	copy(b.bridges[index:], b.bridges[index+1:])
-	b.bridges = b.bridges[:len(b.bridges)-1]
+func (b *backend) SeverConnections() {
+	b.bridges.RemoveAndCloseAllBridges()
 }

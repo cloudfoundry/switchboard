@@ -2,11 +2,16 @@ package switchboard
 
 import (
 	"errors"
+	"io"
 	"sync"
+
+		"github.com/pivotal-golang/lager"
 )
 
+var BridgeProvider = NewConnectionBridge
+
 type Bridges interface {
-	Add(bridge Bridge)
+	Create(clientConn, backendConn io.ReadWriteCloser) Bridge
 	Remove(bridge Bridge) error
 	RemoveAndCloseAll()
 	Size() int
@@ -16,17 +21,22 @@ type Bridges interface {
 type concurrentBridges struct {
 	mutex   sync.Mutex
 	bridges []Bridge
+  logger  lager.Logger
 }
 
-func NewBridges() Bridges {
-	return &concurrentBridges{}
+func NewBridges(logger lager.Logger) Bridges {
+	return &concurrentBridges{
+    logger:logger,
+  }
 }
 
-func (b *concurrentBridges) Add(bridge Bridge) {
+func (b *concurrentBridges) Create(clientConn, backendConn io.ReadWriteCloser) Bridge {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
+	bridge := BridgeProvider(clientConn, backendConn, b.logger)
 	b.bridges = append(b.bridges, bridge)
+	return bridge
 }
 
 func (b *concurrentBridges) Remove(bridge Bridge) error {

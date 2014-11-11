@@ -28,7 +28,7 @@ func NewBackend(ipAddress string, port uint, healthcheckPort uint, logger lager.
 		port:            port,
 		healthcheckPort: healthcheckPort,
 		logger:          logger,
-		bridges:         NewBridges(),
+		bridges:         NewBridges(logger),
 	}
 }
 
@@ -43,8 +43,7 @@ func (b backend) Bridge(clientConn net.Conn) error {
 		return errors.New(fmt.Sprintf("Error connection to backend: %v", err))
 	}
 
-	bridge := NewConnectionBridge(clientConn, backendConn, b.logger)
-	b.bridges.Add(bridge)
+	bridge := b.bridges.Create(clientConn, backendConn)
 
 	go func() {
 		bridge.Connect()

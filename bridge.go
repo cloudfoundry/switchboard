@@ -18,7 +18,7 @@ type ConnectionBridge struct {
 	logger  lager.Logger
 }
 
-func NewConnectionBridge(client, backend io.ReadWriteCloser, logger lager.Logger) *ConnectionBridge {
+func NewConnectionBridge(client, backend io.ReadWriteCloser, logger lager.Logger) Bridge {
 	return &ConnectionBridge{
 		done:    make(chan struct{}),
 		Client:  client,

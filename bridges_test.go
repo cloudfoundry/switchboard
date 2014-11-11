@@ -1,29 +1,29 @@
 package switchboard_test
 
 import (
+	"io"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/fakes"
 	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("Bridges", func() {
-	var bridges Bridges
-	var bridge1 *fakes.FakeBridge
-	var bridge2 *fakes.FakeBridge
-	var bridge3 *fakes.FakeBridge
+	var bridges switchboard.Bridges
+	var bridge1 switchboard.Bridge
+	var bridge2 switchboard.Bridge
+	var bridge3 switchboard.Bridge
 
 	BeforeEach(func() {
-		bridges = NewBridges()
+		bridges = switchboard.NewBridges(nil)
+	})
 
-		bridge1 = &fakes.FakeBridge{}
-		bridge2 = &fakes.FakeBridge{}
-		bridge3 = &fakes.FakeBridge{}
-
-		bridges.Add(bridge1)
-		bridges.Add(bridge2)
-		bridges.Add(bridge3)
+	JustBeforeEach(func() {
+		bridge1 = bridges.Create(nil, nil)
+		bridge2 = bridges.Create(nil, nil)
+		bridge3 = bridges.Create(nil, nil)
 	})
 
 	Describe("Concurrent operations", func() {
@@ -40,7 +40,7 @@ var _ = Describe("Bridges", func() {
 
 			go func() {
 				<-readySetGo
-				bridges.Add(&fakes.FakeBridge{})
+				bridges.Create(nil, nil)
 				close(doneChans[0])
 			}()
 
@@ -90,7 +90,7 @@ var _ = Describe("Bridges", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := bridges.Remove(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
+				err := bridges.Remove(switchboard.NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found"))
 			})
@@ -98,12 +98,18 @@ var _ = Describe("Bridges", func() {
 	})
 
 	Describe("RemoveAndCloseAll", func() {
+		BeforeEach(func() {
+			switchboard.BridgeProvider = func(_, _ io.ReadWriteCloser, _ lager.Logger) switchboard.Bridge {
+				return &fakes.FakeBridge{}
+			}
+		})
+
 		It("closes all bridges", func() {
 			bridges.RemoveAndCloseAll()
 
-			Expect(bridge1.CloseCallCount()).To(Equal(1))
-			Expect(bridge2.CloseCallCount()).To(Equal(1))
-			Expect(bridge3.CloseCallCount()).To(Equal(1))
+			Expect(bridge1.(*fakes.FakeBridge).CloseCallCount()).To(Equal(1))
+			Expect(bridge2.(*fakes.FakeBridge).CloseCallCount()).To(Equal(1))
+			Expect(bridge3.(*fakes.FakeBridge).CloseCallCount()).To(Equal(1))
 		})
 
 		It("removes all bridges", func() {

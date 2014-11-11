@@ -15,7 +15,7 @@ var _ = Describe("Bridges", func() {
 		bridges = NewBridges()
 	})
 
-	Describe("RemoveBridge", func() {
+	Describe("Remove", func() {
 		var bridge1 *ConnectionBridge
 		var bridge2 *ConnectionBridge
 		var bridge3 *ConnectionBridge
@@ -24,23 +24,23 @@ var _ = Describe("Bridges", func() {
 			bridge1 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
 			bridge2 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
 			bridge3 = NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test"))
-			bridges.AddBridge(bridge1)
-			bridges.AddBridge(bridge2)
-			bridges.AddBridge(bridge3)
+			bridges.Add(bridge1)
+			bridges.Add(bridge2)
+			bridges.Add(bridge3)
 		})
 
 		It("removes only the given bridge", func() {
-			err := bridges.RemoveBridge(bridge2)
+			err := bridges.Remove(bridge2)
 			Expect(err).NotTo(HaveOccurred())
 
-			index, err := bridges.IndexOfBridge(bridge2)
+			index, err := bridges.Index(bridge2)
 			Expect(err).To(HaveOccurred())
 
-			index, err = bridges.IndexOfBridge(bridge1)
+			index, err = bridges.Index(bridge1)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(index).To(Equal(0))
 
-			index, err = bridges.IndexOfBridge(bridge3)
+			index, err = bridges.Index(bridge3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(index).To(Equal(1))
 
@@ -49,14 +49,14 @@ var _ = Describe("Bridges", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := bridges.RemoveBridge(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
+				err := bridges.Remove(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found"))
 			})
 		})
 	})
 
-	Describe("RemoveAndCloseAllBridges", func() {
+	Describe("RemoveAndCloseAll", func() {
 		var bridge1 *fakes.FakeBridge
 		var bridge2 *fakes.FakeBridge
 		var bridge3 *fakes.FakeBridge
@@ -65,13 +65,13 @@ var _ = Describe("Bridges", func() {
 			bridge1 = &fakes.FakeBridge{}
 			bridge2 = &fakes.FakeBridge{}
 			bridge3 = &fakes.FakeBridge{}
-			bridges.AddBridge(bridge1)
-			bridges.AddBridge(bridge2)
-			bridges.AddBridge(bridge3)
+			bridges.Add(bridge1)
+			bridges.Add(bridge2)
+			bridges.Add(bridge3)
 		})
 
 		It("closes all bridges", func() {
-			bridges.RemoveAndCloseAllBridges()
+			bridges.RemoveAndCloseAll()
 
 			Expect(bridge1.CloseCallCount()).To(Equal(1))
 			Expect(bridge2.CloseCallCount()).To(Equal(1))
@@ -79,13 +79,13 @@ var _ = Describe("Bridges", func() {
 		})
 
 		It("removes all bridges", func() {
-			bridges.RemoveAndCloseAllBridges()
+			bridges.RemoveAndCloseAll()
 
 			Expect(bridges.Size()).To(Equal(0))
 		})
 	})
 
-	Describe("IndexOfBridge", func() {
+	Describe("Index", func() {
 		var bridge1 *fakes.FakeBridge
 		var bridge2 *fakes.FakeBridge
 		var bridge3 *fakes.FakeBridge
@@ -93,19 +93,19 @@ var _ = Describe("Bridges", func() {
 			bridge1 = &fakes.FakeBridge{}
 			bridge2 = &fakes.FakeBridge{}
 			bridge3 = &fakes.FakeBridge{}
-			bridges.AddBridge(bridge1)
-			bridges.AddBridge(bridge2)
-			bridges.AddBridge(bridge3)
+			bridges.Add(bridge1)
+			bridges.Add(bridge2)
+			bridges.Add(bridge3)
 		})
 
 		It("returns the index of the requested bridge", func() {
-			index, err := bridges.IndexOfBridge(bridge2)
+			index, err := bridges.Index(bridge2)
 			Expect(index).To(Equal(1))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns -1 and an error when the bridge is not present", func() {
-			index, err := bridges.IndexOfBridge(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
+			index, err := bridges.Index(NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
 			Expect(index).To(Equal(-1))
 			Expect(err).To(HaveOccurred())
 		})

@@ -3,11 +3,11 @@ package switchboard
 import "errors"
 
 type Bridges interface {
-	RemoveBridge(bridge Bridge) error
-	RemoveAndCloseAllBridges()
-	AddBridge(bridge Bridge)
+	Add(bridge Bridge)
+	Remove(bridge Bridge) error
+	RemoveAndCloseAll()
 	Size() int
-	IndexOfBridge(bridge Bridge) (int, error)
+	Index(bridge Bridge) (int, error)
 }
 
 type bridges struct {
@@ -18,8 +18,12 @@ func NewBridges() Bridges {
 	return &bridges{}
 }
 
-func (b *bridges) RemoveBridge(bridge Bridge) error {
-	index, err := b.IndexOfBridge(bridge)
+func (b *bridges) Add(bridge Bridge) {
+	b.bridges = append(b.bridges, bridge)
+}
+
+func (b *bridges) Remove(bridge Bridge) error {
+	index, err := b.Index(bridge)
 	if err != nil {
 		return err
 	}
@@ -27,22 +31,18 @@ func (b *bridges) RemoveBridge(bridge Bridge) error {
 	return nil
 }
 
-func (b *bridges) RemoveAndCloseAllBridges() {
+func (b *bridges) RemoveAndCloseAll() {
 	for _, bridge := range b.bridges {
 		bridge.Close()
 	}
 	b.bridges = []Bridge{}
 }
 
-func (b *bridges) AddBridge(bridge Bridge) {
-	b.bridges = append(b.bridges, bridge)
-}
-
 func (b *bridges) Size() int {
 	return len(b.bridges)
 }
 
-func (b *bridges) IndexOfBridge(bridge Bridge) (int, error) {
+func (b *bridges) Index(bridge Bridge) (int, error) {
 	index := -1
 	for i, aBridge := range b.bridges {
 		if aBridge == bridge {

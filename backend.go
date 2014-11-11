@@ -47,11 +47,11 @@ func (b *backend) Bridge(clientConn net.Conn) error {
 	}
 
 	bridge := NewConnectionBridge(clientConn, backendConn, b.logger)
-	b.bridges.AddBridge(bridge)
+	b.bridges.Add(bridge)
 
 	go func() {
 		bridge.Connect()
-		b.bridges.RemoveBridge(bridge)
+		b.bridges.Remove(bridge)
 	}()
 
 	return nil
@@ -67,5 +67,5 @@ func (b *backend) Dial() (net.Conn, error) {
 }
 
 func (b *backend) SeverConnections() {
-	b.bridges.RemoveAndCloseAllBridges()
+	b.bridges.RemoveAndCloseAll()
 }

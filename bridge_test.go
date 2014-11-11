@@ -7,21 +7,20 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/fakes"
 	"github.com/pivotal-golang/lager"
-
-	fakeio "github.com/pivotal-cf-experimental/switchboard/fakes/io"
 )
 
 var _ = Describe("Bridge", func() {
 	Describe("#Connect", func() {
 		var bridge Bridge
-		var client, backend *fakeio.FakeReadWriteCloser
+		var client, backend *fakes.FakeReadWriteCloser
 		var logger lager.Logger
 
 		BeforeEach(func() {
 			logger = lager.NewLogger("Bridge test")
-			backend = &fakeio.FakeReadWriteCloser{}
-			client = &fakeio.FakeReadWriteCloser{}
+			backend = &fakes.FakeReadWriteCloser{}
+			client = &fakes.FakeReadWriteCloser{}
 			bridge = NewConnectionBridge(client, backend, logger)
 		})
 

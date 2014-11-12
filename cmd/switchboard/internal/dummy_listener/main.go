@@ -60,7 +60,7 @@ func handleRequest(conn net.Conn) {
 		select {
 		case data := <-dataCh:
 			fmt.Println("Dummy listener writing to connection: Echo: " + string(data))
-			conn.Write([]byte("Echo: " + string(data)))
+			conn.Write([]byte(fmt.Sprintf("Echo from port %d: %s", *port, string(data))))
 		case err := <-errCh:
 			fmt.Println("Error: " + err.Error())
 			conn.Close()

@@ -13,9 +13,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-const (
-	BACKEND_IPS = "localhost"
-)
 
 func startSwitchboard(args ...string) *gexec.Session {
 	command := exec.Command(switchboardBinPath, args...)
@@ -41,49 +38,61 @@ func startHealthcheck(args ...string) *gexec.Session {
 	return session
 }
 
+func sendData(conn net.Conn, data string) (string, error) {
+	conn.Write([]byte(data))
+	buffer := make([]byte, 1024)
+	_, err := conn.Read(buffer)
+	if err != nil {
+		return "", err
+	} else {
+		return string(buffer), nil
+	}
+}
+
 var _ = Describe("Switchboard", func() {
 	var (
 		backendSession     *gexec.Session
+		backendSession2     *gexec.Session
 		healthcheckSession *gexec.Session
+		healthcheckSession2 *gexec.Session
 		proxySession       *gexec.Session
-		healthCheckTimeout time.Duration
+		healthcheckTimeout time.Duration
 	)
 
-	var sendData = func(conn net.Conn, data string) (string, error) {
-		conn.Write([]byte(data))
-		buffer := make([]byte, 1024)
-		_, err := conn.Read(buffer)
-		if err != nil {
-			return "", err
-		} else {
-			return string(buffer), nil
-		}
-	}
-
 	BeforeEach(func() {
-		healthCheckTimeout = 500 * time.Millisecond
+		healthcheckTimeout = 500 * time.Millisecond
 
 		backendSession = startBackend(
 			fmt.Sprintf("-port=%d", backendPort),
+		)
+
+		backendSession2 = startBackend(
+			fmt.Sprintf("-port=%d", backendPort2),
 		)
 
 		healthcheckSession = startHealthcheck(
 			fmt.Sprintf("-port=%d", dummyHealthcheckPort),
 		)
 
+		healthcheckSession2 = startHealthcheck(
+			fmt.Sprintf("-port=%d", dummyHealthcheckPort2),
+		)
+
 		proxySession = startSwitchboard(
+			"-backendIPs=localhost, localhost",
 			fmt.Sprintf("-port=%d", switchboardPort),
-			fmt.Sprintf("-backendIPs=%s", BACKEND_IPS),
-			fmt.Sprintf("-backendPorts=%d", backendPort),
-			fmt.Sprintf("-healthcheckPorts=%d", dummyHealthcheckPort),
-			fmt.Sprintf("-healthcheckTimeout=%s", healthCheckTimeout),
+			fmt.Sprintf("-backendPorts=%d,%d", backendPort, backendPort2),
+			fmt.Sprintf("-healthcheckPorts=%d,%d", dummyHealthcheckPort, dummyHealthcheckPort2),
+			fmt.Sprintf("-healthcheckTimeout=%s", healthcheckTimeout),
 			fmt.Sprintf("-pidfile=%s", pidfile),
 		)
 	})
 
 	AfterEach(func() {
 		proxySession.Terminate()
+		healthcheckSession2.Terminate()
 		healthcheckSession.Terminate()
+		backendSession2.Terminate()
 		backendSession.Terminate()
 	})
 
@@ -141,9 +150,9 @@ var _ = Describe("Switchboard", func() {
 			<-done2
 			<-done3
 
-			Expect(data1).Should(ContainSubstring("Echo: test1"))
-			Expect(data2).Should(ContainSubstring("Echo: test2"))
-			Expect(data3).Should(ContainSubstring("Echo: test3"))
+			Expect(data1).Should(ContainSubstring(fmt.Sprintf("Echo from port %d: test1", backendPort)))
+			Expect(data2).Should(ContainSubstring(fmt.Sprintf("Echo from port %d: test2", backendPort)))
+			Expect(data3).Should(ContainSubstring(fmt.Sprintf("Echo from port %d: test3", backendPort)))
 		})
 	})
 
@@ -251,7 +260,7 @@ var _ = Describe("Switchboard", func() {
 			Eventually(func() error {
 				_, err := sendData(conn, "data after hang")
 				return err
-			}, healthCheckTimeout*4).Should(HaveOccurred())
+			}, healthcheckTimeout*4).Should(HaveOccurred())
 		}, 5)
 
 		It("disconnects any new connections that are made", func(done Done) {
@@ -262,7 +271,7 @@ var _ = Describe("Switchboard", func() {
 			Expect(httpErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			time.Sleep(healthCheckTimeout)
+			time.Sleep(healthcheckTimeout)
 
 			var conn net.Conn
 			Eventually(func() (err error) {
@@ -273,7 +282,7 @@ var _ = Describe("Switchboard", func() {
 			Eventually(func() error {
 				_, err := sendData(conn, "data after hang")
 				return err
-			}, healthCheckTimeout*4, healthCheckTimeout/2).Should(HaveOccurred())
+			}, healthcheckTimeout*4, healthcheckTimeout/2).Should(HaveOccurred())
 		}, 5)
 	})
 })

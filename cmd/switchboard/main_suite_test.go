@@ -18,7 +18,9 @@ var dummyListenerBinPath string
 var dummyHealthcheckBinPath string
 var switchboardPort uint
 var backendPort uint
+var backendPort2 uint
 var dummyHealthcheckPort uint
+var dummyHealthcheckPort2 uint
 var pidfile string
 
 var _ = BeforeSuite(func() {
@@ -34,7 +36,9 @@ var _ = BeforeSuite(func() {
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())
 	backendPort = uint(45000 + GinkgoParallelNode())
-	dummyHealthcheckPort = uint(46000 + GinkgoParallelNode())
+	backendPort2 = uint(46000 + GinkgoParallelNode())
+	dummyHealthcheckPort = uint(45500 + GinkgoParallelNode())
+	dummyHealthcheckPort2 = uint(46500 + GinkgoParallelNode())
 	pidfile = "/tmp/switchboard.pid"
 })
 

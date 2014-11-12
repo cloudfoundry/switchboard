@@ -41,7 +41,6 @@ func (h healthcheck) Start(backend Backend) {
 			timeout := time.After(h.timeout)
 			select {
 			case <-h.healthyChan:
-				timeout = time.After(h.timeout)
 			case <-h.errorChan:
 				backend.SeverConnections()
 			case <-timeout:

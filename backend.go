@@ -9,6 +9,7 @@ import (
 )
 
 var BridgesProvider = NewBridges
+var Dialer = net.Dial
 
 type Backend interface {
 	HealthcheckUrl() string
@@ -40,7 +41,7 @@ func (b backend) HealthcheckUrl() string {
 }
 
 func (b backend) Bridge(clientConn net.Conn) error {
-	backendConn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", b.ipAddress, b.port))
+	backendConn, err := Dialer("tcp", fmt.Sprintf("%s:%d", b.ipAddress, b.port))
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error connection to backend: %v", err))
 	}

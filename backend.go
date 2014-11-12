@@ -36,8 +36,7 @@ func NewBackend(ipAddress string, port uint, healthcheckPort uint, logger lager.
 }
 
 func (b backend) HealthcheckUrl() string {
-	endpoint := fmt.Sprintf("http://%s:%d", b.ipAddress, b.healthcheckPort)
-	return endpoint
+	return fmt.Sprintf("http://%s:%d", b.ipAddress, b.healthcheckPort)
 }
 
 func (b backend) Bridge(clientConn net.Conn) error {

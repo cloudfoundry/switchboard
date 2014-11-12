@@ -66,7 +66,7 @@ func main() {
 	logger.Info(fmt.Sprintf("Backend port: %d\n", backendPorts[0]))
 	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", healthcheckPorts[0]))
 
-	backends := switchboard.NewCluster(
+	cluster := switchboard.NewCluster(
 		backendIPs,
 		backendPorts,
 		healthcheckPorts,
@@ -74,7 +74,7 @@ func main() {
 		logger,
 	)
 
-	switchboard := switchboard.New(listener, backends, logger)
+	switchboard := switchboard.New(listener, cluster, logger)
 	switchboard.Run()
 }
 

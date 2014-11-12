@@ -90,7 +90,7 @@ var _ = Describe("Bridges", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := bridges.Remove(switchboard.NewConnectionBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
+				err := bridges.Remove(switchboard.NewBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found"))
 			})
@@ -105,7 +105,7 @@ var _ = Describe("Bridges", func() {
 		})
 
 		AfterEach(func() {
-			switchboard.BridgeProvider = switchboard.NewConnectionBridge
+			switchboard.BridgeProvider = switchboard.NewBridge
 		})
 
 		It("closes all bridges", func() {

@@ -8,7 +8,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-var BridgeProvider = NewConnectionBridge
+var BridgeProvider = NewBridge
 
 type Bridges interface {
 	Create(clientConn, backendConn io.ReadWriteCloser) Bridge

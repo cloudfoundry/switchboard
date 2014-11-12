@@ -11,38 +11,38 @@ type Bridge interface {
 	Close()
 }
 
-type ConnectionBridge struct {
+type bridge struct {
 	done    chan struct{}
-	Client  io.ReadWriteCloser
-	Backend io.ReadWriteCloser
+	client  io.ReadWriteCloser
+	backend io.ReadWriteCloser
 	logger  lager.Logger
 }
 
-func NewConnectionBridge(client, backend io.ReadWriteCloser, logger lager.Logger) Bridge {
-	return &ConnectionBridge{
+func NewBridge(client, backend io.ReadWriteCloser, logger lager.Logger) Bridge {
+	return &bridge{
 		done:    make(chan struct{}),
-		Client:  client,
-		Backend: backend,
+		client:  client,
+		backend: backend,
 		logger:  logger,
 	}
 }
 
-func (b ConnectionBridge) Connect() {
-	defer b.Client.Close()
-	defer b.Backend.Close()
+func (b bridge) Connect() {
+	defer b.client.Close()
+	defer b.backend.Close()
 
 	select {
-	case <-b.safeCopy(b.Client, b.Backend):
-	case <-b.safeCopy(b.Backend, b.Client):
+	case <-b.safeCopy(b.client, b.backend):
+	case <-b.safeCopy(b.backend, b.client):
 	case <-b.done:
 	}
 }
 
-func (b ConnectionBridge) Close() {
+func (b bridge) Close() {
 	close(b.done)
 }
 
-func (b ConnectionBridge) safeCopy(from, to io.ReadWriteCloser) chan struct{} {
+func (b bridge) safeCopy(from, to io.ReadWriteCloser) chan struct{} {
 	copyDone := make(chan struct{})
 	go func() {
 		_, err := io.Copy(from, to)

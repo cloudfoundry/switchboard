@@ -21,7 +21,7 @@ var _ = Describe("Bridge", func() {
 			logger = lager.NewLogger("Bridge test")
 			backend = &fakes.FakeReadWriteCloser{}
 			client = &fakes.FakeReadWriteCloser{}
-			bridge = NewConnectionBridge(client, backend, logger)
+			bridge = NewBridge(client, backend, logger)
 		})
 
 		Context("When operating normally", func() {

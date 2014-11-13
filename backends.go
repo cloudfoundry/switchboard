@@ -40,17 +40,17 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 }
 
 func (b *backends) All() <-chan Backend {
-	b.mutex.Lock()
+	ch := make(chan Backend, len(b.all))
 
-	ch := make(chan Backend)
-	go func(backends []Backend) {
+	go func() {
+		b.mutex.Lock()
 		defer b.mutex.Unlock()
 
-		for _, backend := range backends {
+		for _, backend := range b.all {
 			ch <- backend
 		}
 		close(ch)
-	}(b.all)
+	}()
 
 	return ch
 }

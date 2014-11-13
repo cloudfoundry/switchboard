@@ -14,24 +14,34 @@ type Backends interface {
 
 type backends struct {
 	mutex  sync.Mutex
-	all    []Backend
-	active Backend
+	all    []StatefulBackend
+	active StatefulBackend
 	logger lager.Logger
+}
+
+type StatefulBackend struct {
+	backend Backend
+	healthy bool
 }
 
 func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, logger lager.Logger) Backends {
 	b := &backends{
 		logger: logger,
-		all:    make([]Backend, len(backendIPs)),
+		all:    make([]StatefulBackend, len(backendIPs)),
 	}
 
 	for i, ip := range backendIPs {
-		b.all[i] = NewBackend(
+		backend := NewBackend(
 			ip,
 			backendPorts[i],
 			healthcheckPorts[i],
 			logger,
 		)
+
+		b.all[i] = StatefulBackend{
+			backend: backend,
+			healthy: true,
+		}
 	}
 
 	b.active = b.all[0]
@@ -46,8 +56,8 @@ func (b *backends) All() <-chan Backend {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
 
-		for _, backend := range b.all {
-			ch <- backend
+		for _, sb := range b.all {
+			ch <- sb.backend
 		}
 		close(ch)
 	}()
@@ -59,7 +69,7 @@ func (b *backends) Active() Backend {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	return b.active
+	return b.active.backend
 }
 
 func (b *backends) SetActive(backend Backend) error {
@@ -72,7 +82,10 @@ func (b *backends) SetActive(backend Backend) error {
 	// 	return errors.New("Unknown backend")
 	// }
 
-	b.active = backend
+	b.active = StatefulBackend{
+		backend: backend,
+		healthy: true,
+	}
 
 	return nil
 }

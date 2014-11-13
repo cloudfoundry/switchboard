@@ -43,13 +43,13 @@ func (b *backends) All() <- chan Backend {
   b.mutex.Lock()
   defer b.mutex.Unlock()
 
-  ch := make(chan Backend);
+  ch := make(chan Backend)
   go func (backends []Backend) {
     for _, backend := range backends {
       ch <- backend
     }
     close(ch)
-  }(b.all);
+  }(b.all)
   return ch
 }
 

@@ -10,16 +10,19 @@ type Backends interface {
 	All() <-chan Backend
 	SetActive(backend Backend) error
 	Active() Backend
+	SetHealthy(backend Backend)
+	SetUnhealthy(backend Backend)
+	Healthy() <-chan Backend
 }
 
 type backends struct {
 	mutex  sync.Mutex
-	all    []StatefulBackend
-	active StatefulBackend
+	all    []*statefulBackend
+	active *statefulBackend
 	logger lager.Logger
 }
 
-type StatefulBackend struct {
+type statefulBackend struct {
 	backend Backend
 	healthy bool
 }
@@ -27,7 +30,7 @@ type StatefulBackend struct {
 func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, logger lager.Logger) Backends {
 	b := &backends{
 		logger: logger,
-		all:    make([]StatefulBackend, len(backendIPs)),
+		all:    make([]*statefulBackend, len(backendIPs)),
 	}
 
 	for i, ip := range backendIPs {
@@ -38,7 +41,7 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 			logger,
 		)
 
-		b.all[i] = StatefulBackend{
+		b.all[i] = &statefulBackend{
 			backend: backend,
 			healthy: true,
 		}
@@ -82,12 +85,52 @@ func (b *backends) SetActive(backend Backend) error {
 	// 	return errors.New("Unknown backend")
 	// }
 
-	b.active = StatefulBackend{
+	b.active = &statefulBackend{
 		backend: backend,
 		healthy: true,
 	}
 
 	return nil
+}
+
+func (b *backends) SetHealthy(backend Backend) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.setHealth(backend, true)
+}
+
+func (b *backends) SetUnhealthy(backend Backend) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.setHealth(backend, false)
+}
+
+func (b *backends) Healthy() <-chan Backend {
+	c := make(chan Backend, len(b.all))
+
+	go func() {
+		b.mutex.Lock()
+		defer b.mutex.Unlock()
+
+		for _, sb := range b.all {
+			if sb.healthy {
+				c <- sb.backend
+			}
+		}
+
+		close(c)
+	}()
+
+	return c
+}
+
+func (b *backends) setHealth(backend Backend, healthy bool) {
+	for _, sb := range b.all {
+		if sb.backend == backend {
+			sb.healthy = healthy
+			break
+		}
+	}
 }
 
 // func unsafeIndexOf(b []Backend, backend Backend) int {

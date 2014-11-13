@@ -14,6 +14,14 @@ var _ = Describe("Backends", func() {
 		healthcheck_ports []uint
 	)
 
+	var backendChanToSlice = func(c <-chan switchboard.Backend) []switchboard.Backend {
+		var result []switchboard.Backend
+		for b := range c {
+			result = append(result, b)
+		}
+		return result
+	}
+
 	BeforeEach(func() {
 		backend_ips = []string{"localhost", "localhost", "localhost"}
 		backend_ports = []uint{50000, 50001, 50002}
@@ -26,6 +34,9 @@ var _ = Describe("Backends", func() {
 			readySetGo := make(chan interface{})
 
 			doneChans := []chan interface{}{
+				make(chan interface{}),
+				make(chan interface{}),
+				make(chan interface{}),
 				make(chan interface{}),
 				make(chan interface{}),
 				make(chan interface{}),
@@ -47,6 +58,24 @@ var _ = Describe("Backends", func() {
 				<-readySetGo
 				backends.SetActive(nil)
 				close(doneChans[2])
+			}()
+
+			go func() {
+				<-readySetGo
+				backends.SetHealthy(nil)
+				close(doneChans[3])
+			}()
+
+			go func() {
+				<-readySetGo
+				backends.SetUnhealthy(nil)
+				close(doneChans[4])
+			}()
+
+			go func() {
+				<-readySetGo
+				backends.Healthy()
+				close(doneChans[5])
 			}()
 
 			close(readySetGo)
@@ -97,50 +126,47 @@ var _ = Describe("Backends", func() {
 		})
 	})
 
-	// Describe("Remove", func() {
-	//   It("removes only the given bridge", func() {
-	//     err := bridges.Remove(bridge2)
-	//     Expect(err).NotTo(HaveOccurred())
+	Describe("SetHealthy", func() {
+		var unhealthy switchboard.Backend
 
-	//     Expect(bridges.Contains(bridge1)).To(BeTrue())
-	//     Expect(bridges.Contains(bridge2)).To(BeFalse())
-	//     Expect(bridges.Contains(bridge3)).To(BeTrue())
+		BeforeEach(func() {
+			unhealthy = backendChanToSlice(backends.Healthy())[0]
+			backends.SetUnhealthy(unhealthy)
+		})
 
-	//     Expect(bridges.Size()).To(Equal(2))
-	//   })
+		It("sets the backend to be healthy", func() {
+			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(2))
+			backends.SetHealthy(unhealthy)
+			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(3))
+		})
+	})
 
-	//   Context("when the bridge cannot be found", func() {
-	//     It("returns an error", func() {
-	//       err := bridges.Remove(switchboard.NewBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, lager.NewLogger("test")))
-	//       Expect(err).To(HaveOccurred())
-	//       Expect(err).To(MatchError("Bridge not found"))
-	//     })
-	//   })
-	// })
+	Describe("SetUnhealthy", func() {
+		var healthy switchboard.Backend
 
-	// Describe("RemoveAndCloseAll", func() {
-	//   BeforeEach(func() {
-	//     switchboard.BridgeProvider = func(_, _ io.ReadWriteCloser, _ lager.Logger) switchboard.Bridge {
-	//       return &fakes.FakeBridge{}
-	//     }
-	//   })
+		BeforeEach(func() {
+			healthy = backendChanToSlice(backends.Healthy())[0]
+		})
 
-	//   AfterEach(func() {
-	//     switchboard.BridgeProvider = switchboard.NewBridge
-	//   })
+		It("sets the backend to be healthy", func() {
+			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(3))
+			backends.SetUnhealthy(healthy)
+			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(2))
+		})
+	})
 
-	//   It("closes all bridges", func() {
-	//     bridges.RemoveAndCloseAll()
+	Describe("Healthy", func() {
+		It("sets the backend to be healthy", func() {
+			healthy := backendChanToSlice(backends.Healthy())
+			numHealthy := 3
+			Expect(len(healthy)).To(Equal(numHealthy))
 
-	//     Expect(bridge1.(*fakes.FakeBridge).CloseCallCount()).To(Equal(1))
-	//     Expect(bridge2.(*fakes.FakeBridge).CloseCallCount()).To(Equal(1))
-	//     Expect(bridge3.(*fakes.FakeBridge).CloseCallCount()).To(Equal(1))
-	//   })
-
-	//   It("removes all bridges", func() {
-	//     bridges.RemoveAndCloseAll()
-
-	//     Expect(bridges.Size()).To(Equal(0))
-	//   })
-	// })
+			for _, b := range healthy {
+				backends.SetUnhealthy(b)
+				numHealthy--
+				healthy = backendChanToSlice(backends.Healthy())
+				Expect(len(healthy)).To(Equal(numHealthy))
+			}
+		})
+	})
 })

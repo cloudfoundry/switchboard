@@ -25,6 +25,7 @@ var _ = Describe("Backends", func() {
 			doneChans := []chan interface{}{
 				make(chan interface{}),
 				make(chan interface{}),
+				make(chan interface{}),
 			}
 
 			go func() {
@@ -37,6 +38,12 @@ var _ = Describe("Backends", func() {
 				<-readySetGo
 				backends.Active()
 				close(doneChans[1])
+			}()
+
+			go func() {
+				<-readySetGo
+				backends.SetActive(nil)
+				close(doneChans[2])
 			}()
 
 			close(readySetGo)

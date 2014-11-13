@@ -8,7 +8,7 @@ import (
 
 type Backends interface {
 	All() <-chan Backend
-	// SetActive(backend Backend) error
+	SetActive(backend Backend) error
 	Active() Backend
 }
 
@@ -62,19 +62,20 @@ func (b *backends) Active() Backend {
 	return b.active
 }
 
-// func (b *backends) SetActive(backend Backend) error {
-//   b.mutex.Lock()
-//   defer b.mutex.Unlock()
+func (b *backends) SetActive(backend Backend) error {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
 
-//   idx := unsafeIndexOf(b.all, backend)
-//   if idx == -1 {
-//     return errors.New("Unknown backend")
-//   }
+	// // once healthy is implemented, use that instead of all
+	// idx := unsafeIndexOf(b.all, backend)
+	// if idx == -1 {
+	// 	return errors.New("Unknown backend")
+	// }
 
-//   b.active = backend
+	b.active = backend
 
-//   return nil
-// }
+	return nil
+}
 
 // func unsafeIndexOf(b []Backend, backend Backend) int {
 //   index := -1

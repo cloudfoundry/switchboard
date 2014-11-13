@@ -13,22 +13,13 @@ type Cluster interface {
 }
 
 type cluster struct {
-	backends            []Backend
+	backends            Backends
 	currentBackendIndex int
 	logger              lager.Logger
 	healthcheckTimeout  time.Duration
 }
 
-func NewCluster(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, healthcheckTimeout time.Duration, logger lager.Logger) Cluster {
-	backends := make([]Backend, len(backendIPs))
-	for i, ip := range backendIPs {
-		backends[i] = NewBackend(
-			ip,
-			backendPorts[i],
-			healthcheckPorts[i],
-			logger,
-		)
-	}
+func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger) Cluster {
 	return cluster{
 		backends:            backends,
 		currentBackendIndex: 0,
@@ -38,13 +29,12 @@ func NewCluster(backendIPs []string, backendPorts []uint, healthcheckPorts []uin
 }
 
 func (c cluster) StartHealthchecks() {
-	for _, backend := range c.backends {
+	for backend := range c.backends.All() {
 		healthcheck := NewHealthcheck(c.healthcheckTimeout, c.logger)
 		healthcheck.Start(backend)
 	}
 }
 
 func (c cluster) RouteToBackend(clientConn net.Conn) error {
-	backend := c.backends[c.currentBackendIndex]
-	return backend.Bridge(clientConn)
+	return c.backends.Active().Bridge(clientConn)
 }

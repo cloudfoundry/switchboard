@@ -48,6 +48,9 @@ func main() {
 	}
 
 	backendIPs = strings.Split(*backendIPsFlag, ",")
+	for i, ip := range backendIPs {
+		backendIPs[i] = strings.Trim(ip, " ")
+	}
 
 	backendPorts, err = stringsToUints(strings.Split(*backendPortsFlag, ","))
 	if err != nil {
@@ -66,10 +69,15 @@ func main() {
 	logger.Info(fmt.Sprintf("Backend port: %d\n", backendPorts[0]))
 	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", healthcheckPorts[0]))
 
-	cluster := switchboard.NewCluster(
+	backends := switchboard.NewBackends(
 		backendIPs,
 		backendPorts,
 		healthcheckPorts,
+		logger,
+	)
+
+	cluster := switchboard.NewCluster(
+		backends,
 		*healthcheckTimeout,
 		logger,
 	)

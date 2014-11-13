@@ -2,19 +2,22 @@ package switchboard_test
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf-experimental/switchboard"
 )
 
 var _ = Describe("Backends", func() {
-	var backends switchboard.Backends
-	// var backend1 switchboard.Backend
-	// var backend2 switchboard.Backend
-	// var backend3 switchboard.Backend
+	var (
+		backends          switchboard.Backends
+		backend_ips       []string
+		backend_ports     []uint
+		healthcheck_ports []uint
+	)
 
 	BeforeEach(func() {
-		backend_ips := []string{"localhost", "localhost", "localhost"}
-		backend_ports := []uint{50000, 50001, 50002}
-		healthcheck_ports := []uint{60000, 60001, 60002}
+		backend_ips = []string{"localhost", "localhost", "localhost"}
+		backend_ports = []uint{50000, 50001, 50002}
+		healthcheck_ports = []uint{60000, 60001, 60002}
 		backends = switchboard.NewBackends(backend_ips, backend_ports, healthcheck_ports, nil)
 	})
 
@@ -51,6 +54,46 @@ var _ = Describe("Backends", func() {
 			for _, done := range doneChans {
 				<-done
 			}
+		})
+	})
+
+	Describe("All", func() {
+		It("returns a constant list of backends", func() {
+			i := 0
+			for backend := range backends.All() {
+				currentBackend := switchboard.NewBackend(backend_ips[i], backend_ports[i], healthcheck_ports[i], nil)
+				i++
+				Expect(currentBackend).To(Equal(backend))
+			}
+		})
+	})
+
+	Describe("Active", func() {
+		It("returns the currently active backend", func() {
+			currentActive := switchboard.NewBackend(backend_ips[0], backend_ports[0], healthcheck_ports[0], nil)
+			Expect(currentActive).To(Equal(backends.Active()))
+		})
+	})
+
+	Describe("SetActive", func() {
+		var backend switchboard.Backend
+		var active switchboard.Backend
+
+		BeforeEach(func() {
+			active = backends.Active()
+
+			for b := range backends.All() {
+				if b != active {
+					backend = b
+					break
+				}
+			}
+		})
+
+		It("sets the active backend", func() {
+			Expect(backends.SetActive(backend)).NotTo(HaveOccurred())
+			Expect(backends.Active()).To(Equal(backend))
+
 		})
 	})
 

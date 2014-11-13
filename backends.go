@@ -1,63 +1,65 @@
 package switchboard
 
 import (
-  "sync"
+	"sync"
 
-  "github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager"
 )
 
 type Backends interface {
-  All() <- chan Backend
-  // SetActive(backend Backend) error
-  Active() Backend
+	All() <-chan Backend
+	// SetActive(backend Backend) error
+	Active() Backend
 }
 
 type backends struct {
-  mutex    sync.Mutex
-  all      []Backend
-  active   Backend
-  logger   lager.Logger
+	mutex  sync.Mutex
+	all    []Backend
+	active Backend
+	logger lager.Logger
 }
 
 func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, logger lager.Logger) Backends {
-  b := &backends{
-    logger: logger,
-    all: make([]Backend, len(backendIPs)),
-  }
+	b := &backends{
+		logger: logger,
+		all:    make([]Backend, len(backendIPs)),
+	}
 
-  for i, ip := range backendIPs {
-    b.all[i] = NewBackend(
-      ip,
-      backendPorts[i],
-      healthcheckPorts[i],
-      logger,
-    )
-  }
+	for i, ip := range backendIPs {
+		b.all[i] = NewBackend(
+			ip,
+			backendPorts[i],
+			healthcheckPorts[i],
+			logger,
+		)
+	}
 
-  b.active = b.all[0]
+	b.active = b.all[0]
 
-  return b
+	return b
 }
 
-func (b *backends) All() <- chan Backend {
-  b.mutex.Lock()
-  defer b.mutex.Unlock()
+func (b *backends) All() <-chan Backend {
+	b.mutex.Lock()
 
-  ch := make(chan Backend)
-  go func (backends []Backend) {
-    for _, backend := range backends {
-      ch <- backend
-    }
-    close(ch)
-  }(b.all)
-  return ch
+	ch := make(chan Backend)
+	go func(backends []Backend) {
+		defer b.mutex.Unlock()
+
+		for _, backend := range backends {
+			ch <- backend
+		}
+		close(ch)
+	}(b.all)
+
+	return ch
 }
 
 func (b *backends) Active() Backend {
-  b.mutex.Lock()
-  defer b.mutex.Unlock()
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
 
-  return b.active
+	return b.active
 }
 
 // func (b *backends) SetActive(backend Backend) error {

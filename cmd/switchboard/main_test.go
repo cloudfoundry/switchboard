@@ -13,7 +13,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-
 func startSwitchboard(args ...string) *gexec.Session {
 	command := exec.Command(switchboardBinPath, args...)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -51,12 +50,12 @@ func sendData(conn net.Conn, data string) (string, error) {
 
 var _ = Describe("Switchboard", func() {
 	var (
-		backendSession     *gexec.Session
+		backendSession      *gexec.Session
 		backendSession2     *gexec.Session
-		healthcheckSession *gexec.Session
+		healthcheckSession  *gexec.Session
 		healthcheckSession2 *gexec.Session
-		proxySession       *gexec.Session
-		healthcheckTimeout time.Duration
+		proxySession        *gexec.Session
+		healthcheckTimeout  time.Duration
 	)
 
 	BeforeEach(func() {
@@ -271,7 +270,11 @@ var _ = Describe("Switchboard", func() {
 			Expect(httpErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			time.Sleep(healthcheckTimeout)
+			resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort2))
+			Expect(httpErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			time.Sleep(3 * healthcheckTimeout)
 
 			var conn net.Conn
 			Eventually(func() (err error) {

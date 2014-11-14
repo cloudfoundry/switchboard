@@ -29,6 +29,7 @@ func (s Switchboard) Run() {
 		} else {
 			err := s.cluster.RouteToBackend(clientConn)
 			if err != nil {
+				clientConn.Close()
 				s.logger.Error("Error routing to backend", err)
 			}
 		}

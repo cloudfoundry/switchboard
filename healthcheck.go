@@ -2,7 +2,6 @@ package switchboard
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -36,26 +35,13 @@ func (h healthcheck) Start(backend Backend) (<-chan Backend, <-chan Backend) {
 		}
 	}()
 
-	// TODO: discuss the purpose and implementation of timeout
-	go func() {
-		for {
-			timeout := time.After(h.timeout)
-			select {
-			case <-healthyChan:
-			case <-unhealthyChan:
-			case <-timeout:
-				h.logger.Debug(fmt.Sprintf("Healthchecker for backend `%s` timed out", backend.HealthcheckUrl()))
-				unhealthyChan <- backend
-			}
-		}
-	}()
-
 	return healthyChan, unhealthyChan
 }
 
 func (h healthcheck) check(backend Backend, healthyChan, unhealthyChan chan Backend) {
 	url := backend.HealthcheckUrl()
-	resp, err := http.Get(url)
+
+	resp, err := getWithTimeout(url, h.timeout)
 
 	if err != nil {
 		h.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": url})
@@ -70,6 +56,13 @@ func (h healthcheck) check(backend Backend, healthyChan, unhealthyChan chan Back
 			nonBlockingWrite(unhealthyChan, backend)
 		}
 	}
+}
+
+func getWithTimeout(url string, timeout time.Duration) (*http.Response, error) {
+	client := http.Client{
+		Timeout: timeout,
+	}
+	return client.Get(url)
 }
 
 func nonBlockingWrite(channel chan Backend, backend Backend) {

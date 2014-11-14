@@ -39,7 +39,6 @@ var _ = Describe("Backends", func() {
 				make(chan interface{}),
 				make(chan interface{}),
 				make(chan interface{}),
-				make(chan interface{}),
 			}
 
 			go func() {
@@ -56,26 +55,20 @@ var _ = Describe("Backends", func() {
 
 			go func() {
 				<-readySetGo
-				backends.SetActive(nil)
+				backends.SetHealthy(nil)
 				close(doneChans[2])
 			}()
 
 			go func() {
 				<-readySetGo
-				backends.SetHealthy(nil)
+				backends.SetUnhealthy(nil)
 				close(doneChans[3])
 			}()
 
 			go func() {
 				<-readySetGo
-				backends.SetUnhealthy(nil)
-				close(doneChans[4])
-			}()
-
-			go func() {
-				<-readySetGo
 				backends.Healthy()
-				close(doneChans[5])
+				close(doneChans[4])
 			}()
 
 			close(readySetGo)
@@ -104,28 +97,6 @@ var _ = Describe("Backends", func() {
 		})
 	})
 
-	Describe("SetActive", func() {
-		var backend switchboard.Backend
-		var active switchboard.Backend
-
-		BeforeEach(func() {
-			active = backends.Active()
-
-			for b := range backends.All() {
-				if b != active {
-					backend = b
-					break
-				}
-			}
-		})
-
-		It("sets the active backend", func() {
-			Expect(backends.SetActive(backend)).NotTo(HaveOccurred())
-			Expect(backends.Active()).To(Equal(backend))
-
-		})
-	})
-
 	Describe("SetHealthy", func() {
 		var unhealthy switchboard.Backend
 
@@ -139,6 +110,22 @@ var _ = Describe("Backends", func() {
 			backends.SetHealthy(unhealthy)
 			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(3))
 		})
+
+		Context("when all backends are unhealthy and there is no active backend", func() {
+			BeforeEach(func() {
+				healthy := backendChanToSlice(backends.Healthy())
+				for _, b := range healthy {
+					backends.SetUnhealthy(b)
+				}
+			})
+
+			It("sets the newly healthy backend as the new active backend", func() {
+				Expect(backends.Active()).To(BeNil())
+				backend := backendChanToSlice(backends.All())[0]
+				backends.SetHealthy(backend)
+				Expect(backends.Active()).To(Equal(backend))
+			})
+		})
 	})
 
 	Describe("SetUnhealthy", func() {
@@ -148,10 +135,29 @@ var _ = Describe("Backends", func() {
 			healthy = backendChanToSlice(backends.Healthy())[0]
 		})
 
-		It("sets the backend to be healthy", func() {
+		It("sets the backend to be unhealthy", func() {
 			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(3))
 			backends.SetUnhealthy(healthy)
 			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(2))
+		})
+
+		Context("when there is at least one healthy backend", func() {
+			It("sets another healthy backend as the new active backend", func() {
+				numHealthy := len(backendChanToSlice(backends.Healthy()))
+				for backend := range backends.Healthy() {
+					currentActive := backends.Active()
+					backends.SetUnhealthy(backend)
+					numHealthy--
+					Expect(backends.Active()).ToNot(Equal(currentActive))
+					if numHealthy > 0 {
+						// more healthy backends
+						Expect(backends.Active()).ToNot(BeNil())
+					} else {
+						// no more healthy backends -> no active backkend
+						Expect(backends.Active()).To(BeNil())
+					}
+				}
+			})
 		})
 	})
 

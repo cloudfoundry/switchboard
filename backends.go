@@ -8,7 +8,6 @@ import (
 
 type Backends interface {
 	All() <-chan Backend
-	SetActive(backend Backend) error
 	Active() Backend
 	SetHealthy(backend Backend)
 	SetUnhealthy(backend Backend)
@@ -18,7 +17,7 @@ type Backends interface {
 type backends struct {
 	mutex  sync.Mutex
 	all    []*statefulBackend
-	active *statefulBackend
+	active Backend
 	logger lager.Logger
 }
 
@@ -47,7 +46,9 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 		}
 	}
 
-	b.active = b.all[0]
+	if len(b.all) > 0 {
+		b.active = b.all[0].backend
+	}
 
 	return b
 }
@@ -72,37 +73,34 @@ func (b *backends) Active() Backend {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	return b.active.backend
-}
-
-func (b *backends) SetActive(backend Backend) error {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-
-	// // once healthy is implemented, use that instead of all
-	// idx := unsafeIndexOf(b.all, backend)
-	// if idx == -1 {
-	// 	return errors.New("Unknown backend")
-	// }
-
-	b.active = &statefulBackend{
-		backend: backend,
-		healthy: true,
-	}
-
-	return nil
+	return b.active
 }
 
 func (b *backends) SetHealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	b.setHealth(backend, true)
+	knownBackend := b.setHealth(backend, true)
+	if b.active == nil {
+		b.active = knownBackend
+	}
 }
 
 func (b *backends) SetUnhealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	b.setHealth(backend, false)
+	knownBackend := b.setHealth(backend, false)
+	if b.active == knownBackend {
+		b.active = b.nextHealthy()
+	}
+}
+
+func (b *backends) nextHealthy() Backend {
+	for _, sb := range b.all {
+		if sb.healthy {
+			return sb.backend
+		}
+	}
+	return nil
 }
 
 func (b *backends) Healthy() <-chan Backend {
@@ -124,22 +122,12 @@ func (b *backends) Healthy() <-chan Backend {
 	return c
 }
 
-func (b *backends) setHealth(backend Backend, healthy bool) {
+func (b *backends) setHealth(backend Backend, healthy bool) Backend {
 	for _, sb := range b.all {
 		if sb.backend == backend {
 			sb.healthy = healthy
-			break
+			return sb.backend
 		}
 	}
+	return nil
 }
-
-// func unsafeIndexOf(b []Backend, backend Backend) int {
-//   index := -1
-//   for i, aBackend := range b.all {
-//     if aBackend == backend {
-//       index = i
-//       break
-//     }
-//   }
-//   return index
-// }

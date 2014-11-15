@@ -1,9 +1,9 @@
 package switchboard
 
 import (
-	"sync"
-
+	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
+	"sync"
 )
 
 type Backends interface {
@@ -12,13 +12,16 @@ type Backends interface {
 	SetHealthy(backend Backend)
 	SetUnhealthy(backend Backend)
 	Healthy() <-chan Backend
+	ActivityChannels() (<-chan struct{}, <-chan struct{})
 }
 
 type backends struct {
-	mutex  sync.Mutex
-	all    []*statefulBackend
-	active Backend
-	logger lager.Logger
+	mutex        sync.Mutex
+	all          []*statefulBackend
+	active       Backend
+	logger       lager.Logger
+	activeChan   chan struct{}
+	inactiveChan chan struct{}
 }
 
 type statefulBackend struct {
@@ -26,10 +29,12 @@ type statefulBackend struct {
 	healthy bool
 }
 
-func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, logger lager.Logger) Backends {
+func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint) Backends {
 	b := &backends{
-		logger: logger,
-		all:    make([]*statefulBackend, len(backendIPs)),
+		logger:       cf_lager.New("backends"),
+		all:          make([]*statefulBackend, len(backendIPs)),
+		activeChan:   make(chan struct{}),
+		inactiveChan: make(chan struct{}, 1),
 	}
 
 	for i, ip := range backendIPs {
@@ -37,7 +42,6 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 			ip,
 			backendPorts[i],
 			healthcheckPorts[i],
-			logger,
 		)
 
 		b.all[i] = &statefulBackend{
@@ -48,9 +52,15 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 
 	if len(b.all) > 0 {
 		b.active = b.all[0].backend
+	} else {
+		b.nonBlockingWrite(b.inactiveChan, struct{}{})
 	}
 
 	return b
+}
+
+func (b *backends) ActivityChannels() (<-chan struct{}, <-chan struct{}) {
+	return b.activeChan, b.inactiveChan
 }
 
 func (b *backends) All() <-chan Backend {
@@ -80,8 +90,13 @@ func (b *backends) SetHealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	knownBackend := b.setHealth(backend, true)
+	b.logger.Info("Backend became healthy again.")
 	if b.active == nil {
 		b.active = knownBackend
+		if b.active != nil {
+			b.logger.Info("Recovered backends!")
+			b.nonBlockingWrite(b.activeChan, struct{}{})
+		}
 	}
 }
 
@@ -91,6 +106,11 @@ func (b *backends) SetUnhealthy(backend Backend) {
 	knownBackend := b.setHealth(backend, false)
 	if b.active == knownBackend {
 		b.active = b.nextHealthy()
+		b.logger.Info("Active backend became unhealthy. Switching over to next available.")
+		if b.active == nil {
+			b.logger.Info("All backends unhealthy! No currently active backend.")
+			b.nonBlockingWrite(b.inactiveChan, struct{}{})
+		}
 	}
 }
 
@@ -130,4 +150,11 @@ func (b *backends) setHealth(backend Backend, healthy bool) Backend {
 		}
 	}
 	return nil
+}
+
+func (b *backends) nonBlockingWrite(channel chan struct{}, msg struct{}) {
+	select {
+	case channel <- msg:
+	default:
+	}
 }

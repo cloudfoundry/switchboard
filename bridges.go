@@ -5,6 +5,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -24,9 +25,9 @@ type concurrentBridges struct {
 	logger  lager.Logger
 }
 
-func NewBridges(logger lager.Logger) Bridges {
+func NewBridges() Bridges {
 	return &concurrentBridges{
-		logger: logger,
+		logger: cf_lager.New("bridges"),
 	}
 }
 
@@ -34,7 +35,7 @@ func (b *concurrentBridges) Create(clientConn, backendConn io.ReadWriteCloser) B
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	bridge := BridgeProvider(clientConn, backendConn, b.logger)
+	bridge := BridgeProvider(clientConn, backendConn)
 	b.bridges = append(b.bridges, bridge)
 	return bridge
 }

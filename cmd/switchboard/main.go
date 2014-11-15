@@ -33,8 +33,7 @@ var (
 func main() {
 	flag.Parse()
 
-	logger = cf_lager.New("switchboard")
-	logger.Info("Logging for the switchbord")
+	logger = cf_lager.New("main")
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *port))
 	if err != nil {
@@ -73,16 +72,15 @@ func main() {
 		backendIPs,
 		backendPorts,
 		healthcheckPorts,
-		logger,
 	)
 
 	cluster := switchboard.NewCluster(
 		backends,
 		*healthcheckTimeout,
-		logger,
 	)
 
-	switchboard := switchboard.New(listener, cluster, logger)
+	switchboard := switchboard.New(listener, cluster)
+
 	switchboard.Run()
 }
 

@@ -208,84 +208,86 @@ var _ = Describe("Switchboard", func() {
 			}, 3*time.Second).ShouldNot(HaveOccurred())
 		})
 	})
+	Context("when the cluster is down", func() {
+		Context("when the healthcheck reports a 503", func() {
+			It("disconnects client connections", func() {
+				var conn net.Conn
+				Eventually(func() error {
+					var err error
+					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					return err
+				}).ShouldNot(HaveOccurred())
 
-	Context("when the healthcheck reports a 503", func() {
-		It("disconnects client connections", func() {
-			var conn net.Conn
-			Eventually(func() error {
-				var err error
-				conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-				return err
-			}).ShouldNot(HaveOccurred())
+				dataWhileHealthy, err := sendData(conn, "data while healthy")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(dataWhileHealthy).Should(ContainSubstring("data while healthy"))
 
-			dataWhileHealthy, err := sendData(conn, "data while healthy")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(dataWhileHealthy).Should(ContainSubstring("data while healthy"))
+				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/set503", dummyHealthcheckPort))
+				Expect(httpErr).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/set503", dummyHealthcheckPort))
-			Expect(httpErr).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/", dummyHealthcheckPort))
+				Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
+				Expect(httpErr).NotTo(HaveOccurred())
 
-			resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/", dummyHealthcheckPort))
-			Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
-			Expect(httpErr).NotTo(HaveOccurred())
-
-			Eventually(func() error {
-				_, err := sendData(conn, "data when unhealthy")
-				return err
-			}, 2*time.Second).Should(HaveOccurred())
+				Eventually(func() error {
+					_, err := sendData(conn, "data when unhealthy")
+					return err
+				}, 2*time.Second).Should(HaveOccurred())
+			})
 		})
-	})
 
-	Context("when the healthcheck hangs", func() {
-		It("disconnects existing client connections", func(done Done) {
-			defer close(done)
-			defer GinkgoRecover()
+		Context("when the healthcheck hangs", func() {
+			It("disconnects existing client connections", func(done Done) {
+				defer close(done)
+				defer GinkgoRecover()
 
-			var conn net.Conn
-			Eventually(func() (err error) {
-				conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-				return err
-			}).ShouldNot(HaveOccurred())
+				var conn net.Conn
+				Eventually(func() (err error) {
+					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					return err
+				}).ShouldNot(HaveOccurred())
 
-			data, err := sendData(conn, "data before hang")
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(data).Should(ContainSubstring("data before hang"))
-			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
+				data, err := sendData(conn, "data before hang")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(data).Should(ContainSubstring("data before hang"))
+				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
 
-			Expect(httpErr).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(httpErr).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			Eventually(func() error {
-				_, err := sendData(conn, "data after hang")
-				return err
-			}, healthcheckTimeout*4).Should(HaveOccurred())
-		}, 5)
+				Eventually(func() error {
+					_, err := sendData(conn, "data after hang")
+					return err
+				}, healthcheckTimeout*4).Should(HaveOccurred())
+			}, 5)
 
-		It("disconnects any new connections that are made", func(done Done) {
-			defer close(done)
-			defer GinkgoRecover()
+			It("rejects any new connections that are attempted", func(done Done) {
+				defer close(done)
+				defer GinkgoRecover()
 
-			resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
-			Expect(httpErr).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
+				Expect(httpErr).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort2))
-			Expect(httpErr).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort2))
+				Expect(httpErr).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			time.Sleep(3 * healthcheckTimeout)
+				time.Sleep(3 * healthcheckTimeout)
 
-			var conn net.Conn
-			Eventually(func() (err error) {
-				conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-				return err
-			}, 1*time.Second).ShouldNot(HaveOccurred())
+				var conn net.Conn
+				Eventually(func() (err error) {
+					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					return err
+				}, 1*time.Second).ShouldNot(HaveOccurred())
 
-			Eventually(func() error {
-				_, err := sendData(conn, "data after hang")
-				return err
-			}, healthcheckTimeout*4, healthcheckTimeout/2).Should(HaveOccurred())
-		}, 5)
+				Eventually(func() error {
+					_, err := sendData(conn, "write that should fail")
+					return err
+				}, healthcheckTimeout*4).Should(HaveOccurred())
+
+			}, 20)
+		})
 	})
 })

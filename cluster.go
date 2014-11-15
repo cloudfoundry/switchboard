@@ -2,15 +2,15 @@ package switchboard
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"time"
 
+	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
 )
 
 type Cluster interface {
-	StartHealthchecks()
+	Start() (<-chan struct{}, <-chan struct{})
 	RouteToBackend(clientConn net.Conn) error
 }
 
@@ -21,26 +21,47 @@ type cluster struct {
 	healthcheckTimeout  time.Duration
 }
 
-func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger) Cluster {
+func NewCluster(backends Backends, healthcheckTimeout time.Duration) Cluster {
 	return cluster{
 		backends:            backends,
 		currentBackendIndex: 0,
-		logger:              logger,
+		logger:              cf_lager.New("cluster"),
 		healthcheckTimeout:  healthcheckTimeout,
 	}
 }
 
-func (c cluster) StartHealthchecks() {
+func (c cluster) Start() (<-chan struct{}, <-chan struct{}) {
+	c.logger.Info("Starting cluster ...")
+	upChan := make(chan struct{})
+	downChan := make(chan struct{})
+
 	for backend := range c.backends.All() {
-		healthcheck := NewHealthcheck(c.healthcheckTimeout, c.logger)
+		healthcheck := NewHealthcheck(c.healthcheckTimeout)
 		healthyChan, unhealthyChan := healthcheck.Start(backend)
 		c.watchForUnhealthy(healthyChan, unhealthyChan)
 	}
+
+	go func() {
+		activeChan, inactiveChan := c.backends.ActivityChannels()
+		for {
+			select {
+			case <-activeChan:
+				c.logger.Info("Backends active. Cluster is up again.")
+				upChan <- struct{}{}
+			case <-inactiveChan:
+				c.logger.Info("Backends inactive. Cluster is down.")
+				downChan <- struct{}{}
+			}
+		}
+	}()
+
+	return upChan, downChan
 }
 
 func (c cluster) RouteToBackend(clientConn net.Conn) error {
 	activeBackend := c.backends.Active()
 	if activeBackend == nil {
+		c.logger.Info("No active backend. Cluster should be down. We should not have ended up in RouteToBackend.")
 		return errors.New("No active Backend")
 	}
 	return activeBackend.Bridge(clientConn)
@@ -50,27 +71,25 @@ func (c cluster) RouteToBackend(clientConn net.Conn) error {
 func (c cluster) watchForUnhealthy(healthyChan <-chan Backend, unhealthyChan <-chan Backend) {
 	go func() {
 		backend := <-unhealthyChan
-		fmt.Println("Received unhealthy state")
+		c.logger.Info("Healthcheck reported unhealthy backend.")
 		oldActive := c.backends.Active()
 		c.backends.SetUnhealthy(backend)
-		fmt.Printf("Backends.SetUnhealthy to backend at %s\n", backend.HealthcheckUrl())
 
 		if oldActive == backend {
-			fmt.Println("Sever Connections if active")
+			c.logger.Info("Unhealthy backend used to be the active one. Severing connections!!!")
 			backend.SeverConnections()
 		}
 
-		c.watchForHealthy(healthyChan, unhealthyChan)
+		c.waitForHealthy(healthyChan, unhealthyChan)
 	}()
 }
 
 // Watches for an unhealthy backend to become healthy again
-func (c cluster) watchForHealthy(healthyChan <-chan Backend, unhealthyChan <-chan Backend) {
+func (c cluster) waitForHealthy(healthyChan <-chan Backend, unhealthyChan <-chan Backend) {
 	go func() {
 		backend := <-healthyChan
-		fmt.Println("Received healthy state")
+		c.logger.Info("Healthcheck reported healthy backend")
 		c.backends.SetHealthy(backend)
-		fmt.Printf("Backends.SetHealthy to backend at %s\n", backend.HealthcheckUrl())
 		c.watchForUnhealthy(healthyChan, unhealthyChan)
 	}()
 }

@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/fakes"
-	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("Backend", func() {
@@ -17,11 +16,11 @@ var _ = Describe("Backend", func() {
 	BeforeEach(func() {
 		bridges = &fakes.FakeBridges{}
 
-		switchboard.BridgesProvider = func(logger lager.Logger) switchboard.Bridges {
+		switchboard.BridgesProvider = func() switchboard.Bridges {
 			return bridges
 		}
 
-		backend = switchboard.NewBackend("1.2.3.4", 3306, 9902, nil)
+		backend = switchboard.NewBackend("1.2.3.4", 3306, 9902)
 	})
 
 	AfterEach(func() {

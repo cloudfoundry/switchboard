@@ -14,7 +14,7 @@ func TestSwitchboard(t *testing.T) {
 }
 
 var switchboardBinPath string
-var dummyListenerBinPath string
+var dummyBackendBinPath string
 var dummyHealthcheckBinPath string
 var switchboardPort uint
 var backendPort uint
@@ -28,7 +28,7 @@ var _ = BeforeSuite(func() {
 	switchboardBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard", "-race")
 	Ω(err).ShouldNot(HaveOccurred())
 
-	dummyListenerBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/internal/dummy_listener", "-race")
+	dummyBackendBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/internal/dummy_backend", "-race")
 	Ω(err).ShouldNot(HaveOccurred())
 
 	dummyHealthcheckBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/internal/dummy_healthcheck", "-race")

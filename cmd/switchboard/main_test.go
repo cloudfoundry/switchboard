@@ -22,7 +22,7 @@ func startSwitchboard(args ...string) *gexec.Session {
 }
 
 func startBackend(args ...string) *gexec.Session {
-	command := exec.Command(dummyListenerBinPath, args...)
+	command := exec.Command(dummyBackendBinPath, args...)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(session).Should(gbytes.Say("Backend listening on"))

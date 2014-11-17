@@ -3,7 +3,6 @@ package switchboard
 import (
 	"net"
 
-	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -13,9 +12,9 @@ type Switchboard struct {
 	cluster  Cluster
 }
 
-func New(listener net.Listener, cluster Cluster) Switchboard {
+func New(listener net.Listener, cluster Cluster, logger lager.Logger) Switchboard {
 	return Switchboard{
-		logger:   cf_lager.New("switchboard"),
+		logger:   logger,
 		listener: listener,
 		cluster:  cluster,
 	}

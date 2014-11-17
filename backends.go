@@ -1,7 +1,6 @@
 package switchboard
 
 import (
-	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
 	"sync"
 )
@@ -29,9 +28,9 @@ type statefulBackend struct {
 	healthy bool
 }
 
-func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint) Backends {
+func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, logger lager.Logger) Backends {
 	b := &backends{
-		logger:       cf_lager.New("backends"),
+		logger:       logger,
 		all:          make([]*statefulBackend, len(backendIPs)),
 		activeChan:   make(chan struct{}),
 		inactiveChan: make(chan struct{}, 1),
@@ -42,6 +41,7 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 			ip,
 			backendPorts[i],
 			healthcheckPorts[i],
+			logger,
 		)
 
 		b.all[i] = &statefulBackend{

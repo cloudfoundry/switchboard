@@ -72,14 +72,16 @@ func main() {
 		backendIPs,
 		backendPorts,
 		healthcheckPorts,
+		logger,
 	)
 
 	cluster := switchboard.NewCluster(
 		backends,
 		*healthcheckTimeout,
+		logger,
 	)
 
-	switchboard := switchboard.New(listener, cluster)
+	switchboard := switchboard.New(listener, cluster, logger)
 
 	switchboard.Run()
 }

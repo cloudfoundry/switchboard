@@ -3,7 +3,6 @@ package switchboard
 import (
 	"io"
 
-	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -19,12 +18,12 @@ type bridge struct {
 	logger  lager.Logger
 }
 
-func NewBridge(client, backend io.ReadWriteCloser) Bridge {
+func NewBridge(client, backend io.ReadWriteCloser, logger lager.Logger) Bridge {
 	return &bridge{
 		done:    make(chan struct{}),
 		client:  client,
 		backend: backend,
-		logger:  cf_lager.New("bridge"),
+		logger:  logger,
 	}
 }
 

@@ -20,7 +20,7 @@ var _ = Describe("Backend", func() {
 			return bridges
 		}
 
-		backend = switchboard.NewBackend("1.2.3.4", 3306, 9902)
+		backend = switchboard.NewBackend("1.2.3.4", 3306, 9902, nil)
 	})
 
 	AfterEach(func() {

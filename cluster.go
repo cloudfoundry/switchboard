@@ -5,7 +5,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -21,11 +20,11 @@ type cluster struct {
 	healthcheckTimeout  time.Duration
 }
 
-func NewCluster(backends Backends, healthcheckTimeout time.Duration) Cluster {
+func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger) Cluster {
 	return cluster{
 		backends:            backends,
 		currentBackendIndex: 0,
-		logger:              cf_lager.New("cluster"),
+		logger:              logger,
 		healthcheckTimeout:  healthcheckTimeout,
 	}
 }
@@ -36,7 +35,7 @@ func (c cluster) Start() (<-chan struct{}, <-chan struct{}) {
 	downChan := make(chan struct{})
 
 	for backend := range c.backends.All() {
-		healthcheck := NewHealthcheck(c.healthcheckTimeout)
+		healthcheck := NewHealthcheck(c.healthcheckTimeout, c.logger)
 		healthyChan, unhealthyChan := healthcheck.Start(backend)
 		c.watchForUnhealthy(healthyChan, unhealthyChan)
 	}

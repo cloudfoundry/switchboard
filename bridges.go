@@ -35,7 +35,7 @@ func (b *concurrentBridges) Create(clientConn, backendConn io.ReadWriteCloser) B
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	bridge := BridgeProvider(clientConn, backendConn)
+	bridge := BridgeProvider(clientConn, backendConn, b.logger)
 	b.bridges = append(b.bridges, bridge)
 	return bridge
 }

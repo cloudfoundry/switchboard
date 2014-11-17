@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -26,12 +25,12 @@ type backend struct {
 	bridges         Bridges
 }
 
-func NewBackend(ipAddress string, port uint, healthcheckPort uint) Backend {
+func NewBackend(ipAddress string, port uint, healthcheckPort uint, logger lager.Logger) Backend {
 	return &backend{
 		ipAddress:       ipAddress,
 		port:            port,
 		healthcheckPort: healthcheckPort,
-		logger:          cf_lager.New("backend"),
+		logger:          logger,
 		bridges:         BridgesProvider(),
 	}
 }

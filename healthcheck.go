@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -17,10 +16,10 @@ type healthcheck struct {
 	logger  lager.Logger
 }
 
-func NewHealthcheck(timeout time.Duration) Healthcheck {
+func NewHealthcheck(timeout time.Duration, logger lager.Logger) Healthcheck {
 	return &healthcheck{
 		timeout: timeout,
-		logger:  cf_lager.New("healthcheck"),
+		logger:  logger,
 	}
 }
 

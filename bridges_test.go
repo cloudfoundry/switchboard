@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/fakes"
+	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("Bridges", func() {
@@ -89,7 +90,7 @@ var _ = Describe("Bridges", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := bridges.Remove(switchboard.NewBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}))
+				err := bridges.Remove(switchboard.NewBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, nil))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found"))
 			})
@@ -98,7 +99,7 @@ var _ = Describe("Bridges", func() {
 
 	Describe("RemoveAndCloseAll", func() {
 		BeforeEach(func() {
-			switchboard.BridgeProvider = func(_, _ io.ReadWriteCloser) switchboard.Bridge {
+			switchboard.BridgeProvider = func(_, _ io.ReadWriteCloser, logger lager.Logger) switchboard.Bridge {
 				return &fakes.FakeBridge{}
 			}
 		})

@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("Backends", func() {
@@ -12,6 +13,7 @@ var _ = Describe("Backends", func() {
 		backend_ips       []string
 		backend_ports     []uint
 		healthcheck_ports []uint
+		logger            lager.Logger
 	)
 
 	var backendChanToSlice = func(c <-chan switchboard.Backend) []switchboard.Backend {
@@ -26,7 +28,8 @@ var _ = Describe("Backends", func() {
 		backend_ips = []string{"localhost", "localhost", "localhost"}
 		backend_ports = []uint{50000, 50001, 50002}
 		healthcheck_ports = []uint{60000, 60001, 60002}
-		backends = switchboard.NewBackends(backend_ips, backend_ports, healthcheck_ports)
+		logger = lager.NewLogger("Backends test")
+		backends = switchboard.NewBackends(backend_ips, backend_ports, healthcheck_ports, logger)
 	})
 
 	Describe("Concurrent operations", func() {
@@ -83,7 +86,7 @@ var _ = Describe("Backends", func() {
 		It("returns a constant list of backends", func() {
 			i := 0
 			for backend := range backends.All() {
-				currentBackend := switchboard.NewBackend(backend_ips[i], backend_ports[i], healthcheck_ports[i])
+				currentBackend := switchboard.NewBackend(backend_ips[i], backend_ports[i], healthcheck_ports[i], logger)
 				i++
 				Expect(currentBackend).To(Equal(backend))
 			}
@@ -92,7 +95,7 @@ var _ = Describe("Backends", func() {
 
 	Describe("Active", func() {
 		It("returns the currently active backend", func() {
-			currentActive := switchboard.NewBackend(backend_ips[0], backend_ports[0], healthcheck_ports[0])
+			currentActive := switchboard.NewBackend(backend_ips[0], backend_ports[0], healthcheck_ports[0], logger)
 			Expect(currentActive).To(Equal(backends.Active()))
 		})
 	})

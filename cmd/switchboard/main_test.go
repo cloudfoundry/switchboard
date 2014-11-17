@@ -208,6 +208,7 @@ var _ = Describe("Switchboard", func() {
 			}, 3*time.Second).ShouldNot(HaveOccurred())
 		})
 	})
+
 	Context("when the cluster is down", func() {
 		Context("when the healthcheck reports a 503", func() {
 			It("disconnects client connections", func() {
@@ -237,12 +238,11 @@ var _ = Describe("Switchboard", func() {
 			})
 		})
 
-		Context("when the healthcheck hangs", func() {
-			It("disconnects existing client connections", func(done Done) {
-				defer close(done)
-				defer GinkgoRecover()
+		Context("when a backend goes down", func() {
+			var conn net.Conn
+			var data string
 
-				var conn net.Conn
+			BeforeEach(func() {
 				Eventually(func() (err error) {
 					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
@@ -251,10 +251,14 @@ var _ = Describe("Switchboard", func() {
 				data, err := sendData(conn, "data before hang")
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(data).Should(ContainSubstring("data before hang"))
-				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
 
+				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
 				Expect(httpErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
+
+			It("disconnects existing client connections", func(done Done) {
+				defer close(done)
 
 				Eventually(func() error {
 					_, err := sendData(conn, "data after hang")
@@ -262,10 +266,25 @@ var _ = Describe("Switchboard", func() {
 				}, healthcheckTimeout*4).Should(HaveOccurred())
 			}, 5)
 
-			It("rejects any new connections that are attempted", func(done Done) {
+			It("proxies new connections to another backend", func(done Done) {
 				defer close(done)
-				defer GinkgoRecover()
 
+				time.Sleep(3 * healthcheckTimeout) // wait for failover
+
+				var err error
+				Eventually(func() error {
+					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					return err
+				}).ShouldNot(HaveOccurred())
+
+				data, err = sendData(conn, "test")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).Should(ContainSubstring(fmt.Sprintf("Echo from port %d: test", backendPort2)))
+			}, 5)
+		})
+
+		Context("when all backends are down", func() {
+			BeforeEach(func() {
 				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
 				Expect(httpErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -273,8 +292,12 @@ var _ = Describe("Switchboard", func() {
 				resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort2))
 				Expect(httpErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
 
-				time.Sleep(3 * healthcheckTimeout)
+			It("rejects any new connections that are attempted", func(done Done) {
+				defer close(done)
+
+				time.Sleep(3 * healthcheckTimeout) // wait for failover
 
 				var conn net.Conn
 				Eventually(func() (err error) {

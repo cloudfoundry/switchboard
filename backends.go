@@ -94,7 +94,7 @@ func (b *backends) SetHealthy(backend Backend) {
 	if b.active == nil {
 		b.active = knownBackend
 		if b.active != nil {
-			b.logger.Info("Recovered backends!")
+			b.logger.Info("Recovering from down cluster, new active backend...")
 			b.nonBlockingWrite(b.activeChan, struct{}{})
 		}
 	}
@@ -106,10 +106,12 @@ func (b *backends) SetUnhealthy(backend Backend) {
 	knownBackend := b.setHealth(backend, false)
 	if b.active == knownBackend {
 		b.active = b.nextHealthy()
-		b.logger.Info("Active backend became unhealthy. Switching over to next available.")
+		b.logger.Info("Active backend became unhealthy. Switching over to next available...")
 		if b.active == nil {
 			b.logger.Info("All backends unhealthy! No currently active backend.")
 			b.nonBlockingWrite(b.inactiveChan, struct{}{})
+		} else {
+			b.logger.Info("Successfully failed over to next available backend!")
 		}
 	}
 }

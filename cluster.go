@@ -60,7 +60,6 @@ func (c cluster) Start() (<-chan struct{}, <-chan struct{}) {
 func (c cluster) RouteToBackend(clientConn net.Conn) error {
 	activeBackend := c.backends.Active()
 	if activeBackend == nil {
-		c.logger.Info("No active backend. Cluster should be down. We should not have ended up in RouteToBackend.")
 		return errors.New("No active Backend")
 	}
 	return activeBackend.Bridge(clientConn)
@@ -75,7 +74,7 @@ func (c cluster) watchForUnhealthy(healthyChan <-chan Backend, unhealthyChan <-c
 		c.backends.SetUnhealthy(backend)
 
 		if oldActive == backend {
-			c.logger.Info("Unhealthy backend used to be the active one. Severing connections!!!")
+			c.logger.Info("Unhealthy backend used to be the active one. Severing existing connections!")
 			backend.SeverConnections()
 		}
 

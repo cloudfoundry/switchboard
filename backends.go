@@ -53,7 +53,10 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 	if len(b.all) > 0 {
 		b.active = b.all[0].backend
 	} else {
-		b.nonBlockingWrite(b.inactiveChan, struct{}{})
+		select {
+		case b.inactiveChan <- struct{}{}:
+		default:
+		}
 	}
 
 	return b
@@ -95,7 +98,10 @@ func (b *backends) SetHealthy(backend Backend) {
 		b.active = knownBackend
 		if b.active != nil {
 			b.logger.Info("Recovering from down cluster, new active backend...")
-			b.nonBlockingWrite(b.activeChan, struct{}{})
+			select {
+			case b.activeChan <- struct{}{}:
+			default:
+			}
 		}
 	}
 }
@@ -109,7 +115,10 @@ func (b *backends) SetUnhealthy(backend Backend) {
 		b.logger.Info("Active backend became unhealthy. Switching over to next available...")
 		if b.active == nil {
 			b.logger.Info("All backends unhealthy! No currently active backend.")
-			b.nonBlockingWrite(b.inactiveChan, struct{}{})
+			select {
+			case b.inactiveChan <- struct{}{}:
+			default:
+			}
 		} else {
 			b.logger.Info("Successfully failed over to next available backend!")
 		}
@@ -152,11 +161,4 @@ func (b *backends) unsafeSetHealth(backend Backend, healthy bool) Backend {
 		}
 	}
 	return nil
-}
-
-func (b *backends) nonBlockingWrite(channel chan struct{}, msg struct{}) {
-	select {
-	case channel <- msg:
-	default:
-	}
 }

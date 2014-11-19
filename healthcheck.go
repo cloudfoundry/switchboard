@@ -44,15 +44,24 @@ func (h healthcheck) check(backend Backend, healthyChan, unhealthyChan chan Back
 
 	if err != nil {
 		h.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": url})
-		h.nonBlockingWrite(unhealthyChan, backend)
+		select {
+		case unhealthyChan <- backend:
+		default:
+		}
 	} else {
 		resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			h.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
-			h.nonBlockingWrite(healthyChan, backend)
+			select {
+			case healthyChan <- backend:
+			default:
+			}
 		} else {
 			h.logger.Debug("Non-200 exit code from healthcheck", lager.Data{"status_code": resp.StatusCode, "endpoint": url})
-			h.nonBlockingWrite(unhealthyChan, backend)
+			select {
+			case unhealthyChan <- backend:
+			default:
+			}
 		}
 	}
 }
@@ -62,11 +71,4 @@ func (h healthcheck) getWithTimeout(url string, timeout time.Duration) (*http.Re
 		Timeout: timeout,
 	}
 	return client.Get(url)
-}
-
-func (h healthcheck) nonBlockingWrite(channel chan Backend, backend Backend) {
-	select {
-	case channel <- backend:
-	default:
-	}
 }

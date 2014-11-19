@@ -89,7 +89,7 @@ func (b *backends) Active() Backend {
 func (b *backends) SetHealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	knownBackend := b.setHealth(backend, true)
+	knownBackend := b.unsafeSetHealth(backend, true)
 	b.logger.Info("Backend became healthy again.")
 	if b.active == nil {
 		b.active = knownBackend
@@ -103,9 +103,9 @@ func (b *backends) SetHealthy(backend Backend) {
 func (b *backends) SetUnhealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	knownBackend := b.setHealth(backend, false)
+	knownBackend := b.unsafeSetHealth(backend, false)
 	if b.active == knownBackend {
-		b.active = b.nextHealthy()
+		b.active = b.unsafeNextHealthy()
 		b.logger.Info("Active backend became unhealthy. Switching over to next available...")
 		if b.active == nil {
 			b.logger.Info("All backends unhealthy! No currently active backend.")
@@ -116,7 +116,7 @@ func (b *backends) SetUnhealthy(backend Backend) {
 	}
 }
 
-func (b *backends) nextHealthy() Backend {
+func (b *backends) unsafeNextHealthy() Backend {
 	for _, sb := range b.all {
 		if sb.healthy {
 			return sb.backend
@@ -144,7 +144,7 @@ func (b *backends) Healthy() <-chan Backend {
 	return c
 }
 
-func (b *backends) setHealth(backend Backend, healthy bool) Backend {
+func (b *backends) unsafeSetHealth(backend Backend, healthy bool) Backend {
 	for _, sb := range b.all {
 		if sb.backend == backend {
 			sb.healthy = healthy

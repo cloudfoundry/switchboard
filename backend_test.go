@@ -124,7 +124,7 @@ var _ = Describe("Backend", func() {
 
 				Eventually(bridges.RemoveCallCount).Should(Equal(1))
 				Expect(bridges.RemoveArgsForCall(0)).To(Equal(bridge))
-			})
+			}, 2)
 		})
 	})
 })

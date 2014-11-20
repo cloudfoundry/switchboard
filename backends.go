@@ -15,7 +15,7 @@ type Backends interface {
 }
 
 type backends struct {
-	mutex        sync.Mutex
+	mutex        sync.RWMutex
 	all          []*statefulBackend
 	active       Backend
 	logger       lager.Logger
@@ -70,8 +70,8 @@ func (b *backends) All() <-chan Backend {
 	ch := make(chan Backend, len(b.all))
 
 	go func() {
-		b.mutex.Lock()
-		defer b.mutex.Unlock()
+		b.mutex.RLock()
+		defer b.mutex.RUnlock()
 
 		for _, sb := range b.all {
 			ch <- sb.backend
@@ -138,8 +138,8 @@ func (b *backends) Healthy() <-chan Backend {
 	c := make(chan Backend, len(b.all))
 
 	go func() {
-		b.mutex.Lock()
-		defer b.mutex.Unlock()
+		b.mutex.RLock()
+		defer b.mutex.RUnlock()
 
 		for _, sb := range b.all {
 			if sb.healthy {

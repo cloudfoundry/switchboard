@@ -20,7 +20,7 @@ type Bridges interface {
 }
 
 type concurrentBridges struct {
-	mutex   sync.Mutex
+	mutex   sync.RWMutex
 	bridges []Bridge
 	logger  lager.Logger
 }
@@ -66,15 +66,15 @@ func (b *concurrentBridges) RemoveAndCloseAll() {
 }
 
 func (b *concurrentBridges) Size() int {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
 
 	return len(b.bridges)
 }
 
 func (b *concurrentBridges) Contains(bridge Bridge) bool {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
 
 	return b.unsafeContains(bridge)
 }

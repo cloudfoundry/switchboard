@@ -67,7 +67,7 @@ func (b *backends) All() <-chan Backend {
 		b.mutex.RLock()
 		defer b.mutex.RUnlock()
 
-		for backend, _ := range b.all {
+		for backend := range b.all {
 			ch <- backend
 		}
 		close(ch)

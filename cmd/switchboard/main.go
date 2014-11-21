@@ -87,15 +87,15 @@ func main() {
 }
 
 func stringsToUints(s []string) ([]uint, error) {
-	dest_slice := make([]uint, len(s))
+	uints := make([]uint, len(s))
 	for i, val := range s {
 		intVal, err := strconv.ParseUint(val, 10, 64)
 		if err != nil {
 			return nil, err
 		}
-		dest_slice[i] = uint(intVal)
+		uints[i] = uint(intVal)
 	}
-	return dest_slice, nil
+	return uints, nil
 }
 
 func replicatePorts() {

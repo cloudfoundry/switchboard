@@ -9,11 +9,11 @@ import (
 
 var _ = Describe("Backends", func() {
 	var (
-		backends          switchboard.Backends
-		backend_ips       []string
-		backend_ports     []uint
-		healthcheck_ports []uint
-		logger            lager.Logger
+		backends         switchboard.Backends
+		backendIps       []string
+		backendPorts     []uint
+		healthcheckPorts []uint
+		logger           lager.Logger
 	)
 
 	var backendChanToSlice = func(c <-chan switchboard.Backend) []switchboard.Backend {
@@ -25,11 +25,11 @@ var _ = Describe("Backends", func() {
 	}
 
 	BeforeEach(func() {
-		backend_ips = []string{"localhost", "localhost", "localhost"}
-		backend_ports = []uint{50000, 50001, 50002}
-		healthcheck_ports = []uint{60000, 60001, 60002}
+		backendIps = []string{"localhost", "localhost", "localhost"}
+		backendPorts = []uint{50000, 50001, 50002}
+		healthcheckPorts = []uint{60000, 60001, 60002}
 		logger = lager.NewLogger("Backends test")
-		backends = switchboard.NewBackends(backend_ips, backend_ports, healthcheck_ports, logger)
+		backends = switchboard.NewBackends(backendIps, backendPorts, healthcheckPorts, logger)
 	})
 
 	Describe("Concurrent operations", func() {

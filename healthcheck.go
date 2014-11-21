@@ -40,7 +40,11 @@ func (h healthcheck) Start(backend Backend) (<-chan Backend, <-chan Backend) {
 func (h healthcheck) check(backend Backend, healthyChan, unhealthyChan chan Backend) {
 	url := backend.HealthcheckUrl()
 
-	resp, err := h.getWithTimeout(url, h.timeout)
+	client := http.Client{
+		Timeout: h.timeout,
+	}
+
+	resp, err := client.Get(url)
 
 	if err != nil {
 		h.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": url})
@@ -64,11 +68,4 @@ func (h healthcheck) check(backend Backend, healthyChan, unhealthyChan chan Back
 			}
 		}
 	}
-}
-
-func (h healthcheck) getWithTimeout(url string, timeout time.Duration) (*http.Response, error) {
-	client := http.Client{
-		Timeout: timeout,
-	}
-	return client.Get(url)
 }

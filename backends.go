@@ -8,6 +8,7 @@ import (
 
 type Backends interface {
 	All() <-chan Backend
+	Any() Backend
 	Active() Backend
 	SetHealthy(backend Backend)
 	SetUnhealthy(backend Backend)
@@ -73,6 +74,17 @@ func (b *backends) All() <-chan Backend {
 	}()
 
 	return ch
+}
+
+func (b *backends) Any() Backend {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	for backend, _ := range b.all {
+		return backend
+	}
+
+	return nil
 }
 
 func (b *backends) Active() Backend {

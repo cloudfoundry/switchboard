@@ -119,7 +119,7 @@ var _ = Describe("Backends", func() {
 
 			It("sets the newly healthy backend as the new active backend", func() {
 				Expect(backends.Active()).To(BeNil())
-				backend := backendChanToSlice(backends.All())[0]
+				backend := backends.Any()
 				backends.SetHealthy(backend)
 				Expect(backends.Active()).To(Equal(backend))
 			})

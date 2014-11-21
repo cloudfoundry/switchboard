@@ -1,8 +1,9 @@
 package switchboard
 
 import (
-	"github.com/pivotal-golang/lager"
 	"sync"
+
+	"github.com/pivotal-golang/lager"
 )
 
 type Backends interface {
@@ -16,22 +17,17 @@ type Backends interface {
 
 type backends struct {
 	mutex        sync.RWMutex
-	all          []*statefulBackend
+	all          map[Backend]bool
 	active       Backend
 	logger       lager.Logger
 	activeChan   chan struct{}
 	inactiveChan chan struct{}
 }
 
-type statefulBackend struct {
-	backend Backend
-	healthy bool
-}
-
 func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, logger lager.Logger) Backends {
 	b := &backends{
 		logger:       logger,
-		all:          make([]*statefulBackend, len(backendIPs)),
+		all:          make(map[Backend]bool),
 		activeChan:   make(chan struct{}),
 		inactiveChan: make(chan struct{}, 1),
 	}
@@ -44,14 +40,11 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 			logger,
 		)
 
-		b.all[i] = &statefulBackend{
-			backend: backend,
-			healthy: true,
-		}
+		b.all[backend] = true
 	}
 
 	if len(b.all) > 0 {
-		b.active = b.all[0].backend
+		b.active = b.unsafeNextHealthy()
 	} else {
 		select {
 		case b.inactiveChan <- struct{}{}:
@@ -73,8 +66,8 @@ func (b *backends) All() <-chan Backend {
 		b.mutex.RLock()
 		defer b.mutex.RUnlock()
 
-		for _, sb := range b.all {
-			ch <- sb.backend
+		for backend, _ := range b.all {
+			ch <- backend
 		}
 		close(ch)
 	}()
@@ -126,9 +119,9 @@ func (b *backends) SetUnhealthy(backend Backend) {
 }
 
 func (b *backends) unsafeNextHealthy() Backend {
-	for _, sb := range b.all {
-		if sb.healthy {
-			return sb.backend
+	for backend, healthy := range b.all {
+		if healthy {
+			return backend
 		}
 	}
 	return nil
@@ -141,9 +134,9 @@ func (b *backends) Healthy() <-chan Backend {
 		b.mutex.RLock()
 		defer b.mutex.RUnlock()
 
-		for _, sb := range b.all {
-			if sb.healthy {
-				c <- sb.backend
+		for backend, healthy := range b.all {
+			if healthy {
+				c <- backend
 			}
 		}
 
@@ -154,11 +147,10 @@ func (b *backends) Healthy() <-chan Backend {
 }
 
 func (b *backends) unsafeSetHealth(backend Backend, healthy bool) Backend {
-	for _, sb := range b.all {
-		if sb.backend == backend {
-			sb.healthy = healthy
-			return sb.backend
-		}
+	_, found := b.all[backend]
+	if found {
+		b.all[backend] = healthy
+		return backend
 	}
 	return nil
 }

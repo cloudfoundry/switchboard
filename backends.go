@@ -80,7 +80,7 @@ func (b *backends) Any() Backend {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 
-	for backend, _ := range b.all {
+	for backend := range b.all {
 		return backend
 	}
 

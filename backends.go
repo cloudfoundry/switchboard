@@ -118,10 +118,10 @@ func (b *backends) Active() Backend {
 func (b *backends) SetHealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	knownBackend := b.unsafeSetHealth(backend, true)
+	b.all[backend] = true
 	b.logger.Info("Backend became healthy again.")
 	if b.active == nil {
-		b.active = knownBackend
+		b.active = backend
 		if b.active != nil {
 			b.logger.Info("Recovering from down cluster, new active backend...")
 			select {
@@ -135,8 +135,9 @@ func (b *backends) SetHealthy(backend Backend) {
 func (b *backends) SetUnhealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	knownBackend := b.unsafeSetHealth(backend, false)
-	if b.active == knownBackend {
+
+	b.all[backend] = false
+	if b.active == backend {
 		b.active = b.unsafeNextHealthy()
 		b.logger.Info("Active backend became unhealthy. Switching over to next available...")
 		if b.active == nil {
@@ -156,15 +157,6 @@ func (b *backends) unsafeNextHealthy() Backend {
 		if healthy {
 			return backend
 		}
-	}
-	return nil
-}
-
-func (b *backends) unsafeSetHealth(backend Backend, healthy bool) Backend {
-	_, found := b.all[backend]
-	if found {
-		b.all[backend] = healthy
-		return backend
 	}
 	return nil
 }

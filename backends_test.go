@@ -44,6 +44,8 @@ var _ = Describe("Backends", func() {
 				make(chan interface{}),
 			}
 
+			backend := backends.Any()
+
 			go func() {
 				<-readySetGo
 				backends.All()
@@ -58,13 +60,13 @@ var _ = Describe("Backends", func() {
 
 			go func() {
 				<-readySetGo
-				backends.SetHealthy(nil)
+				backends.SetHealthy(backend)
 				close(doneChans[2])
 			}()
 
 			go func() {
 				<-readySetGo
-				backends.SetUnhealthy(nil)
+				backends.SetUnhealthy(backend)
 				close(doneChans[3])
 			}()
 

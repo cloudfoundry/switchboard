@@ -22,64 +22,22 @@ func New(listener net.Listener, cluster Cluster, logger lager.Logger) Switchboar
 
 func (s Switchboard) Run() {
 	s.logger.Info("Running switchboard ...")
-	upChan, downChan := s.cluster.Start()
-	connChan := s.acceptConnections()
-	s.servingConnections(connChan, upChan, downChan)
-}
+	s.cluster.Start()
 
-// Takes connection channel (connChan) and channels monitoring cluster health (upChan/downChan)
-// Immediately closes connections
-// (Eventually we would like to send a meaningful error message before closing)
-// Defers to servingConnections when message comes on upChan
-func (s Switchboard) rejectConnections(connChan <-chan net.Conn, upChan <-chan struct{}, downChan <-chan struct{}) {
-	s.logger.Info("Rejecting Connections.")
 	for {
-		select {
-		case conn := <-connChan:
-			conn.Close()
-		case <-upChan:
-			s.servingConnections(connChan, upChan, downChan)
-			return
-		}
-	}
-}
+		s.logger.Info("Accepting connections ...")
+		clientConn, err := s.listener.Accept()
 
-// Takes connection channel (connChan) and channels monitoring cluster health (upChan/downChan)
-// Routes connections to the backend
-// Defers to rejectConnections when message comes on downChan
-func (s Switchboard) servingConnections(connChan <-chan net.Conn, upChan <-chan struct{}, downChan <-chan struct{}) {
-	s.logger.Info("Serving Connections.")
-	for {
-		select {
-		case conn := <-connChan:
-			err := s.cluster.RouteToBackend(conn)
+		if err != nil {
+			s.logger.Error("Error accepting client connection", err)
+		} else {
+			s.logger.Info("Serving Connections.")
+
+			err := s.cluster.RouteToBackend(clientConn)
 			if err != nil {
-				conn.Close()
+				clientConn.Close()
 				s.logger.Error("Error routing to backend", err)
 			}
-		case <-downChan:
-			s.rejectConnections(connChan, upChan, downChan)
-			return
 		}
 	}
-}
-
-// Return a channel of client connections.
-// The inner go routine listens for incoming connections and puts them on
-// the connections channel.  We had to put the accept call into a go
-// routine since that call is blocking.
-func (s Switchboard) acceptConnections() <-chan net.Conn {
-	s.logger.Info("Accepting connections ...")
-	c := make(chan net.Conn)
-	go func() {
-		for {
-			clientConn, err := s.listener.Accept()
-			if err != nil {
-				s.logger.Error("Error accepting client connection", err)
-			} else {
-				c <- clientConn
-			}
-		}
-	}()
-	return c
 }

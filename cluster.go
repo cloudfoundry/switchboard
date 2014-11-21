@@ -9,7 +9,7 @@ import (
 )
 
 type Cluster interface {
-	Start() (<-chan struct{}, <-chan struct{})
+	Start()
 	RouteToBackend(clientConn net.Conn) error
 }
 
@@ -29,32 +29,14 @@ func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lage
 	}
 }
 
-func (c cluster) Start() (<-chan struct{}, <-chan struct{}) {
+func (c cluster) Start() {
 	c.logger.Info("Starting cluster ...")
-	upChan := make(chan struct{})
-	downChan := make(chan struct{})
 
 	for backend := range c.backends.All() {
 		healthcheck := NewHealthcheck(c.healthcheckTimeout, c.logger)
 		healthyChan, unhealthyChan := healthcheck.Start(backend)
 		c.watchForUnhealthy(healthyChan, unhealthyChan)
 	}
-
-	go func() {
-		activeChan, inactiveChan := c.backends.ActivityChannels()
-		for {
-			select {
-			case <-activeChan:
-				c.logger.Info("Backends active. Cluster is up again.")
-				upChan <- struct{}{}
-			case <-inactiveChan:
-				c.logger.Info("Backends inactive. Cluster is down.")
-				downChan <- struct{}{}
-			}
-		}
-	}()
-
-	return upChan, downChan
 }
 
 func (c cluster) RouteToBackend(clientConn net.Conn) error {

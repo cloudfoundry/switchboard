@@ -147,16 +147,16 @@ var _ = Describe("Backends", func() {
 		Context("when there is at least one healthy backend", func() {
 			It("sets another healthy backend as the new active backend", func() {
 				numHealthy := len(backendChanToSlice(backends.Healthy()))
-				for backend := range backends.Healthy() {
-					currentActive := backends.Active()
-					backends.SetUnhealthy(backend)
+				for _ = range backends.Healthy() {
+					previousActive := backends.Active()
+					backends.SetUnhealthy(previousActive)
+					nextActive := backends.Active()
+					Expect(nextActive).ToNot(Equal(previousActive))
+
 					numHealthy--
-					Expect(backends.Active()).ToNot(Equal(currentActive))
-					if numHealthy > 0 {
-						// more healthy backends
+					if numHealthy > 0 { // more healthy backends
 						Expect(backends.Active()).ToNot(BeNil())
-					} else {
-						// no more healthy backends -> no active backkend
+					} else { // no more healthy backends -> no active backend
 						Expect(backends.Active()).To(BeNil())
 					}
 				}

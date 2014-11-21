@@ -83,20 +83,15 @@ var _ = Describe("Backends", func() {
 	})
 
 	Describe("All", func() {
-		It("returns a constant list of backends", func() {
-			i := 0
+		It("allows iterating over all the backends", func() {
+			backendsSeen := []string{}
 			for backend := range backends.All() {
-				currentBackend := switchboard.NewBackend(backend_ips[i], backend_ports[i], healthcheck_ports[i], logger)
-				i++
-				Expect(currentBackend).To(Equal(backend))
+				backendsSeen = append(backendsSeen, backend.HealthcheckUrl())
 			}
-		})
-	})
 
-	Describe("Active", func() {
-		It("returns the currently active backend", func() {
-			currentActive := switchboard.NewBackend(backend_ips[0], backend_ports[0], healthcheck_ports[0], logger)
-			Expect(currentActive).To(Equal(backends.Active()))
+			Expect(backendsSeen).To(ContainElement("http://localhost:60000"))
+			Expect(backendsSeen).To(ContainElement("http://localhost:60001"))
+			Expect(backendsSeen).To(ContainElement("http://localhost:60002"))
 		})
 	})
 

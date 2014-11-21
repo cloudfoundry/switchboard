@@ -95,6 +95,21 @@ var _ = Describe("Backends", func() {
 		})
 	})
 
+	Describe("Healthy", func() {
+		It("allows iterating over only the healthy backends", func() {
+			healthy := backendChanToSlice(backends.Healthy())
+			numHealthy := 3
+			Expect(len(healthy)).To(Equal(numHealthy))
+
+			for _, b := range healthy {
+				backends.SetUnhealthy(b)
+				numHealthy--
+				healthy = backendChanToSlice(backends.Healthy())
+				Expect(len(healthy)).To(Equal(numHealthy))
+			}
+		})
+	})
+
 	Describe("SetHealthy", func() {
 		var unhealthy switchboard.Backend
 
@@ -156,21 +171,6 @@ var _ = Describe("Backends", func() {
 					}
 				}
 			})
-		})
-	})
-
-	Describe("Healthy", func() {
-		It("sets the backend to be healthy", func() {
-			healthy := backendChanToSlice(backends.Healthy())
-			numHealthy := 3
-			Expect(len(healthy)).To(Equal(numHealthy))
-
-			for _, b := range healthy {
-				backends.SetUnhealthy(b)
-				numHealthy--
-				healthy = backendChanToSlice(backends.Healthy())
-				Expect(len(healthy)).To(Equal(numHealthy))
-			}
 		})
 	})
 })

@@ -60,6 +60,7 @@ func (b *backends) ActivityChannels() (<-chan struct{}, <-chan struct{}) {
 	return b.activeChan, b.inactiveChan
 }
 
+// Maintains a lock while iterating over all backends
 func (b *backends) All() <-chan Backend {
 	ch := make(chan Backend, len(b.all))
 
@@ -74,6 +75,26 @@ func (b *backends) All() <-chan Backend {
 	}()
 
 	return ch
+}
+
+// Maintains a lock while iterating over healthy backends
+func (b *backends) Healthy() <-chan Backend {
+	c := make(chan Backend, len(b.all))
+
+	go func() {
+		b.mutex.RLock()
+		defer b.mutex.RUnlock()
+
+		for backend, healthy := range b.all {
+			if healthy {
+				c <- backend
+			}
+		}
+
+		close(c)
+	}()
+
+	return c
 }
 
 func (b *backends) Any() Backend {
@@ -137,25 +158,6 @@ func (b *backends) unsafeNextHealthy() Backend {
 		}
 	}
 	return nil
-}
-
-func (b *backends) Healthy() <-chan Backend {
-	c := make(chan Backend, len(b.all))
-
-	go func() {
-		b.mutex.RLock()
-		defer b.mutex.RUnlock()
-
-		for backend, healthy := range b.all {
-			if healthy {
-				c <- backend
-			}
-		}
-
-		close(c)
-	}()
-
-	return c
 }
 
 func (b *backends) unsafeSetHealth(backend Backend, healthy bool) Backend {

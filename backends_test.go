@@ -130,9 +130,8 @@ var _ = Describe("Backends", func() {
 
 		Context("when all backends are unhealthy and there is no active backend", func() {
 			JustBeforeEach(func() {
-				healthy := backendChanToSlice(backends.Healthy())
-				for _, b := range healthy {
-					backends.SetUnhealthy(b)
+				for backend := range backends.Healthy() {
+					backends.SetUnhealthy(backend)
 				}
 			})
 

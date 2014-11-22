@@ -3,6 +3,7 @@ package switchboard
 import (
 	"errors"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/pivotal-golang/lager"
@@ -31,11 +32,8 @@ func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lage
 
 func (c cluster) Start() {
 	c.logger.Info("Starting cluster ...")
-
 	for backend := range c.backends.All() {
-		healthcheck := NewHealthcheck(c.healthcheckTimeout, c.logger)
-		healthyChan, unhealthyChan := healthcheck.Start(backend)
-		c.watchForUnhealthy(healthyChan, unhealthyChan)
+		go c.monitorHealth(backend)
 	}
 }
 
@@ -47,22 +45,27 @@ func (c cluster) RouteToBackend(clientConn net.Conn) error {
 	return activeBackend.Bridge(clientConn)
 }
 
-// Watches for a healthy backend to become unhealthy
-func (c cluster) watchForUnhealthy(healthyChan <-chan Backend, unhealthyChan <-chan Backend) {
-	go func() {
-		backend := <-unhealthyChan
-		c.logger.Info("Healthcheck reported unhealthy backend.")
-		c.backends.SetUnhealthy(backend)
-		c.waitForHealthy(healthyChan, unhealthyChan)
-	}()
-}
+func (c cluster) monitorHealth(backend Backend) {
+	for _ = range time.Tick(c.healthcheckTimeout / 5) {
+		url := backend.HealthcheckUrl()
+		client := http.Client{
+			Timeout: c.healthcheckTimeout,
+		}
 
-// Watches for an unhealthy backend to become healthy again
-func (c cluster) waitForHealthy(healthyChan <-chan Backend, unhealthyChan <-chan Backend) {
-	go func() {
-		backend := <-healthyChan
-		c.logger.Info("Healthcheck reported healthy backend")
-		c.backends.SetHealthy(backend)
-		c.watchForUnhealthy(healthyChan, unhealthyChan)
-	}()
+		resp, err := client.Get(url)
+		if err != nil {
+			c.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": url})
+			c.backends.SetUnhealthy(backend)
+		} else {
+			resp.Body.Close()
+
+			if resp.StatusCode == http.StatusOK {
+				c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
+				c.backends.SetHealthy(backend)
+			} else {
+				c.logger.Debug("Non-200 exit code from healthcheck", lager.Data{"status_code": resp.StatusCode, "endpoint": url})
+				c.backends.SetUnhealthy(backend)
+			}
+		}
+	}
 }

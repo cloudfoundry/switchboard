@@ -52,14 +52,7 @@ func (c cluster) watchForUnhealthy(healthyChan <-chan Backend, unhealthyChan <-c
 	go func() {
 		backend := <-unhealthyChan
 		c.logger.Info("Healthcheck reported unhealthy backend.")
-		oldActive := c.backends.Active()
 		c.backends.SetUnhealthy(backend)
-
-		if oldActive == backend {
-			c.logger.Info("Unhealthy backend used to be the active one. Severing existing connections!")
-			backend.SeverConnections()
-		}
-
 		c.waitForHealthy(healthyChan, unhealthyChan)
 	}()
 }

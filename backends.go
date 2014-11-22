@@ -6,6 +6,8 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+var BackendProvider = NewBackend
+
 type Backends interface {
 	All() <-chan Backend
 	Any() Backend
@@ -29,7 +31,7 @@ func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []ui
 	}
 
 	for i, ip := range backendIPs {
-		backend := NewBackend(
+		backend := BackendProvider(
 			ip,
 			backendPorts[i],
 			healthcheckPorts[i],
@@ -117,6 +119,7 @@ func (b *backends) SetUnhealthy(backend Backend) {
 	b.all[backend] = false
 	if b.active == backend {
 		b.logger.Info("Active backend became unhealthy. Switching over to next available...")
+		backend.SeverConnections()
 		b.active = b.unsafeNextHealthy()
 	}
 }

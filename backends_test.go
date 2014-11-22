@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/fakes"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -24,7 +25,7 @@ var _ = Describe("Backends", func() {
 		return result
 	}
 
-	BeforeEach(func() {
+	JustBeforeEach(func() {
 		backendIps = []string{"localhost", "localhost", "localhost"}
 		backendPorts = []uint{50000, 50001, 50002}
 		healthcheckPorts = []uint{60000, 60001, 60002}
@@ -82,6 +83,7 @@ var _ = Describe("Backends", func() {
 				<-done
 			}
 		})
+
 	})
 
 	Describe("All", func() {
@@ -115,7 +117,7 @@ var _ = Describe("Backends", func() {
 	Describe("SetHealthy", func() {
 		var unhealthy switchboard.Backend
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			unhealthy = backendChanToSlice(backends.Healthy())[0]
 			backends.SetUnhealthy(unhealthy)
 		})
@@ -127,7 +129,7 @@ var _ = Describe("Backends", func() {
 		})
 
 		Context("when all backends are unhealthy and there is no active backend", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				healthy := backendChanToSlice(backends.Healthy())
 				for _, b := range healthy {
 					backends.SetUnhealthy(b)
@@ -144,19 +146,30 @@ var _ = Describe("Backends", func() {
 	})
 
 	Describe("SetUnhealthy", func() {
-		var healthy switchboard.Backend
-
-		BeforeEach(func() {
-			healthy = backendChanToSlice(backends.Healthy())[0]
-		})
-
 		It("sets the backend to be unhealthy", func() {
+			backend := backendChanToSlice(backends.Healthy())[0]
 			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(3))
-			backends.SetUnhealthy(healthy)
+			backends.SetUnhealthy(backend)
 			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(2))
 		})
 
-		Context("when there is at least one healthy backend", func() {
+		Context("when this is active", func() {
+			BeforeEach(func() {
+				switchboard.BackendProvider = func(string, uint, uint, lager.Logger) switchboard.Backend {
+					return &fakes.FakeBackend{}
+				}
+			})
+
+			AfterEach(func() {
+				switchboard.BackendProvider = switchboard.NewBackend
+			})
+
+			It("severs all open connections", func() {
+				backend := backends.Active()
+				backends.SetUnhealthy(backend)
+				Expect(backend.(*fakes.FakeBackend).SeverConnectionsCallCount()).To(Equal(1))
+			})
+
 			It("sets another healthy backend as the new active backend", func() {
 				numHealthy := len(backendChanToSlice(backends.Healthy()))
 				for _ = range backends.Healthy() {

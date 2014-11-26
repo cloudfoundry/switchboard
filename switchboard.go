@@ -22,7 +22,7 @@ func New(listener net.Listener, cluster Cluster, logger lager.Logger) Switchboar
 
 func (s Switchboard) Run() {
 	s.logger.Info("Running switchboard ...")
-	s.cluster.Start()
+	s.cluster.Monitor()
 
 	for {
 		s.logger.Info("Accepting connections ...")

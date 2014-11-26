@@ -10,7 +10,7 @@ import (
 )
 
 type Cluster interface {
-	Start()
+	Monitor()
 	RouteToBackend(clientConn net.Conn) error
 }
 
@@ -30,8 +30,7 @@ func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lage
 	}
 }
 
-func (c cluster) Start() {
-	c.logger.Info("Starting cluster ...")
+func (c cluster) Monitor() {
 	for backend := range c.backends.All() {
 		go c.monitorHealth(backend)
 	}

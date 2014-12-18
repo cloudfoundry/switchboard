@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"time"
 
 	"github.com/fraenkel/candiedyaml"
 )
@@ -24,10 +25,10 @@ func Load(configFilePath string) (*Proxy, error) {
 }
 
 type Proxy struct {
-	Port                   uint
-	Pidfile                string
-	Backends               []Backend
-	HealthcheckTimeoutInMS uint
+	Port               uint
+	Pidfile            string
+	Backends           []Backend
+	HealthcheckTimeout time.Duration
 }
 
 type Backend struct {

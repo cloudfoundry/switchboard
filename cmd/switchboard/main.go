@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-cf-experimental/switchboard"
@@ -64,7 +63,7 @@ func main() {
 
 	cluster := switchboard.NewCluster(
 		backends,
-		time.Millisecond*time.Duration(proxyConfig.HealthcheckTimeoutInMS),
+		proxyConfig.HealthcheckTimeout,
 		logger,
 	)
 

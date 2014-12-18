@@ -8,8 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-
-	"github.com/pivotal-cf-experimental/switchboard/cmd/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/config"
 )
 
 func TestSwitchboard(t *testing.T) {
@@ -25,8 +24,8 @@ var backendPort uint
 var backendPort2 uint
 var dummyHealthcheckPort uint
 var dummyHealthcheckPort2 uint
-var configFile string
-var config main.Config
+var proxyConfigFile string
+var proxyConfig config.Proxy
 
 var _ = BeforeSuite(func() {
 	var err error
@@ -47,37 +46,37 @@ var _ = BeforeSuite(func() {
 	dummyHealthcheckPort = uint(45500 + GinkgoParallelNode())
 	dummyHealthcheckPort2 = uint(46500 + GinkgoParallelNode())
 
-	backend1 := main.Backend{
+	backend1 := config.Backend{
 		BackendIP:       "localhost",
 		BackendPort:     backendPort,
 		HealthcheckPort: dummyHealthcheckPort,
 	}
 
-	backend2 := main.Backend{
+	backend2 := config.Backend{
 		BackendIP:       "localhost",
 		BackendPort:     backendPort2,
 		HealthcheckPort: dummyHealthcheckPort2,
 	}
 
-	backends := []main.Backend{backend1, backend2}
+	backends := []config.Backend{backend1, backend2}
 
-	config = main.Config{
+	proxyConfig = config.Proxy{
 		Pidfile:                "/tmp/switchboard.pid",
 		Backends:               backends,
 		HealthcheckTimeoutInMS: healthcheckTimeoutInMS,
 		Port: switchboardPort,
 	}
 
-	configFile = "/tmp/config.yml"
+	proxyConfigFile = "/tmp/proxyConfig.yml"
 
-	fileToWrite, err := os.Create(configFile)
+	fileToWrite, err := os.Create(proxyConfigFile)
 	if err != nil {
 		println("Failed to open file for writing:", err.Error())
 		os.Exit(1)
 	}
 
 	encoder := candiedyaml.NewEncoder(fileToWrite)
-	err = encoder.Encode(config)
+	err = encoder.Encode(proxyConfig)
 
 	if err != nil {
 		println("Failed to encode document:", err.Error())

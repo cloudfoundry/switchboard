@@ -59,7 +59,7 @@ var _ = Describe("Switchboard", func() {
 	)
 
 	BeforeEach(func() {
-		healthcheckTimeout = time.Millisecond * time.Duration(config.HealthcheckTimeoutInMS)
+		healthcheckTimeout = time.Millisecond * time.Duration(proxyConfig.HealthcheckTimeoutInMS)
 
 		backendSession = startBackend(
 			fmt.Sprintf("-port=%d", backendPort),
@@ -78,7 +78,7 @@ var _ = Describe("Switchboard", func() {
 		)
 
 		proxySession = startSwitchboard(
-			fmt.Sprintf("-config=%s", configFile),
+			fmt.Sprintf("-config=%s", proxyConfigFile),
 		)
 	})
 

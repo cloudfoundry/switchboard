@@ -10,6 +10,10 @@
 			"Rev": "94308c799cf61ac0818667ddcc25046c8c5659d1"
 		},
 		{
+			"ImportPath": "github.com/fraenkel/candiedyaml",
+			"Rev": "84842532f8194fe186b48a009251dfaec9924ccd"
+		},
+		{
 			"ImportPath": "github.com/onsi/ginkgo",
 			"Comment": "v1.1.0-20-g75d0cd9",
 			"Rev": "75d0cd9c7ee52e99b13e6ccfd9e58b4f92b7795e"

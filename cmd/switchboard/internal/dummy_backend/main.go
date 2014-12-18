@@ -16,7 +16,7 @@ func main() {
 
 	l, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Fatal("Error listening: %s\n", err.Error())
+		log.Fatal(fmt.Sprintf("Backend error listening on address: %s - %s\n", address, err.Error()))
 	}
 	defer l.Close()
 

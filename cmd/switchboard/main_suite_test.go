@@ -1,11 +1,15 @@
 package main_test
 
 import (
+	"os"
 	"testing"
 
+	"github.com/fraenkel/candiedyaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+
+	"github.com/pivotal-cf-experimental/switchboard/cmd/switchboard"
 )
 
 func TestSwitchboard(t *testing.T) {
@@ -21,7 +25,8 @@ var backendPort uint
 var backendPort2 uint
 var dummyHealthcheckPort uint
 var dummyHealthcheckPort2 uint
-var pidfile string
+var configFile string
+var config main.Config
 
 var _ = BeforeSuite(func() {
 	var err error
@@ -35,11 +40,50 @@ var _ = BeforeSuite(func() {
 	Ω(err).ShouldNot(HaveOccurred())
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())
+	healthcheckTimeoutInMS := uint(500)
+
 	backendPort = uint(45000 + GinkgoParallelNode())
 	backendPort2 = uint(46000 + GinkgoParallelNode())
 	dummyHealthcheckPort = uint(45500 + GinkgoParallelNode())
 	dummyHealthcheckPort2 = uint(46500 + GinkgoParallelNode())
-	pidfile = "/tmp/switchboard.pid"
+
+	backend1 := main.Backend{
+		BackendIP:       "localhost",
+		BackendPort:     backendPort,
+		HealthcheckPort: dummyHealthcheckPort,
+	}
+
+	backend2 := main.Backend{
+		BackendIP:       "localhost",
+		BackendPort:     backendPort2,
+		HealthcheckPort: dummyHealthcheckPort2,
+	}
+
+	backends := []main.Backend{backend1, backend2}
+
+	config = main.Config{
+		Pidfile:                "/tmp/switchboard.pid",
+		Backends:               backends,
+		HealthcheckTimeoutInMS: healthcheckTimeoutInMS,
+		Port: switchboardPort,
+	}
+
+	configFile = "/tmp/config.yml"
+
+	fileToWrite, err := os.Create(configFile)
+	if err != nil {
+		println("Failed to open file for writing:", err.Error())
+		os.Exit(1)
+	}
+
+	encoder := candiedyaml.NewEncoder(fileToWrite)
+	err = encoder.Encode(config)
+
+	if err != nil {
+		println("Failed to encode document:", err.Error())
+		os.Exit(1)
+	}
+
 })
 
 var _ = AfterSuite(func() {

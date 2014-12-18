@@ -4,69 +4,76 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cloudfoundry-incubator/cf-lager"
+	"github.com/fraenkel/candiedyaml"
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-golang/lager"
 )
 
 var (
-	pidfile = flag.String("pidfile", "", "The location for the pidfile")
-	port    = flag.Uint("port", 3306, "Port to listen on")
-
-	backendIPsFlag       = flag.String("backendIPs", "", "Comma-separated list of backend IP addresses")
-	backendPortsFlag     = flag.String("backendPorts", "3306", "Comma-separated list of backend ports")
-	healthcheckPortsFlag = flag.String("healthcheckPorts", "9200", "Comma-separated list of healthcheck ports")
-	healthcheckTimeout   = flag.Duration("healthcheckTimeout", 5*time.Second, "Timeout for healthcheck")
+	config = flag.String("config", "", "Path to config file")
 
 	backendIPs                     []string
 	backendPorts, healthcheckPorts []uint
 	logger                         lager.Logger
 )
 
+type Config struct {
+	Port                   uint
+	Pidfile                string
+	Backends               []Backend
+	HealthcheckTimeoutInMS uint
+}
+
+type Backend struct {
+	BackendIP       string
+	BackendPort     uint
+	HealthcheckPort uint
+}
+
 func main() {
 	flag.Parse()
 
 	logger = cf_lager.New("main")
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *port))
+	file, err := os.Open(*config)
 	if err != nil {
-		logger.Fatal("Error listening on port.", err, lager.Data{"port": *port})
+		logger.Fatal("Config file does not exist:", err, lager.Data{"config": *config})
+	}
+
+	config := new(Config)
+	decoder := candiedyaml.NewDecoder(file)
+	err = decoder.Decode(config)
+	if err != nil {
+		logger.Fatal("Failed to decode config file:", err, lager.Data{"config": *config})
+	}
+
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", config.Port))
+	if err != nil {
+		logger.Fatal("Error listening on port.", err, lager.Data{"port": config.Port})
 	}
 	defer listener.Close()
 
-	err = ioutil.WriteFile(*pidfile, []byte(strconv.Itoa(os.Getpid())), 0644)
+	err = ioutil.WriteFile(config.Pidfile, []byte(strconv.Itoa(os.Getpid())), 0644)
 	if err != nil {
-		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidfile": *pidfile})
+		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidfile": config.Pidfile})
+	}
+	logger.Info(fmt.Sprintf("Wrote pidfile to %s", config.Pidfile))
+
+	for _, backend := range config.Backends {
+		backendIPs = append(backendIPs, backend.BackendIP)
+		backendPorts = append(backendPorts, backend.BackendPort)
+		healthcheckPorts = append(healthcheckPorts, backend.HealthcheckPort)
 	}
 
-	backendIPs = strings.Split(*backendIPsFlag, ",")
-	for i, ip := range backendIPs {
-		backendIPs[i] = strings.Trim(ip, " ")
-	}
+	logger.Info(fmt.Sprintf("Proxy started on port %d\n", config.Port))
 
-	backendPorts, err = stringsToUints(strings.Split(*backendPortsFlag, ","))
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Error parsing backendPorts: %v", err))
-	}
-
-	healthcheckPorts, err = stringsToUints(strings.Split(*healthcheckPortsFlag, ","))
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Error parsing healthcheckPorts: %v", err))
-	}
-
-	replicatePorts()
-
-	logger.Info(fmt.Sprintf("Proxy started on port %d\n", *port))
-	logger.Info(fmt.Sprintf("Backend ipAddress: %s\n", backendIPs[0]))
-	logger.Info(fmt.Sprintf("Backend port: %d\n", backendPorts[0]))
-	logger.Info(fmt.Sprintf("Healthcheck port: %d\n", healthcheckPorts[0]))
+	fmt.Printf("Proxy started with configuration: %+v\n", config)
 
 	backends := switchboard.NewBackends(
 		backendIPs,
@@ -77,40 +84,11 @@ func main() {
 
 	cluster := switchboard.NewCluster(
 		backends,
-		*healthcheckTimeout,
+		time.Millisecond*time.Duration(config.HealthcheckTimeoutInMS),
 		logger,
 	)
 
 	switchboard := switchboard.New(listener, cluster, logger)
 
 	switchboard.Run()
-}
-
-func stringsToUints(s []string) ([]uint, error) {
-	uints := make([]uint, len(s))
-	for i, val := range s {
-		intVal, err := strconv.ParseUint(val, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		uints[i] = uint(intVal)
-	}
-	return uints, nil
-}
-
-func replicatePorts() {
-	if len(backendPorts) != len(backendIPs) {
-		port := backendPorts[0]
-		backendPorts = make([]uint, len(backendIPs))
-		for i, _ := range backendIPs {
-			backendPorts[i] = port
-		}
-	}
-	if len(healthcheckPorts) != len(backendIPs) {
-		port := healthcheckPorts[0]
-		healthcheckPorts = make([]uint, len(backendIPs))
-		for i, _ := range backendIPs {
-			healthcheckPorts[i] = port
-		}
-	}
 }

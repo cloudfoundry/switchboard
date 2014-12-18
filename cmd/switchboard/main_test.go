@@ -17,7 +17,7 @@ func startSwitchboard(args ...string) *gexec.Session {
 	command := exec.Command(switchboardBinPath, args...)
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gbytes.Say("started on port"))
+	Eventually(session).Should(gbytes.Say("started"))
 	return session
 }
 
@@ -59,7 +59,7 @@ var _ = Describe("Switchboard", func() {
 	)
 
 	BeforeEach(func() {
-		healthcheckTimeout = 500 * time.Millisecond
+		healthcheckTimeout = time.Millisecond * time.Duration(config.HealthcheckTimeoutInMS)
 
 		backendSession = startBackend(
 			fmt.Sprintf("-port=%d", backendPort),
@@ -78,12 +78,7 @@ var _ = Describe("Switchboard", func() {
 		)
 
 		proxySession = startSwitchboard(
-			"-backendIPs=localhost, localhost",
-			fmt.Sprintf("-port=%d", switchboardPort),
-			fmt.Sprintf("-backendPorts=%d,%d", backendPort, backendPort2),
-			fmt.Sprintf("-healthcheckPorts=%d,%d", dummyHealthcheckPort, dummyHealthcheckPort2),
-			fmt.Sprintf("-healthcheckTimeout=%s", healthcheckTimeout),
-			fmt.Sprintf("-pidfile=%s", pidfile),
+			fmt.Sprintf("-config=%s", configFile),
 		)
 	})
 

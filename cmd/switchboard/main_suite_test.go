@@ -1,7 +1,9 @@
 package main_test
 
 import (
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/fraenkel/candiedyaml"
@@ -60,15 +62,17 @@ var _ = BeforeSuite(func() {
 
 	backends := []config.Backend{backend1, backend2}
 
+	tempDir, err := ioutil.TempDir(os.TempDir(), "switchboard")
+	Expect(err).NotTo(HaveOccurred())
+
 	proxyConfig = config.Proxy{
-		Pidfile:                "/tmp/switchboard.pid",
+		Pidfile:                filepath.Join(tempDir, "switchboard.pid"),
 		Backends:               backends,
 		HealthcheckTimeoutInMS: healthcheckTimeoutInMS,
 		Port: switchboardPort,
 	}
 
-	proxyConfigFile = "/tmp/proxyConfig.yml"
-
+	proxyConfigFile = filepath.Join(tempDir, "proxyConfig.yml")
 	fileToWrite, err := os.Create(proxyConfigFile)
 	if err != nil {
 		println("Failed to open file for writing:", err.Error())

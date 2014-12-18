@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/cf-lager"
-	"github.com/fraenkel/candiedyaml"
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/config"
 
@@ -30,16 +29,9 @@ func main() {
 
 	logger = cf_lager.New("main")
 
-	file, err := os.Open(*configFlag)
+	proxyConfig, err := config.Load(*configFlag)
 	if err != nil {
-		logger.Fatal("Config file does not exist:", err, lager.Data{"config": *configFlag})
-	}
-
-	proxyConfig := new(config.Proxy)
-	decoder := candiedyaml.NewDecoder(file)
-	err = decoder.Decode(proxyConfig)
-	if err != nil {
-		logger.Fatal("Failed to decode config file:", err, lager.Data{"config": *configFlag})
+		logger.Fatal("Error loading config file:", err, lager.Data{"config": *configFlag})
 	}
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", proxyConfig.Port))
@@ -61,8 +53,7 @@ func main() {
 	}
 
 	logger.Info(fmt.Sprintf("Proxy started on port %d\n", proxyConfig.Port))
-
-	fmt.Printf("Proxy started with configuration: %+v\n", proxyConfig)
+	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v\n", proxyConfig))
 
 	backends := switchboard.NewBackends(
 		backendIPs,

@@ -75,19 +75,11 @@ var _ = BeforeSuite(func() {
 
 	proxyConfigFile = filepath.Join(tempDir, "proxyConfig.yml")
 	fileToWrite, err := os.Create(proxyConfigFile)
-	if err != nil {
-		println("Failed to open file for writing:", err.Error())
-		os.Exit(1)
-	}
+	Ω(err).ShouldNot(HaveOccurred())
 
 	encoder := candiedyaml.NewEncoder(fileToWrite)
 	err = encoder.Encode(proxyConfig)
-
-	if err != nil {
-		println("Failed to encode document:", err.Error())
-		os.Exit(1)
-	}
-
+	Ω(err).ShouldNot(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {

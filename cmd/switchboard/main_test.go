@@ -76,6 +76,7 @@ var _ = Describe("Switchboard", func() {
 
 		proxySession = startSwitchboard(
 			fmt.Sprintf("-config=%s", proxyConfigFile),
+			fmt.Sprintf("-pidFile=%s", pidFile),
 		)
 	})
 

@@ -26,7 +26,6 @@ func Load(configFilePath string) (*Proxy, error) {
 
 type Proxy struct {
 	Port               uint
-	Pidfile            string
 	Backends           []Backend
 	HealthcheckTimeout time.Duration
 }

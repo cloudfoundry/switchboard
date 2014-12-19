@@ -29,6 +29,7 @@ var dummyHealthcheckPort uint
 var dummyHealthcheckPort2 uint
 var proxyConfigFile string
 var proxyConfig config.Proxy
+var pidFile string
 
 var _ = BeforeSuite(func() {
 	var err error
@@ -66,8 +67,8 @@ var _ = BeforeSuite(func() {
 	tempDir, err := ioutil.TempDir(os.TempDir(), "switchboard")
 	Expect(err).NotTo(HaveOccurred())
 
+	pidFile = filepath.Join(tempDir, "switchboard.pid")
 	proxyConfig = config.Proxy{
-		Pidfile:            filepath.Join(tempDir, "switchboard.pid"),
 		Backends:           backends,
 		HealthcheckTimeout: healthcheckTimeout,
 		Port:               switchboardPort,

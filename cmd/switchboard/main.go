@@ -17,6 +17,7 @@ import (
 
 var (
 	configFlag = flag.String("config", "", "Path to config file")
+	pidFile    = flag.String("pidFile", "", "Path to pid file")
 
 	backendIPs                     []string
 	backendPorts, healthcheckPorts []uint
@@ -39,11 +40,11 @@ func main() {
 	}
 	defer listener.Close()
 
-	err = ioutil.WriteFile(proxyConfig.Pidfile, []byte(strconv.Itoa(os.Getpid())), 0644)
+	err = ioutil.WriteFile(*pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
 	if err != nil {
-		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidfile": proxyConfig.Pidfile})
+		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": *pidFile})
 	}
-	logger.Info(fmt.Sprintf("Wrote pidfile to %s", proxyConfig.Pidfile))
+	logger.Info(fmt.Sprintf("Wrote pidFile to %s", *pidFile))
 
 	for _, backend := range proxyConfig.Backends {
 		backendIPs = append(backendIPs, backend.BackendIP)

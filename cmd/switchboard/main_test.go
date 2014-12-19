@@ -256,13 +256,13 @@ var _ = Describe("Switchboard", func() {
 				Eventually(func() error {
 					_, err := sendData(conn, "data after hang")
 					return err
-				}, proxyConfig.HealthcheckTimeout*4).Should(HaveOccurred())
+				}, proxyConfig.HealthcheckTimeout()*4).Should(HaveOccurred())
 			}, 5)
 
 			It("proxies new connections to another backend", func(done Done) {
 				defer close(done)
 
-				time.Sleep(3 * proxyConfig.HealthcheckTimeout) // wait for failover
+				time.Sleep(3 * proxyConfig.HealthcheckTimeout()) // wait for failover
 
 				var err error
 				Eventually(func() error {
@@ -290,7 +290,7 @@ var _ = Describe("Switchboard", func() {
 			It("rejects any new connections that are attempted", func(done Done) {
 				defer close(done)
 
-				time.Sleep(3 * proxyConfig.HealthcheckTimeout) // wait for failover
+				time.Sleep(3 * proxyConfig.HealthcheckTimeout()) // wait for failover
 
 				var conn net.Conn
 				Eventually(func() (err error) {
@@ -301,7 +301,7 @@ var _ = Describe("Switchboard", func() {
 				Eventually(func() error {
 					_, err := sendData(conn, "write that should fail")
 					return err
-				}, proxyConfig.HealthcheckTimeout*4).Should(HaveOccurred())
+				}, proxyConfig.HealthcheckTimeout()*4).Should(HaveOccurred())
 
 			}, 20)
 		})

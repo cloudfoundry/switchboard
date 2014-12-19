@@ -25,9 +25,13 @@ func Load(configFilePath string) (*Proxy, error) {
 }
 
 type Proxy struct {
-	Port               uint
-	Backends           []Backend
-	HealthcheckTimeout time.Duration
+	Port                     uint
+	Backends                 []Backend
+	HealthcheckTimeoutMillis uint
+}
+
+func (p Proxy) HealthcheckTimeout() time.Duration {
+	return time.Duration(p.HealthcheckTimeoutMillis) * time.Millisecond
 }
 
 type Backend struct {

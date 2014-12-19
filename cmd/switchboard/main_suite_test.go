@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/fraenkel/candiedyaml"
 	. "github.com/onsi/ginkgo"
@@ -43,8 +42,6 @@ var _ = BeforeSuite(func() {
 	Ω(err).ShouldNot(HaveOccurred())
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())
-	healthcheckTimeout := time.Duration(500 * time.Millisecond)
-
 	backendPort = uint(45000 + GinkgoParallelNode())
 	backendPort2 = uint(46000 + GinkgoParallelNode())
 	dummyHealthcheckPort = uint(45500 + GinkgoParallelNode())
@@ -69,9 +66,9 @@ var _ = BeforeSuite(func() {
 
 	pidFile = filepath.Join(tempDir, "switchboard.pid")
 	proxyConfig = config.Proxy{
-		Backends:           backends,
-		HealthcheckTimeout: healthcheckTimeout,
-		Port:               switchboardPort,
+		Backends:                 backends,
+		HealthcheckTimeoutMillis: 500,
+		Port: switchboardPort,
 	}
 
 	proxyConfigFile = filepath.Join(tempDir, "proxyConfig.yml")

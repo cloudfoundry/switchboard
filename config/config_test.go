@@ -25,7 +25,7 @@ var _ = Describe("Config", func() {
 			invalidConfig, err := ioutil.TempFile("", "invalidConfig.yml")
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = invalidConfig.WriteString(`"HealthcheckTimeout": 500seconds`)
+			_, err = invalidConfig.WriteString(`"HealthcheckTimeoutMillis": "NotAnInteger"`)
 			Expect(err).NotTo(HaveOccurred())
 
 			err = invalidConfig.Close()

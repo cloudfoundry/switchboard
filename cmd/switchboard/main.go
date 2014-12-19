@@ -64,7 +64,7 @@ func main() {
 
 	cluster := switchboard.NewCluster(
 		backends,
-		proxyConfig.HealthcheckTimeout,
+		proxyConfig.HealthcheckTimeout(),
 		logger,
 	)
 

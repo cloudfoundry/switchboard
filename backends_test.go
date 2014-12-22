@@ -4,17 +4,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/config"
 	"github.com/pivotal-cf-experimental/switchboard/fakes"
 	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("Backends", func() {
 	var (
-		backends         switchboard.Backends
-		backendIps       []string
-		backendPorts     []uint
-		healthcheckPorts []uint
-		logger           lager.Logger
+		backends switchboard.Backends
 	)
 
 	var backendChanToSlice = func(c <-chan switchboard.Backend) []switchboard.Backend {
@@ -26,11 +23,15 @@ var _ = Describe("Backends", func() {
 	}
 
 	JustBeforeEach(func() {
-		backendIps = []string{"localhost", "localhost", "localhost"}
-		backendPorts = []uint{50000, 50001, 50002}
-		healthcheckPorts = []uint{60000, 60001, 60002}
-		logger = lager.NewLogger("Backends test")
-		backends = switchboard.NewBackends(backendIps, backendPorts, healthcheckPorts, logger)
+		logger := lager.NewLogger("Backends test")
+
+		backendConfigs := []config.Backend{
+			{"localhost", 50000, 60000},
+			{"localhost", 50001, 60001},
+			{"localhost", 50002, 60002},
+		}
+
+		backends = switchboard.NewBackends(backendConfigs, logger)
 	})
 
 	Describe("Concurrent operations", func() {

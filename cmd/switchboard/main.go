@@ -19,9 +19,7 @@ var (
 	configFlag = flag.String("config", "", "Path to config file")
 	pidFile    = flag.String("pidFile", "", "Path to pid file")
 
-	backendIPs                     []string
-	backendPorts, healthcheckPorts []uint
-	logger                         lager.Logger
+	logger lager.Logger
 )
 
 func main() {
@@ -41,27 +39,16 @@ func main() {
 	defer listener.Close()
 
 	err = ioutil.WriteFile(*pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
-	if err != nil {
+	if err == nil {
+		logger.Info(fmt.Sprintf("Wrote pidFile to %s", *pidFile))
+	} else {
 		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": *pidFile})
-	}
-	logger.Info(fmt.Sprintf("Wrote pidFile to %s", *pidFile))
-
-	for _, backend := range proxyConfig.Backends {
-		backendIPs = append(backendIPs, backend.BackendIP)
-		backendPorts = append(backendPorts, backend.BackendPort)
-		healthcheckPorts = append(healthcheckPorts, backend.HealthcheckPort)
 	}
 
 	logger.Info(fmt.Sprintf("Proxy started on port %d\n", proxyConfig.Port))
 	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v\n", proxyConfig))
 
-	backends := switchboard.NewBackends(
-		backendIPs,
-		backendPorts,
-		healthcheckPorts,
-		logger,
-	)
-
+	backends := switchboard.NewBackends(proxyConfig.Backends, logger)
 	cluster := switchboard.NewCluster(
 		backends,
 		proxyConfig.HealthcheckTimeout(),
@@ -69,6 +56,5 @@ func main() {
 	)
 
 	switchboard := switchboard.New(listener, cluster, logger)
-
 	switchboard.Run()
 }

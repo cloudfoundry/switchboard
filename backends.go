@@ -3,6 +3,7 @@ package switchboard
 import (
 	"sync"
 
+	"github.com/pivotal-cf-experimental/switchboard/config"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -24,17 +25,17 @@ type backends struct {
 	logger lager.Logger
 }
 
-func NewBackends(backendIPs []string, backendPorts []uint, healthcheckPorts []uint, logger lager.Logger) Backends {
+func NewBackends(backendConfigs []config.Backend, logger lager.Logger) Backends {
 	b := &backends{
 		logger: logger,
 		all:    make(map[Backend]bool),
 	}
 
-	for i, ip := range backendIPs {
+	for _, bc := range backendConfigs {
 		backend := BackendProvider(
-			ip,
-			backendPorts[i],
-			healthcheckPorts[i],
+			bc.BackendIP,
+			bc.BackendPort,
+			bc.HealthcheckPort,
 			logger,
 		)
 

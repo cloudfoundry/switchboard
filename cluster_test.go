@@ -121,12 +121,11 @@ var _ = Describe("Cluster", func() {
 			defer close(stopMonitoring)
 
 			Eventually(backends.SetHealthyCallCount).Should(BeNumerically(">=", 2))
-			Expect(backends.SetHealthyArgsForCall(0)).To(Equal(backend1))
-			Expect(backends.SetHealthyArgsForCall(1)).To(Equal(backend3))
+			Eventually(backends.SetHealthyArgsForCall(0)).Should(Equal(backend1))
+			Eventually(backends.SetHealthyArgsForCall(1)).Should(Equal(backend3))
 
-			Expect(backends.SetUnhealthyCallCount()).To(BeNumerically(">=", 1))
-			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
-
+			Eventually(backends.SetUnhealthyCallCount()).Should(BeNumerically(">=", 1))
+			Eventually(backends.SetUnhealthyArgsForCall(0)).Should(Equal(backend2))
 		}, 5)
 
 		It("notices when an unhealthy backend becomes healthy", func(done Done) {

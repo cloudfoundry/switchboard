@@ -9,32 +9,38 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
+	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
-func startSwitchboard(args ...string) *gexec.Session {
+func startSwitchboard(args ...string) ifrit.Process {
 	command := exec.Command(switchboardBinPath, args...)
-	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gbytes.Say("started"))
-	return session
+	runner := ginkgomon.New(ginkgomon.Config{
+		Command:    command,
+		Name:       fmt.Sprintf("switchboard"),
+		StartCheck: "started",
+	})
+	return ginkgomon.Invoke(runner)
 }
 
-func startBackend(args ...string) *gexec.Session {
-	command := exec.Command(dummyBackendBinPath, args...)
-	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gbytes.Say("Backend listening on"))
-	return session
+func startBackend(port uint) ifrit.Process {
+	command := exec.Command(dummyBackendBinPath, fmt.Sprintf("-port=%d", port))
+	runner := ginkgomon.New(ginkgomon.Config{
+		Command:    command,
+		Name:       fmt.Sprintf("fake-backend:%d", port),
+		StartCheck: "Backend listening on",
+	})
+	return ginkgomon.Invoke(runner)
 }
 
-func startHealthcheck(args ...string) *gexec.Session {
-	command := exec.Command(dummyHealthcheckBinPath, args...)
-	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gbytes.Say("Healthcheck listening on"))
-	return session
+func startHealthcheck(port uint) ifrit.Process {
+	command := exec.Command(dummyHealthcheckBinPath, fmt.Sprintf("-port=%d", port))
+	runner := ginkgomon.New(ginkgomon.Config{
+		Command:    command,
+		Name:       fmt.Sprintf("fake-healthcheck:%d", port),
+		StartCheck: "Healthcheck listening on",
+	})
+	return ginkgomon.Invoke(runner)
 }
 
 func sendData(conn net.Conn, data string) (string, error) {
@@ -50,42 +56,32 @@ func sendData(conn net.Conn, data string) (string, error) {
 
 var _ = Describe("Switchboard", func() {
 	var (
-		backendSession      *gexec.Session
-		backendSession2     *gexec.Session
-		healthcheckSession  *gexec.Session
-		healthcheckSession2 *gexec.Session
-		proxySession        *gexec.Session
+		backendProcess      ifrit.Process
+		backendProcess2     ifrit.Process
+		healthcheckProcess  ifrit.Process
+		healthcheckProcess2 ifrit.Process
+		switchboardProcess  ifrit.Process
 	)
 
 	BeforeEach(func() {
-		backendSession = startBackend(
-			fmt.Sprintf("-port=%d", backendPort),
-		)
+		backendProcess = startBackend(backendPort)
+		backendProcess2 = startBackend(backendPort2)
 
-		backendSession2 = startBackend(
-			fmt.Sprintf("-port=%d", backendPort2),
-		)
+		healthcheckProcess = startHealthcheck(dummyHealthcheckPort)
+		healthcheckProcess2 = startHealthcheck(dummyHealthcheckPort2)
 
-		healthcheckSession = startHealthcheck(
-			fmt.Sprintf("-port=%d", dummyHealthcheckPort),
-		)
-
-		healthcheckSession2 = startHealthcheck(
-			fmt.Sprintf("-port=%d", dummyHealthcheckPort2),
-		)
-
-		proxySession = startSwitchboard(
+		switchboardProcess = startSwitchboard(
 			fmt.Sprintf("-config=%s", proxyConfigFile),
 			fmt.Sprintf("-pidFile=%s", pidFile),
 		)
 	})
 
 	AfterEach(func() {
-		proxySession.Terminate()
-		healthcheckSession2.Terminate()
-		healthcheckSession.Terminate()
-		backendSession2.Terminate()
-		backendSession.Terminate()
+		ginkgomon.Kill(switchboardProcess)
+		ginkgomon.Kill(healthcheckProcess2)
+		ginkgomon.Kill(healthcheckProcess)
+		ginkgomon.Kill(backendProcess2)
+		ginkgomon.Kill(backendProcess)
 	})
 
 	Context("when there are multiple concurrent clients", func() {

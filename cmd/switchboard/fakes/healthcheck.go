@@ -3,8 +3,9 @@ package fakes
 import (
 	"fmt"
 	"io"
-	"log"
+	"net"
 	"net/http"
+	"os"
 )
 
 type FakeHealthcheck struct {
@@ -21,19 +22,45 @@ func NewFakeHealthcheck(port uint) *FakeHealthcheck {
 	}
 }
 
-func (fh *FakeHealthcheck) Start() {
-	fmt.Printf("Healthcheck listening on port %d\n", fh.port)
+func (fh *FakeHealthcheck) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	fh.hang = false
 
-	http.HandleFunc("/", fh.HelloServer)
-	http.HandleFunc("/set200", fh.set200Server)
-	http.HandleFunc("/set503", fh.set503Server)
-	http.HandleFunc("/setHang", fh.setHangServer)
+	errChan := make(chan error, 1)
 
-	err := http.ListenAndServe(fmt.Sprintf(":%d", fh.port), nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", fh.HelloServer)
+	mux.HandleFunc("/set200", fh.set200Server)
+	mux.HandleFunc("/set503", fh.set503Server)
+	mux.HandleFunc("/setHang", fh.setHangServer)
+
+	server := http.Server{
+		Handler: mux,
 	}
+
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", fh.port))
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		err := server.Serve(listener)
+		if err != nil {
+			errChan <- err
+		}
+	}()
+
+	fmt.Printf("Healthcheck listening on port %d\n", fh.port)
+	close(ready)
+
+	for {
+		select {
+		case err := <-errChan:
+			return err
+		case <-signals:
+			listener.Close()
+		}
+	}
+	return nil
 }
 
 func (fh *FakeHealthcheck) HelloServer(w http.ResponseWriter, req *http.Request) {

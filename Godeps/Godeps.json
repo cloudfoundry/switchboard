@@ -26,6 +26,10 @@
 		{
 			"ImportPath": "github.com/pivotal-golang/lager",
 			"Rev": "a106931abed5afe3043eae8851be8b33a4bdfa3f"
+		},
+		{
+			"ImportPath": "github.com/tedsuo/ifrit",
+			"Rev": "611096055721e35a95e3d1e4e2bc666fae509fcb"
 		}
 	]
 }

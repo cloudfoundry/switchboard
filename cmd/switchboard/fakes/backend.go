@@ -1,9 +1,10 @@
 package fakes
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"net"
+	"os"
 )
 
 type FakeBackend struct {
@@ -16,24 +17,39 @@ func NewFakeBackend(port uint) *FakeBackend {
 	}
 }
 
-func (fb *FakeBackend) Start() {
+func (fb *FakeBackend) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	address := fmt.Sprintf("%s:%d", "localhost", fb.port)
 
 	l, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Backend error listening on address: %s - %s\n", address, err.Error()))
+		return errors.New(fmt.Sprintf("Backend error listening on address: %s - %s\n", address, err.Error()))
 	}
 	defer l.Close()
 
-	fmt.Printf("Backend listening on port %s\n", address)
-	for {
-		conn, err := l.Accept()
-		defer conn.Close()
-		if err != nil {
-			log.Fatal("Error accepting: ", err.Error())
+	errChan := make(chan error, 1)
+	go func() {
+		for {
+			conn, err := l.Accept()
+			defer conn.Close()
+			if err != nil {
+				errChan <- errors.New(fmt.Sprintf("Error accepting: ", err.Error()))
+			}
+			go fb.handleRequest(conn)
 		}
-		go fb.handleRequest(conn)
+	}()
+
+	fmt.Printf("Backend listening on port %s\n", address)
+	close(ready)
+
+	for {
+		select {
+		case err := <-errChan:
+			return err
+		case <-signals:
+			l.Close()
+		}
 	}
+	return nil
 }
 
 func (fb *FakeBackend) handleRequest(conn net.Conn) {

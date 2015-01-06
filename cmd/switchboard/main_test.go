@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"time"
 
@@ -11,36 +12,37 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
+	"github.com/tedsuo/ifrit/grouper"
 )
 
-func startSwitchboard(args ...string) ifrit.Process {
+func switchboardRunner(args ...string) ifrit.Runner {
 	command := exec.Command(switchboardBinPath, args...)
 	runner := ginkgomon.New(ginkgomon.Config{
 		Command:    command,
 		Name:       fmt.Sprintf("switchboard"),
 		StartCheck: "started",
 	})
-	return ginkgomon.Invoke(runner)
+	return runner
 }
 
-func startBackend(port uint) ifrit.Process {
+func backendRunner(port uint) ifrit.Runner {
 	command := exec.Command(dummyBackendBinPath, fmt.Sprintf("-port=%d", port))
 	runner := ginkgomon.New(ginkgomon.Config{
 		Command:    command,
 		Name:       fmt.Sprintf("fake-backend:%d", port),
 		StartCheck: "Backend listening on",
 	})
-	return ginkgomon.Invoke(runner)
+	return runner
 }
 
-func startHealthcheck(port uint) ifrit.Process {
+func healthcheckRunner(port uint) ifrit.Runner {
 	command := exec.Command(dummyHealthcheckBinPath, fmt.Sprintf("-port=%d", port))
 	runner := ginkgomon.New(ginkgomon.Config{
 		Command:    command,
 		Name:       fmt.Sprintf("fake-healthcheck:%d", port),
 		StartCheck: "Healthcheck listening on",
 	})
-	return ginkgomon.Invoke(runner)
+	return runner
 }
 
 func sendData(conn net.Conn, data string) (string, error) {
@@ -55,33 +57,24 @@ func sendData(conn net.Conn, data string) (string, error) {
 }
 
 var _ = Describe("Switchboard", func() {
-	var (
-		backendProcess      ifrit.Process
-		backendProcess2     ifrit.Process
-		healthcheckProcess  ifrit.Process
-		healthcheckProcess2 ifrit.Process
-		switchboardProcess  ifrit.Process
-	)
+	var process ifrit.Process
 
 	BeforeEach(func() {
-		backendProcess = startBackend(backendPort)
-		backendProcess2 = startBackend(backendPort2)
-
-		healthcheckProcess = startHealthcheck(dummyHealthcheckPort)
-		healthcheckProcess2 = startHealthcheck(dummyHealthcheckPort2)
-
-		switchboardProcess = startSwitchboard(
-			fmt.Sprintf("-config=%s", proxyConfigFile),
-			fmt.Sprintf("-pidFile=%s", pidFile),
-		)
+		group := grouper.NewParallel(os.Kill, grouper.Members{
+			grouper.Member{"backend-1", backendRunner(backendPort)},
+			grouper.Member{"backend-2", backendRunner(backendPort2)},
+			grouper.Member{"healthcheck-1", healthcheckRunner(dummyHealthcheckPort)},
+			grouper.Member{"healthcheck-2", healthcheckRunner(dummyHealthcheckPort2)},
+			grouper.Member{"switchboard", switchboardRunner(
+				fmt.Sprintf("-config=%s", proxyConfigFile),
+				fmt.Sprintf("-pidFile=%s", pidFile),
+			)},
+		})
+		process = ifrit.Invoke(group)
 	})
 
 	AfterEach(func() {
-		ginkgomon.Kill(switchboardProcess)
-		ginkgomon.Kill(healthcheckProcess2)
-		ginkgomon.Kill(healthcheckProcess)
-		ginkgomon.Kill(backendProcess2)
-		ginkgomon.Kill(backendProcess)
+		ginkgomon.Kill(process)
 	})
 
 	Context("when there are multiple concurrent clients", func() {

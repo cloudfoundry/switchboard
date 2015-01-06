@@ -138,9 +138,9 @@ var _ = Describe("Switchboard", func() {
 			<-done2
 			<-done3
 
-			Expect(data1).Should(ContainSubstring(fmt.Sprintf("Echo from port %d: test1", backendPort)))
-			Expect(data2).Should(ContainSubstring(fmt.Sprintf("Echo from port %d: test2", backendPort)))
-			Expect(data3).Should(ContainSubstring(fmt.Sprintf("Echo from port %d: test3", backendPort)))
+			Expect(data1).Should(ContainSubstring("test1"))
+			Expect(data2).Should(ContainSubstring("test2"))
+			Expect(data3).Should(ContainSubstring("test3"))
 		})
 	})
 

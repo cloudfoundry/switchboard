@@ -11,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/fakes"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 	"github.com/tedsuo/ifrit/grouper"
@@ -36,16 +37,6 @@ func backendRunner(port, healthcheckPort uint) ifrit.Runner {
 		Command:    command,
 		Name:       fmt.Sprintf("fake-backend:%d", port),
 		StartCheck: "Backend listening on",
-	})
-	return runner
-}
-
-func healthcheckRunner(port uint) ifrit.Runner {
-	command := exec.Command(dummyHealthcheckBinPath, fmt.Sprintf("-port=%d", port))
-	runner := ginkgomon.New(ginkgomon.Config{
-		Command:    command,
-		Name:       fmt.Sprintf("fake-healthcheck:%d", port),
-		StartCheck: "Healthcheck listening on",
 	})
 	return runner
 }
@@ -76,13 +67,17 @@ var _ = Describe("Switchboard", func() {
 	var process ifrit.Process
 	var initialActiveHealthcheckPort uint
 	var initialInactiveBackendPort uint
+	var healthcheckRunner1, healthcheckRunner2 *fakes.FakeHealthcheck
 
 	BeforeEach(func() {
+		healthcheckRunner1 = fakes.NewFakeHealthcheck(dummyHealthcheckPort)
+		healthcheckRunner2 = fakes.NewFakeHealthcheck(dummyHealthcheckPort2)
+
 		group := grouper.NewParallel(os.Kill, grouper.Members{
 			grouper.Member{"backend-1", backendRunner(backendPort, dummyHealthcheckPort)},
 			grouper.Member{"backend-2", backendRunner(backendPort2, dummyHealthcheckPort2)},
-			grouper.Member{"healthcheck-1", healthcheckRunner(dummyHealthcheckPort)},
-			grouper.Member{"healthcheck-2", healthcheckRunner(dummyHealthcheckPort2)},
+			grouper.Member{"healthcheck-1", healthcheckRunner1},
+			grouper.Member{"healthcheck-2", healthcheckRunner2},
 			grouper.Member{"switchboard", switchboardRunner(
 				fmt.Sprintf("-config=%s", proxyConfigFile),
 				fmt.Sprintf("-pidFile=%s", pidFile),
@@ -202,9 +197,8 @@ var _ = Describe("Switchboard", func() {
 	})
 
 	Context("when the healthcheck succeeds", func() {
-		var client net.Conn
-
 		It("checks health again after the specified interval", func() {
+			var client net.Conn
 			Eventually(func() error {
 				var err error
 				client, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
@@ -236,13 +230,11 @@ var _ = Describe("Switchboard", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(dataWhileHealthy.Message).To(Equal("data while healthy"))
 
-				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/set503", initialActiveHealthcheckPort))
-				Expect(httpErr).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-				resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/", initialActiveHealthcheckPort))
-				Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
-				Expect(httpErr).NotTo(HaveOccurred())
+				if initialActiveHealthcheckPort == dummyHealthcheckPort {
+					healthcheckRunner1.SetStatusCode(http.StatusServiceUnavailable)
+				} else {
+					healthcheckRunner2.SetStatusCode(http.StatusServiceUnavailable)
+				}
 
 				Eventually(func() error {
 					_, err := sendData(conn, "data when unhealthy")
@@ -265,9 +257,11 @@ var _ = Describe("Switchboard", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(data.Message).Should(Equal("data before hang"))
 
-				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", initialActiveHealthcheckPort))
-				Expect(httpErr).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				if initialActiveHealthcheckPort == dummyHealthcheckPort {
+					healthcheckRunner1.SetHang(true)
+				} else {
+					healthcheckRunner2.SetHang(true)
+				}
 			})
 
 			It("disconnects existing client connections", func(done Done) {
@@ -276,7 +270,7 @@ var _ = Describe("Switchboard", func() {
 				Eventually(func() error {
 					_, err := sendData(conn, "data after hang")
 					return err
-				}, proxyConfig.HealthcheckTimeout()*4).Should(HaveOccurred())
+				}, proxyConfig.HealthcheckTimeout()*10).Should(HaveOccurred())
 			}, 5)
 
 			It("proxies new connections to another backend", func(done Done) {
@@ -299,13 +293,8 @@ var _ = Describe("Switchboard", func() {
 
 		Context("when all backends are down", func() {
 			BeforeEach(func() {
-				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
-				Expect(httpErr).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-				resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort2))
-				Expect(httpErr).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				healthcheckRunner1.SetHang(true)
+				healthcheckRunner2.SetHang(true)
 			})
 
 			It("rejects any new connections that are attempted", func(done Done) {
@@ -322,7 +311,7 @@ var _ = Describe("Switchboard", func() {
 				Eventually(func() error {
 					_, err := sendData(conn, "write that should fail")
 					return err
-				}, proxyConfig.HealthcheckTimeout()*4).Should(HaveOccurred())
+				}, proxyConfig.HealthcheckTimeout()*4, 200*time.Millisecond).Should(HaveOccurred())
 
 			}, 20)
 		})

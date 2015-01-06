@@ -8,12 +8,14 @@ import (
 )
 
 type FakeBackend struct {
-	port uint
+	port            uint
+	healthcheckPort uint
 }
 
-func NewFakeBackend(port uint) *FakeBackend {
+func NewFakeBackend(port, healthcheckPort uint) *FakeBackend {
 	return &FakeBackend{
-		port: port,
+		port:            port,
+		healthcheckPort: healthcheckPort,
 	}
 }
 
@@ -72,8 +74,14 @@ func (fb *FakeBackend) handleRequest(conn net.Conn) {
 	for {
 		select {
 		case data := <-dataCh:
-			fmt.Println("Dummy backend writing to connection: Echo: " + string(data))
-			conn.Write([]byte(fmt.Sprintf("Echo from port %d: %s", fb.port, string(data))))
+			response := fmt.Sprintf(
+				`{"BackendPort": %d, "HealthcheckPort": %d, "Message": "%s"}`,
+				fb.port,
+				fb.healthcheckPort,
+				string(data),
+			)
+			fmt.Println("Dummy backend writing to connection: Echo: " + response)
+			conn.Write([]byte(response))
 		case err := <-errCh:
 			fmt.Println("Error: " + err.Error())
 			conn.Close()

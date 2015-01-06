@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -25,8 +26,12 @@ func switchboardRunner(args ...string) ifrit.Runner {
 	return runner
 }
 
-func backendRunner(port uint) ifrit.Runner {
-	command := exec.Command(dummyBackendBinPath, fmt.Sprintf("-port=%d", port))
+func backendRunner(port, healthcheckPort uint) ifrit.Runner {
+	command := exec.Command(
+		dummyBackendBinPath,
+		fmt.Sprintf("-port=%d", port),
+		fmt.Sprintf("-healthcheckPort=%d", healthcheckPort),
+	)
 	runner := ginkgomon.New(ginkgomon.Config{
 		Command:    command,
 		Name:       fmt.Sprintf("fake-backend:%d", port),
@@ -45,24 +50,37 @@ func healthcheckRunner(port uint) ifrit.Runner {
 	return runner
 }
 
-func sendData(conn net.Conn, data string) (string, error) {
+type Response struct {
+	BackendPort     uint
+	HealthcheckPort uint
+	Message         string
+}
+
+func sendData(conn net.Conn, data string) (Response, error) {
 	conn.Write([]byte(data))
 	buffer := make([]byte, 1024)
-	_, err := conn.Read(buffer)
+	n, err := conn.Read(buffer)
 	if err != nil {
-		return "", err
+		return Response{}, err
 	} else {
-		return string(buffer), nil
+		response := Response{}
+		err := json.Unmarshal(buffer[:n], &response)
+		if err != nil {
+			return Response{}, err
+		}
+		return response, nil
 	}
 }
 
 var _ = Describe("Switchboard", func() {
 	var process ifrit.Process
+	var initialActiveHealthcheckPort uint
+	var initialInactiveBackendPort uint
 
 	BeforeEach(func() {
 		group := grouper.NewParallel(os.Kill, grouper.Members{
-			grouper.Member{"backend-1", backendRunner(backendPort)},
-			grouper.Member{"backend-2", backendRunner(backendPort2)},
+			grouper.Member{"backend-1", backendRunner(backendPort, dummyHealthcheckPort)},
+			grouper.Member{"backend-2", backendRunner(backendPort2, dummyHealthcheckPort2)},
 			grouper.Member{"healthcheck-1", healthcheckRunner(dummyHealthcheckPort)},
 			grouper.Member{"healthcheck-2", healthcheckRunner(dummyHealthcheckPort2)},
 			grouper.Member{"switchboard", switchboardRunner(
@@ -71,6 +89,23 @@ var _ = Describe("Switchboard", func() {
 			)},
 		})
 		process = ifrit.Invoke(group)
+
+		var err error
+		var conn net.Conn
+		Eventually(func() error {
+			conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+			return err
+		}).ShouldNot(HaveOccurred())
+
+		response, err := sendData(conn, "detect active")
+		Expect(err).NotTo(HaveOccurred())
+
+		initialActiveHealthcheckPort = response.HealthcheckPort
+		if response.BackendPort == backendPort {
+			initialInactiveBackendPort = backendPort2
+		} else {
+			initialInactiveBackendPort = backendPort
+		}
 	})
 
 	AfterEach(func() {
@@ -79,7 +114,7 @@ var _ = Describe("Switchboard", func() {
 
 	Context("when there are multiple concurrent clients", func() {
 		var conn1, conn2, conn3 net.Conn
-		var data1, data2, data3 string
+		var data1, data2, data3 Response
 
 		It("proxies all the connections to the backend", func() {
 			done1 := make(chan interface{})
@@ -131,9 +166,9 @@ var _ = Describe("Switchboard", func() {
 			<-done2
 			<-done3
 
-			Expect(data1).Should(ContainSubstring("test1"))
-			Expect(data2).Should(ContainSubstring("test2"))
-			Expect(data3).Should(ContainSubstring("test3"))
+			Expect(data1.Message).Should(Equal("test1"))
+			Expect(data2.Message).Should(Equal("test2"))
+			Expect(data3.Message).Should(Equal("test3"))
 		})
 	})
 
@@ -156,13 +191,13 @@ var _ = Describe("Switchboard", func() {
 
 			dataBeforeDisconnect, err := sendData(conn, "data before disconnect")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(dataBeforeDisconnect).Should(ContainSubstring("data before disconnect"))
+			Expect(dataBeforeDisconnect.Message).Should(Equal("data before disconnect"))
 
 			connToDisconnect.Close()
 
 			dataAfterDisconnect, err := sendData(conn, "data after disconnect")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(dataAfterDisconnect).Should(ContainSubstring("data after disconnect"))
+			Expect(dataAfterDisconnect.Message).Should(Equal("data after disconnect"))
 		})
 	})
 
@@ -176,16 +211,12 @@ var _ = Describe("Switchboard", func() {
 				return err
 			}).ShouldNot(HaveOccurred())
 
-			buffer := make([]byte, 1024)
-
-			client.Write([]byte("data around first healthcheck"))
-			n, err := client.Read(buffer)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(buffer[:n])).Should(ContainSubstring("data around first healthcheck"))
+			data, err := sendData(client, "data around first healthcheck")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(data.Message).To(Equal("data around first healthcheck"))
 
 			Consistently(func() error {
-				client.Write([]byte("data around subsequent healthcheck"))
-				_, err = client.Read(buffer)
+				_, err = sendData(client, "data around subsequent healthcheck")
 				return err
 			}, 3*time.Second).ShouldNot(HaveOccurred())
 		})
@@ -203,13 +234,13 @@ var _ = Describe("Switchboard", func() {
 
 				dataWhileHealthy, err := sendData(conn, "data while healthy")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(dataWhileHealthy).Should(ContainSubstring("data while healthy"))
+				Expect(dataWhileHealthy.Message).To(Equal("data while healthy"))
 
-				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/set503", dummyHealthcheckPort))
+				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/set503", initialActiveHealthcheckPort))
 				Expect(httpErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/", dummyHealthcheckPort))
+				resp, httpErr = http.Get(fmt.Sprintf("http://localhost:%d/", initialActiveHealthcheckPort))
 				Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
 				Expect(httpErr).NotTo(HaveOccurred())
 
@@ -222,7 +253,7 @@ var _ = Describe("Switchboard", func() {
 
 		Context("when a backend goes down", func() {
 			var conn net.Conn
-			var data string
+			var data Response
 
 			BeforeEach(func() {
 				Eventually(func() (err error) {
@@ -232,9 +263,9 @@ var _ = Describe("Switchboard", func() {
 
 				data, err := sendData(conn, "data before hang")
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(data).Should(ContainSubstring("data before hang"))
+				Expect(data.Message).Should(Equal("data before hang"))
 
-				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", dummyHealthcheckPort))
+				resp, httpErr := http.Get(fmt.Sprintf("http://localhost:%d/setHang", initialActiveHealthcheckPort))
 				Expect(httpErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			})
@@ -261,7 +292,8 @@ var _ = Describe("Switchboard", func() {
 
 				data, err = sendData(conn, "test")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(data).Should(ContainSubstring(fmt.Sprintf("Echo from port %d: test", backendPort2)))
+				Expect(data.Message).To(Equal("test"))
+				Expect(data.BackendPort).To(Equal(initialInactiveBackendPort))
 			}, 5)
 		})
 

@@ -27,20 +27,6 @@ func switchboardRunner(args ...string) ifrit.Runner {
 	return runner
 }
 
-func backendRunner(port, healthcheckPort uint) ifrit.Runner {
-	command := exec.Command(
-		dummyBackendBinPath,
-		fmt.Sprintf("-port=%d", port),
-		fmt.Sprintf("-healthcheckPort=%d", healthcheckPort),
-	)
-	runner := ginkgomon.New(ginkgomon.Config{
-		Command:    command,
-		Name:       fmt.Sprintf("fake-backend:%d", port),
-		StartCheck: "Backend listening on",
-	})
-	return runner
-}
-
 type Response struct {
 	BackendPort     uint
 	HealthcheckPort uint
@@ -74,8 +60,8 @@ var _ = Describe("Switchboard", func() {
 		healthcheckRunner2 = fakes.NewFakeHealthcheck(dummyHealthcheckPort2)
 
 		group := grouper.NewParallel(os.Kill, grouper.Members{
-			grouper.Member{"backend-1", backendRunner(backendPort, dummyHealthcheckPort)},
-			grouper.Member{"backend-2", backendRunner(backendPort2, dummyHealthcheckPort2)},
+			grouper.Member{"backend-1", fakes.NewFakeBackend(backendPort, dummyHealthcheckPort)},
+			grouper.Member{"backend-2", fakes.NewFakeBackend(backendPort2, dummyHealthcheckPort2)},
 			grouper.Member{"healthcheck-1", healthcheckRunner1},
 			grouper.Member{"healthcheck-2", healthcheckRunner2},
 			grouper.Member{"switchboard", switchboardRunner(

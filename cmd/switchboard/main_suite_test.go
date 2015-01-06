@@ -19,7 +19,6 @@ func TestSwitchboard(t *testing.T) {
 }
 
 var switchboardBinPath string
-var dummyBackendBinPath string
 var switchboardPort uint
 var backendPort uint
 var backendPort2 uint
@@ -32,9 +31,6 @@ var pidFile string
 var _ = BeforeSuite(func() {
 	var err error
 	switchboardBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard", "-race")
-	Ω(err).ShouldNot(HaveOccurred())
-
-	dummyBackendBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/internal/dummy_backend", "-race")
 	Ω(err).ShouldNot(HaveOccurred())
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())

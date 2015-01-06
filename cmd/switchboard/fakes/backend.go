@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+
+	"github.com/onsi/ginkgo"
 )
 
 type FakeBackend struct {
@@ -29,18 +31,20 @@ func (fb *FakeBackend) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 	defer l.Close()
 
 	errChan := make(chan error, 1)
+	var conn net.Conn
 	go func() {
 		for {
-			conn, err := l.Accept()
-			defer conn.Close()
+			conn, err = l.Accept()
 			if err != nil {
 				errChan <- errors.New(fmt.Sprintf("Error accepting: ", err.Error()))
+			} else {
+				defer conn.Close()
+				go fb.handleRequest(conn)
 			}
-			go fb.handleRequest(conn)
 		}
 	}()
 
-	fmt.Printf("Backend listening on port %s\n", address)
+	fmt.Fprintf(ginkgo.GinkgoWriter, "Backend listening on port %s\n", address)
 	close(ready)
 
 	for {
@@ -62,7 +66,7 @@ func (fb *FakeBackend) handleRequest(conn net.Conn) {
 		for {
 			data := make([]byte, 1024)
 			n, err := conn.Read(data)
-			fmt.Println("Dummy backend received on connection: " + string(data))
+			fmt.Fprintln(ginkgo.GinkgoWriter, "Dummy backend received on connection: "+string(data))
 			if err != nil {
 				eCh <- err
 				return
@@ -80,10 +84,10 @@ func (fb *FakeBackend) handleRequest(conn net.Conn) {
 				fb.healthcheckPort,
 				string(data),
 			)
-			fmt.Println("Dummy backend writing to connection: Echo: " + response)
+			fmt.Fprintln(ginkgo.GinkgoWriter, "Dummy backend writing to connection: Echo: "+response)
 			conn.Write([]byte(response))
 		case err := <-errCh:
-			fmt.Println("Error: " + err.Error())
+			fmt.Fprintln(ginkgo.GinkgoWriter, "Error: "+err.Error())
 			conn.Close()
 			break
 		}

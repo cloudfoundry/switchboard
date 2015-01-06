@@ -17,16 +17,6 @@ import (
 	"github.com/tedsuo/ifrit/grouper"
 )
 
-func switchboardRunner(args ...string) ifrit.Runner {
-	command := exec.Command(switchboardBinPath, args...)
-	runner := ginkgomon.New(ginkgomon.Config{
-		Command:    command,
-		Name:       fmt.Sprintf("switchboard"),
-		StartCheck: "started",
-	})
-	return runner
-}
-
 type Response struct {
 	BackendPort     uint
 	HealthcheckPort uint
@@ -56,18 +46,27 @@ var _ = Describe("Switchboard", func() {
 	var healthcheckRunner1, healthcheckRunner2 *fakes.FakeHealthcheck
 
 	BeforeEach(func() {
+		backendRunner1 := fakes.NewFakeBackend(backendPort, dummyHealthcheckPort)
+		backendRunner2 := fakes.NewFakeBackend(backendPort2, dummyHealthcheckPort2)
 		healthcheckRunner1 = fakes.NewFakeHealthcheck(dummyHealthcheckPort)
 		healthcheckRunner2 = fakes.NewFakeHealthcheck(dummyHealthcheckPort2)
 
-		group := grouper.NewParallel(os.Kill, grouper.Members{
-			grouper.Member{"backend-1", fakes.NewFakeBackend(backendPort, dummyHealthcheckPort)},
-			grouper.Member{"backend-2", fakes.NewFakeBackend(backendPort2, dummyHealthcheckPort2)},
-			grouper.Member{"healthcheck-1", healthcheckRunner1},
-			grouper.Member{"healthcheck-2", healthcheckRunner2},
-			grouper.Member{"switchboard", switchboardRunner(
+		switchboardRunner := ginkgomon.New(ginkgomon.Config{
+			Command: exec.Command(
+				switchboardBinPath,
 				fmt.Sprintf("-config=%s", proxyConfigFile),
 				fmt.Sprintf("-pidFile=%s", pidFile),
-			)},
+			),
+			Name:       fmt.Sprintf("switchboard"),
+			StartCheck: "started",
+		})
+
+		group := grouper.NewParallel(os.Kill, grouper.Members{
+			grouper.Member{"backend-1", backendRunner1},
+			grouper.Member{"backend-2", backendRunner2},
+			grouper.Member{"healthcheck-1", healthcheckRunner1},
+			grouper.Member{"healthcheck-2", healthcheckRunner2},
+			grouper.Member{"switchboard", switchboardRunner},
 		})
 		process = ifrit.Invoke(group)
 

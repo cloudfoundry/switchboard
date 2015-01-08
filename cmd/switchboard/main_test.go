@@ -43,13 +43,13 @@ func sendData(conn net.Conn, data string) (Response, error) {
 var _ = Describe("Switchboard", func() {
 	var process ifrit.Process
 	var initialActiveBackend, initialInactiveBackend config.Backend
-	var healthcheckRunner1, healthcheckRunner2 *fakes.HealthcheckRunner
+	var healthcheckRunners []*fakes.HealthcheckRunner
 
 	BeforeEach(func() {
-		backendRunner1 := fakes.NewBackendRunner(0, backends[0])
-		backendRunner2 := fakes.NewBackendRunner(1, backends[1])
-		healthcheckRunner1 = fakes.NewHealthcheckRunner(backends[0])
-		healthcheckRunner2 = fakes.NewHealthcheckRunner(backends[1])
+		healthcheckRunners = []*fakes.HealthcheckRunner{
+			fakes.NewHealthcheckRunner(backends[0]),
+			fakes.NewHealthcheckRunner(backends[1]),
+		}
 
 		switchboardRunner := ginkgomon.New(ginkgomon.Config{
 			Command: exec.Command(
@@ -62,10 +62,10 @@ var _ = Describe("Switchboard", func() {
 		})
 
 		group := grouper.NewParallel(os.Kill, grouper.Members{
-			grouper.Member{"backend-1", backendRunner1},
-			grouper.Member{"backend-2", backendRunner2},
-			grouper.Member{"healthcheck-1", healthcheckRunner1},
-			grouper.Member{"healthcheck-2", healthcheckRunner2},
+			grouper.Member{"backend-0", fakes.NewBackendRunner(0, backends[0])},
+			grouper.Member{"backend-1", fakes.NewBackendRunner(1, backends[1])},
+			grouper.Member{"healthcheck-0", healthcheckRunners[0]},
+			grouper.Member{"healthcheck-1", healthcheckRunners[1]},
 			grouper.Member{"switchboard", switchboardRunner},
 		})
 		process = ifrit.Invoke(group)
@@ -212,9 +212,9 @@ var _ = Describe("Switchboard", func() {
 				Expect(dataWhileHealthy.Message).To(Equal("data while healthy"))
 
 				if initialActiveBackend == backends[0] {
-					healthcheckRunner1.SetStatusCode(http.StatusServiceUnavailable)
+					healthcheckRunners[0].SetStatusCode(http.StatusServiceUnavailable)
 				} else {
-					healthcheckRunner2.SetStatusCode(http.StatusServiceUnavailable)
+					healthcheckRunners[1].SetStatusCode(http.StatusServiceUnavailable)
 				}
 
 				Eventually(func() error {
@@ -239,9 +239,9 @@ var _ = Describe("Switchboard", func() {
 				Expect(data.Message).Should(Equal("data before hang"))
 
 				if initialActiveBackend == backends[0] {
-					healthcheckRunner1.SetHang(true)
+					healthcheckRunners[0].SetHang(true)
 				} else {
-					healthcheckRunner2.SetHang(true)
+					healthcheckRunners[1].SetHang(true)
 				}
 			})
 
@@ -274,8 +274,9 @@ var _ = Describe("Switchboard", func() {
 
 		Context("when all backends are down", func() {
 			BeforeEach(func() {
-				healthcheckRunner1.SetHang(true)
-				healthcheckRunner2.SetHang(true)
+				for _, hr := range healthcheckRunners {
+					hr.SetHang(true)
+				}
 			})
 
 			It("rejects any new connections that are attempted", func(done Done) {

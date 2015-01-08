@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/config"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 	"github.com/tedsuo/ifrit/grouper"
@@ -41,8 +42,7 @@ func sendData(conn net.Conn, data string) (Response, error) {
 
 var _ = Describe("Switchboard", func() {
 	var process ifrit.Process
-	var initialActiveHealthcheckPort uint
-	var initialInactiveBackendPort uint
+	var initialActiveBackend, initialInactiveBackend config.Backend
 	var healthcheckRunner1, healthcheckRunner2 *fakes.HealthcheckRunner
 
 	BeforeEach(func() {
@@ -80,11 +80,12 @@ var _ = Describe("Switchboard", func() {
 		response, err := sendData(conn, "detect active")
 		Expect(err).NotTo(HaveOccurred())
 
-		initialActiveHealthcheckPort = response.HealthcheckPort
-		if response.BackendPort == backends[0].BackendPort {
-			initialInactiveBackendPort = backends[1].BackendPort
+		if response.HealthcheckPort == backends[0].HealthcheckPort {
+			initialActiveBackend = backends[0]
+			initialInactiveBackend = backends[1]
 		} else {
-			initialInactiveBackendPort = backends[0].BackendPort
+			initialActiveBackend = backends[1]
+			initialInactiveBackend = backends[0]
 		}
 	})
 
@@ -215,7 +216,7 @@ var _ = Describe("Switchboard", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(dataWhileHealthy.Message).To(Equal("data while healthy"))
 
-				if initialActiveHealthcheckPort == backends[0].HealthcheckPort {
+				if initialActiveBackend == backends[0] {
 					healthcheckRunner1.SetStatusCode(http.StatusServiceUnavailable)
 				} else {
 					healthcheckRunner2.SetStatusCode(http.StatusServiceUnavailable)
@@ -242,7 +243,7 @@ var _ = Describe("Switchboard", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(data.Message).Should(Equal("data before hang"))
 
-				if initialActiveHealthcheckPort == backends[0].HealthcheckPort {
+				if initialActiveBackend == backends[0] {
 					healthcheckRunner1.SetHang(true)
 				} else {
 					healthcheckRunner2.SetHang(true)
@@ -272,7 +273,7 @@ var _ = Describe("Switchboard", func() {
 				data, err = sendData(conn, "test")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(data.Message).To(Equal("test"))
-				Expect(data.BackendPort).To(Equal(initialInactiveBackendPort))
+				Expect(data.BackendPort).To(Equal(initialInactiveBackend.BackendPort))
 			}, 5)
 		})
 

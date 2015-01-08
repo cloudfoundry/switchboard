@@ -9,19 +9,19 @@ import (
 	"github.com/onsi/ginkgo"
 )
 
-type FakeBackend struct {
+type BackendRunner struct {
 	port            uint
 	healthcheckPort uint
 }
 
-func NewFakeBackend(port, healthcheckPort uint) *FakeBackend {
-	return &FakeBackend{
+func NewBackendRunner(port, healthcheckPort uint) *BackendRunner {
+	return &BackendRunner{
 		port:            port,
 		healthcheckPort: healthcheckPort,
 	}
 }
 
-func (fb *FakeBackend) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+func (fb *BackendRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	address := fmt.Sprintf("%s:%d", "localhost", fb.port)
 
 	l, err := net.Listen("tcp", address)
@@ -58,7 +58,7 @@ func (fb *FakeBackend) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 	return nil
 }
 
-func (fb *FakeBackend) handleRequest(conn net.Conn) {
+func (fb *BackendRunner) handleRequest(conn net.Conn) {
 	dataCh := make(chan []byte)
 	errCh := make(chan error)
 

@@ -11,7 +11,7 @@ import (
 	"github.com/onsi/ginkgo"
 )
 
-type FakeHealthcheck struct {
+type HealthcheckRunner struct {
 	sync.Mutex
 	port       uint
 	stopped    chan interface{}
@@ -19,8 +19,8 @@ type FakeHealthcheck struct {
 	hang       bool
 }
 
-func NewFakeHealthcheck(port uint) *FakeHealthcheck {
-	return &FakeHealthcheck{
+func NewHealthcheckRunner(port uint) *HealthcheckRunner {
+	return &HealthcheckRunner{
 		port:       port,
 		stopped:    make(chan interface{}),
 		statusCode: http.StatusOK,
@@ -28,21 +28,21 @@ func NewFakeHealthcheck(port uint) *FakeHealthcheck {
 	}
 }
 
-func (fh *FakeHealthcheck) SetHang(hang bool) {
+func (fh *HealthcheckRunner) SetHang(hang bool) {
 	fh.Lock()
 	defer fh.Unlock()
 
 	fh.hang = hang
 }
 
-func (fh *FakeHealthcheck) SetStatusCode(statusCode int) {
+func (fh *HealthcheckRunner) SetStatusCode(statusCode int) {
 	fh.Lock()
 	defer fh.Unlock()
 
 	fh.statusCode = statusCode
 }
 
-func (fh *FakeHealthcheck) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+func (fh *HealthcheckRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	errChan := make(chan error, 1)
 
 	mux := http.NewServeMux()
@@ -86,7 +86,7 @@ func (fh *FakeHealthcheck) Run(signals <-chan os.Signal, ready chan<- struct{}) 
 	return nil
 }
 
-func (fh *FakeHealthcheck) health(w http.ResponseWriter, req *http.Request) {
+func (fh *HealthcheckRunner) health(w http.ResponseWriter, req *http.Request) {
 	fh.Lock()
 	defer fh.Unlock()
 

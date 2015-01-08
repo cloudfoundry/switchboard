@@ -43,13 +43,13 @@ var _ = Describe("Switchboard", func() {
 	var process ifrit.Process
 	var initialActiveHealthcheckPort uint
 	var initialInactiveBackendPort uint
-	var healthcheckRunner1, healthcheckRunner2 *fakes.FakeHealthcheck
+	var healthcheckRunner1, healthcheckRunner2 *fakes.HealthcheckRunner
 
 	BeforeEach(func() {
-		backendRunner1 := fakes.NewFakeBackend(backendPort, dummyHealthcheckPort)
-		backendRunner2 := fakes.NewFakeBackend(backendPort2, dummyHealthcheckPort2)
-		healthcheckRunner1 = fakes.NewFakeHealthcheck(dummyHealthcheckPort)
-		healthcheckRunner2 = fakes.NewFakeHealthcheck(dummyHealthcheckPort2)
+		backendRunner1 := fakes.NewBackendRunner(backendPort, dummyHealthcheckPort)
+		backendRunner2 := fakes.NewBackendRunner(backendPort2, dummyHealthcheckPort2)
+		healthcheckRunner1 = fakes.NewHealthcheckRunner(dummyHealthcheckPort)
+		healthcheckRunner2 = fakes.NewHealthcheckRunner(dummyHealthcheckPort2)
 
 		switchboardRunner := ginkgomon.New(ginkgomon.Config{
 			Command: exec.Command(

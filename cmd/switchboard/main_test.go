@@ -11,7 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/dummies"
 	"github.com/pivotal-cf-experimental/switchboard/config"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
@@ -43,12 +43,12 @@ func sendData(conn net.Conn, data string) (Response, error) {
 var _ = Describe("Switchboard", func() {
 	var process ifrit.Process
 	var initialActiveBackend, initialInactiveBackend config.Backend
-	var healthcheckRunners []*fakes.HealthcheckRunner
+	var healthcheckRunners []*dummies.HealthcheckRunner
 
 	BeforeEach(func() {
-		healthcheckRunners = []*fakes.HealthcheckRunner{
-			fakes.NewHealthcheckRunner(backends[0]),
-			fakes.NewHealthcheckRunner(backends[1]),
+		healthcheckRunners = []*dummies.HealthcheckRunner{
+			dummies.NewHealthcheckRunner(backends[0]),
+			dummies.NewHealthcheckRunner(backends[1]),
 		}
 
 		switchboardRunner := ginkgomon.New(ginkgomon.Config{
@@ -62,8 +62,8 @@ var _ = Describe("Switchboard", func() {
 		})
 
 		group := grouper.NewParallel(os.Kill, grouper.Members{
-			grouper.Member{"backend-0", fakes.NewBackendRunner(0, backends[0])},
-			grouper.Member{"backend-1", fakes.NewBackendRunner(1, backends[1])},
+			grouper.Member{"backend-0", dummies.NewBackendRunner(0, backends[0])},
+			grouper.Member{"backend-1", dummies.NewBackendRunner(1, backends[1])},
 			grouper.Member{"healthcheck-0", healthcheckRunners[0]},
 			grouper.Member{"healthcheck-1", healthcheckRunners[1]},
 			grouper.Member{"switchboard", switchboardRunner},

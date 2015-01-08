@@ -1,4 +1,4 @@
-package fakes
+package dummies
 
 import (
 	"fmt"

@@ -98,7 +98,7 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			Eventually(backends.SetHealthyCallCount).Should(BeNumerically(">=", 2))
+			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", 2))
 			Expect(backends.SetHealthyArgsForCall(0)).To(Equal(backend1))
 			Expect(backends.SetHealthyArgsForCall(1)).To(Equal(backend3))
 
@@ -120,12 +120,12 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			Eventually(backends.SetHealthyCallCount).Should(BeNumerically(">=", 2))
-			Eventually(backends.SetHealthyArgsForCall(0)).Should(Equal(backend1))
-			Eventually(backends.SetHealthyArgsForCall(1)).Should(Equal(backend3))
+			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", 2))
+			Expect(backends.SetHealthyArgsForCall(0)).Should(Equal(backend1))
+			Expect(backends.SetHealthyArgsForCall(1)).Should(Equal(backend3))
 
-			Eventually(backends.SetUnhealthyCallCount()).Should(BeNumerically(">=", 1))
-			Eventually(backends.SetUnhealthyArgsForCall(0)).Should(Equal(backend2))
+			Expect(backends.SetUnhealthyCallCount()).Should(BeNumerically(">=", 1))
+			Expect(backends.SetUnhealthyArgsForCall(0)).Should(Equal(backend2))
 		}, 5)
 
 		It("notices when an unhealthy backend becomes healthy", func(done Done) {
@@ -149,8 +149,11 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", 2+3))
-			Expect(backends.SetUnhealthyCallCount()).To(Equal(1))
+			initialHealthyBackendCount := 2
+			initialUnhealthyBackendCount := 1
+			finalHealthyBackendCount := 3
+			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", initialHealthyBackendCount+finalHealthyBackendCount))
+			Expect(backends.SetUnhealthyCallCount()).To(Equal(initialUnhealthyBackendCount))
 		}, 5)
 	})
 

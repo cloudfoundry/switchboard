@@ -11,14 +11,14 @@ import (
 )
 
 type BackendRunner struct {
-	port            uint
-	healthcheckPort uint
+	index uint
+	port  uint
 }
 
-func NewBackendRunner(backend config.Backend) *BackendRunner {
+func NewBackendRunner(index uint, backend config.Backend) *BackendRunner {
 	return &BackendRunner{
-		port:            backend.BackendPort,
-		healthcheckPort: backend.HealthcheckPort,
+		index: index,
+		port:  backend.BackendPort,
 	}
 }
 
@@ -80,9 +80,9 @@ func (fb *BackendRunner) handleRequest(conn net.Conn) {
 		select {
 		case data := <-dataCh:
 			response := fmt.Sprintf(
-				`{"BackendPort": %d, "HealthcheckPort": %d, "Message": "%s"}`,
+				`{"BackendPort": %d, "BackendIndex": %d, "Message": "%s"}`,
 				fb.port,
-				fb.healthcheckPort,
+				fb.index,
 				string(data),
 			)
 			fmt.Fprintln(ginkgo.GinkgoWriter, "Dummy backend writing to connection: Echo: "+response)

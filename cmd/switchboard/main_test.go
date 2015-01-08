@@ -19,9 +19,9 @@ import (
 )
 
 type Response struct {
-	BackendPort     uint
-	HealthcheckPort uint
-	Message         string
+	BackendPort  uint
+	BackendIndex uint
+	Message      string
 }
 
 func sendData(conn net.Conn, data string) (Response, error) {
@@ -46,8 +46,8 @@ var _ = Describe("Switchboard", func() {
 	var healthcheckRunner1, healthcheckRunner2 *fakes.HealthcheckRunner
 
 	BeforeEach(func() {
-		backendRunner1 := fakes.NewBackendRunner(backends[0])
-		backendRunner2 := fakes.NewBackendRunner(backends[1])
+		backendRunner1 := fakes.NewBackendRunner(0, backends[0])
+		backendRunner2 := fakes.NewBackendRunner(1, backends[1])
 		healthcheckRunner1 = fakes.NewHealthcheckRunner(backends[0])
 		healthcheckRunner2 = fakes.NewHealthcheckRunner(backends[1])
 
@@ -80,13 +80,8 @@ var _ = Describe("Switchboard", func() {
 		response, err := sendData(conn, "detect active")
 		Expect(err).NotTo(HaveOccurred())
 
-		if response.HealthcheckPort == backends[0].HealthcheckPort {
-			initialActiveBackend = backends[0]
-			initialInactiveBackend = backends[1]
-		} else {
-			initialActiveBackend = backends[1]
-			initialInactiveBackend = backends[0]
-		}
+		initialActiveBackend = backends[response.BackendIndex]
+		initialInactiveBackend = backends[(response.BackendIndex+1)%2]
 	})
 
 	AfterEach(func() {

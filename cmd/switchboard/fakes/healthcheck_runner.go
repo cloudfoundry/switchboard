@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/onsi/ginkgo"
+	"github.com/pivotal-cf-experimental/switchboard/config"
 )
 
 type HealthcheckRunner struct {
@@ -19,9 +20,9 @@ type HealthcheckRunner struct {
 	hang       bool
 }
 
-func NewHealthcheckRunner(port uint) *HealthcheckRunner {
+func NewHealthcheckRunner(backend config.Backend) *HealthcheckRunner {
 	return &HealthcheckRunner{
-		port:       port,
+		port:       backend.HealthcheckPort,
 		stopped:    make(chan interface{}),
 		statusCode: http.StatusOK,
 		hang:       false,

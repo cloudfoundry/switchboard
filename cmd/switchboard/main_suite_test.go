@@ -20,10 +20,7 @@ func TestSwitchboard(t *testing.T) {
 
 var switchboardBinPath string
 var switchboardPort uint
-var backendPort uint
-var backendPort2 uint
-var dummyHealthcheckPort uint
-var dummyHealthcheckPort2 uint
+var backends []config.Backend
 var proxyConfigFile string
 var proxyConfig config.Proxy
 var pidFile string
@@ -34,24 +31,20 @@ var _ = BeforeSuite(func() {
 	Ω(err).ShouldNot(HaveOccurred())
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())
-	backendPort = uint(45000 + GinkgoParallelNode())
-	backendPort2 = uint(46000 + GinkgoParallelNode())
-	dummyHealthcheckPort = uint(45500 + GinkgoParallelNode())
-	dummyHealthcheckPort2 = uint(46500 + GinkgoParallelNode())
 
 	backend1 := config.Backend{
 		BackendIP:       "localhost",
-		BackendPort:     backendPort,
-		HealthcheckPort: dummyHealthcheckPort,
+		BackendPort:     uint(45000 + GinkgoParallelNode()),
+		HealthcheckPort: uint(45500 + GinkgoParallelNode()),
 	}
 
 	backend2 := config.Backend{
 		BackendIP:       "localhost",
-		BackendPort:     backendPort2,
-		HealthcheckPort: dummyHealthcheckPort2,
+		BackendPort:     uint(46000 + GinkgoParallelNode()),
+		HealthcheckPort: uint(46500 + GinkgoParallelNode()),
 	}
 
-	backends := []config.Backend{backend1, backend2}
+	backends = []config.Backend{backend1, backend2}
 
 	tempDir, err := ioutil.TempDir(os.TempDir(), "switchboard")
 	Expect(err).NotTo(HaveOccurred())

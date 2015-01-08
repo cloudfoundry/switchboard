@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/onsi/ginkgo"
+	"github.com/pivotal-cf-experimental/switchboard/config"
 )
 
 type BackendRunner struct {
@@ -14,10 +15,10 @@ type BackendRunner struct {
 	healthcheckPort uint
 }
 
-func NewBackendRunner(port, healthcheckPort uint) *BackendRunner {
+func NewBackendRunner(backend config.Backend) *BackendRunner {
 	return &BackendRunner{
-		port:            port,
-		healthcheckPort: healthcheckPort,
+		port:            backend.BackendPort,
+		healthcheckPort: backend.HealthcheckPort,
 	}
 }
 

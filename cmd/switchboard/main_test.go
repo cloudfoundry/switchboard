@@ -46,10 +46,10 @@ var _ = Describe("Switchboard", func() {
 	var healthcheckRunner1, healthcheckRunner2 *fakes.HealthcheckRunner
 
 	BeforeEach(func() {
-		backendRunner1 := fakes.NewBackendRunner(backendPort, dummyHealthcheckPort)
-		backendRunner2 := fakes.NewBackendRunner(backendPort2, dummyHealthcheckPort2)
-		healthcheckRunner1 = fakes.NewHealthcheckRunner(dummyHealthcheckPort)
-		healthcheckRunner2 = fakes.NewHealthcheckRunner(dummyHealthcheckPort2)
+		backendRunner1 := fakes.NewBackendRunner(backends[0])
+		backendRunner2 := fakes.NewBackendRunner(backends[1])
+		healthcheckRunner1 = fakes.NewHealthcheckRunner(backends[0])
+		healthcheckRunner2 = fakes.NewHealthcheckRunner(backends[1])
 
 		switchboardRunner := ginkgomon.New(ginkgomon.Config{
 			Command: exec.Command(
@@ -81,10 +81,10 @@ var _ = Describe("Switchboard", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		initialActiveHealthcheckPort = response.HealthcheckPort
-		if response.BackendPort == backendPort {
-			initialInactiveBackendPort = backendPort2
+		if response.BackendPort == backends[0].BackendPort {
+			initialInactiveBackendPort = backends[1].BackendPort
 		} else {
-			initialInactiveBackendPort = backendPort
+			initialInactiveBackendPort = backends[0].BackendPort
 		}
 	})
 
@@ -215,7 +215,7 @@ var _ = Describe("Switchboard", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(dataWhileHealthy.Message).To(Equal("data while healthy"))
 
-				if initialActiveHealthcheckPort == dummyHealthcheckPort {
+				if initialActiveHealthcheckPort == backends[0].HealthcheckPort {
 					healthcheckRunner1.SetStatusCode(http.StatusServiceUnavailable)
 				} else {
 					healthcheckRunner2.SetStatusCode(http.StatusServiceUnavailable)
@@ -242,7 +242,7 @@ var _ = Describe("Switchboard", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(data.Message).Should(Equal("data before hang"))
 
-				if initialActiveHealthcheckPort == dummyHealthcheckPort {
+				if initialActiveHealthcheckPort == backends[0].HealthcheckPort {
 					healthcheckRunner1.SetHang(true)
 				} else {
 					healthcheckRunner2.SetHang(true)

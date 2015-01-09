@@ -4,13 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"strconv"
 
 	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/config"
+	"github.com/tedsuo/ifrit"
 
 	"github.com/pivotal-golang/lager"
 )
@@ -32,21 +32,12 @@ func main() {
 		logger.Fatal("Error loading config file:", err, lager.Data{"config": *configFlag})
 	}
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", proxyConfig.Port))
-	if err != nil {
-		logger.Fatal("Error listening on port.", err, lager.Data{"port": proxyConfig.Port})
-	}
-	defer listener.Close()
-
 	err = ioutil.WriteFile(*pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
 	if err == nil {
 		logger.Info(fmt.Sprintf("Wrote pidFile to %s", *pidFile))
 	} else {
 		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": *pidFile})
 	}
-
-	logger.Info(fmt.Sprintf("Proxy started on port %d\n", proxyConfig.Port))
-	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v\n", proxyConfig))
 
 	backends := switchboard.NewBackends(proxyConfig.Backends, logger)
 	cluster := switchboard.NewCluster(
@@ -55,6 +46,14 @@ func main() {
 		logger,
 	)
 
-	switchboard := switchboard.New(listener, cluster, logger)
-	switchboard.Run()
+	proxyRunner := switchboard.NewProxyRunner(cluster, proxyConfig.Port, logger)
+	proxyProcess := ifrit.Invoke(proxyRunner)
+
+	logger.Info(fmt.Sprintf("Proxy started on port %d\n", proxyConfig.Port))
+	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v\n", proxyConfig))
+
+	err = <-proxyProcess.Wait()
+	if err != nil {
+		logger.Fatal("Error starting switchboard", err, lager.Data{"proxyConfig": proxyConfig})
+	}
 }

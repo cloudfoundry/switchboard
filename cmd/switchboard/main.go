@@ -3,9 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"strconv"
 
@@ -50,19 +48,7 @@ func main() {
 	)
 
 	proxyRunner := switchboard.NewProxyRunner(cluster, proxyConfig.Port, logger)
-	apiRunner := ifrit.RunFunc(func(signals <-chan os.Signal, ready chan<- struct{}) error {
-		http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-			io.WriteString(w, "")
-		})
-		close(ready)
-
-		err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", proxyConfig.ApiPort), nil)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
+	apiRunner := switchboard.NewAPIRunner(proxyConfig.APIPort)
 	group := grouper.NewParallel(os.Kill, grouper.Members{
 		grouper.Member{"proxy", proxyRunner},
 		grouper.Member{"api", apiRunner},

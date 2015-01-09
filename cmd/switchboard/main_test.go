@@ -90,7 +90,7 @@ var _ = Describe("Switchboard", func() {
 
 	Describe("api", func() {
 		It("returns empty response", func() {
-			_, err := http.Get(fmt.Sprintf("http://localhost:%d", switchboardApiPort))
+			_, err := http.Get(fmt.Sprintf("http://localhost:%d", switchboardAPIPort))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

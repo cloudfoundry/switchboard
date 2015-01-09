@@ -89,8 +89,12 @@ var _ = Describe("Switchboard", func() {
 	})
 
 	Describe("api", func() {
-		It("returns empty response", func() {
-			_, err := http.Get(fmt.Sprintf("http://localhost:%d", switchboardAPIPort))
+		It("responds with valid json", func() {
+			resp, err := http.Get(fmt.Sprintf("http://localhost:%d", switchboardAPIPort))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			decoder := json.NewDecoder(resp.Body)
+			err = decoder.Decode(new(struct{}))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

@@ -19,7 +19,7 @@ func NewAPIRunner(port uint) APIRunner {
 
 func (a APIRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		io.WriteString(w, "")
+		io.WriteString(w, "{}")
 	})
 	close(ready)
 

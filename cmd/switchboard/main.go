@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/config"
 	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/grouper"
 
 	"github.com/pivotal-golang/lager"
 )
@@ -47,12 +50,29 @@ func main() {
 	)
 
 	proxyRunner := switchboard.NewProxyRunner(cluster, proxyConfig.Port, logger)
-	proxyProcess := ifrit.Invoke(proxyRunner)
+	apiRunner := ifrit.RunFunc(func(signals <-chan os.Signal, ready chan<- struct{}) error {
+		http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+			io.WriteString(w, "")
+		})
+		close(ready)
+
+		err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", proxyConfig.ApiPort), nil)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	group := grouper.NewParallel(os.Kill, grouper.Members{
+		grouper.Member{"proxy", proxyRunner},
+		grouper.Member{"api", apiRunner},
+	})
+	process := ifrit.Invoke(group)
 
 	logger.Info(fmt.Sprintf("Proxy started on port %d\n", proxyConfig.Port))
 	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v\n", proxyConfig))
 
-	err = <-proxyProcess.Wait()
+	err = <-process.Wait()
 	if err != nil {
 		logger.Fatal("Error starting switchboard", err, lager.Data{"proxyConfig": proxyConfig})
 	}

@@ -25,6 +25,7 @@ func Load(configFilePath string) (*Proxy, error) {
 }
 
 type Proxy struct {
+	ApiPort                  uint
 	Port                     uint
 	Backends                 []Backend
 	HealthcheckTimeoutMillis uint

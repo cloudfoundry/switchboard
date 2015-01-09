@@ -20,6 +20,7 @@ func TestSwitchboard(t *testing.T) {
 
 var switchboardBinPath string
 var switchboardPort uint
+var switchboardApiPort uint
 var backends []config.Backend
 var proxyConfigFile string
 var proxyConfig config.Proxy
@@ -31,6 +32,7 @@ var _ = BeforeSuite(func() {
 	Ω(err).ShouldNot(HaveOccurred())
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())
+	switchboardApiPort = uint(39000 + GinkgoParallelNode())
 
 	backend1 := config.Backend{
 		BackendIP:       "localhost",
@@ -53,7 +55,8 @@ var _ = BeforeSuite(func() {
 	proxyConfig = config.Proxy{
 		Backends:                 backends,
 		HealthcheckTimeoutMillis: 500,
-		Port: switchboardPort,
+		Port:    switchboardPort,
+		ApiPort: switchboardApiPort,
 	}
 
 	proxyConfigFile = filepath.Join(tempDir, "proxyConfig.yml")

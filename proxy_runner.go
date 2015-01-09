@@ -31,22 +31,26 @@ func (s ProxyRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error 
 	}
 	defer listener.Close()
 
-	close(ready)
+	go func() {
+		for {
+			s.logger.Info("Accepting connections ...")
+			clientConn, err := listener.Accept()
 
-	for {
-		s.logger.Info("Accepting connections ...")
-		clientConn, err := listener.Accept()
-
-		if err != nil {
-			s.logger.Error("Error accepting client connection", err)
-		} else {
-			s.logger.Info("Serving Connections.")
-
-			err := s.cluster.RouteToBackend(clientConn)
 			if err != nil {
-				clientConn.Close()
-				s.logger.Error("Error routing to backend", err)
+				s.logger.Error("Error accepting client connection", err)
+			} else {
+				s.logger.Info("Serving Connections.")
+
+				err := s.cluster.RouteToBackend(clientConn)
+				if err != nil {
+					clientConn.Close()
+					s.logger.Error("Error routing to backend", err)
+				}
 			}
 		}
-	}
+	}()
+
+	close(ready)
+	<-signals
+	return listener.Close()
 }

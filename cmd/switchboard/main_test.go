@@ -93,9 +93,12 @@ var _ = Describe("Switchboard", func() {
 			resp, err := http.Get(fmt.Sprintf("http://localhost:%d", switchboardAPIPort))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			returnedBackends := []string{}
 			decoder := json.NewDecoder(resp.Body)
-			err = decoder.Decode(new(struct{}))
+			err = decoder.Decode(&returnedBackends)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(len(returnedBackends)).To(Equal(2))
 		})
 	})
 

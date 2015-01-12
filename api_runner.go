@@ -1,26 +1,43 @@
 package switchboard
 
 import (
+	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
 )
 
 type APIRunner struct {
-	port uint
+	port     uint
+	backends Backends
 }
 
-func NewAPIRunner(port uint) APIRunner {
+func NewAPIRunner(port uint, backends Backends) APIRunner {
 	return APIRunner{
-		port: port,
+		port:     port,
+		backends: backends,
 	}
 }
 
 func (a APIRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		io.WriteString(w, "{}")
+		backendsResponse := []string{}
+		for range a.backends.All() {
+			backendsResponse = append(backendsResponse, "")
+		}
+
+		backendsJSON, err := json.Marshal(backendsResponse)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		_, err = w.Write(backendsJSON)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	})
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", a.port))

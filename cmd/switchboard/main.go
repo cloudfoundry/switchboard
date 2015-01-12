@@ -48,7 +48,7 @@ func main() {
 	)
 
 	proxyRunner := switchboard.NewProxyRunner(cluster, proxyConfig.Port, logger)
-	apiRunner := switchboard.NewAPIRunner(proxyConfig.APIPort)
+	apiRunner := switchboard.NewAPIRunner(proxyConfig.APIPort, backends)
 	group := grouper.NewParallel(os.Kill, grouper.Members{
 		grouper.Member{"proxy", proxyRunner},
 		grouper.Member{"api", apiRunner},

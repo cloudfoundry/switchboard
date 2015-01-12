@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/fakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,7 +16,8 @@ import (
 var _ = Describe("APIRunner", func() {
 	It("shuts down gracefully when signalled", func() {
 		apiPort := 10000 + GinkgoParallelNode()
-		apiRunner := switchboard.NewAPIRunner(uint(apiPort))
+		backends := &fakes.FakeBackends{}
+		apiRunner := switchboard.NewAPIRunner(uint(apiPort), backends)
 		apiProcess := ifrit.Invoke(apiRunner)
 		apiProcess.Signal(os.Kill)
 		Eventually(apiProcess.Wait()).Should(Receive())

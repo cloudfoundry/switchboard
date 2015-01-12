@@ -1,6 +1,7 @@
 package switchboard_test
 
 import (
+	"net"
 	"os"
 
 	"github.com/pivotal-cf-experimental/switchboard"
@@ -19,5 +20,8 @@ var _ = Describe("ProxyRunner", func() {
 		proxyProcess := ifrit.Invoke(proxyRunner)
 		proxyProcess.Signal(os.Kill)
 		Eventually(proxyProcess.Wait()).Should(Receive())
+
+		_, err := net.Dial("tcp", "127.0.0.1:1234")
+		Expect(err).To(HaveOccurred())
 	})
 })

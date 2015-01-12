@@ -14,7 +14,7 @@ func NewBackendsPresenter(backends Backends) backendsPresenter {
 
 func (bp backendsPresenter) Present() ([]byte, error) {
 	backendsResponse := []string{}
-	for range bp.backends.All() {
+	for _ = range bp.backends.All() {
 		backendsResponse = append(backendsResponse, "")
 	}
 

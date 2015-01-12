@@ -1,6 +1,7 @@
 package switchboard_test
 
 import (
+	"fmt"
 	"net"
 	"os"
 
@@ -16,12 +17,14 @@ import (
 var _ = Describe("ProxyRunner", func() {
 	It("shuts down gracefully when signalled", func() {
 		cluster := &fakes.FakeCluster{}
-		proxyRunner := switchboard.NewProxyRunner(cluster, 1234, lager.NewLogger("ProxyRunner test"))
+		proxyPort := 10000 + GinkgoParallelNode()
+		logger := lager.NewLogger("ProxyRunner test")
+		proxyRunner := switchboard.NewProxyRunner(cluster, uint(proxyPort), logger)
 		proxyProcess := ifrit.Invoke(proxyRunner)
 		proxyProcess.Signal(os.Kill)
 		Eventually(proxyProcess.Wait()).Should(Receive())
 
-		_, err := net.Dial("tcp", "127.0.0.1:1234")
+		_, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", proxyPort))
 		Expect(err).To(HaveOccurred())
 	})
 })

@@ -22,17 +22,13 @@ func NewProxyRunner(cluster Cluster, port uint, logger lager.Logger) ProxyRunner
 	}
 }
 
-func (s ProxyRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) (err error) {
+func (s ProxyRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	s.logger.Info("Running switchboard ...")
 	s.cluster.Monitor()
-	var listener net.Listener
-	listener, err = net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", s.port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", s.port))
 	if err != nil {
-		return
+		return err
 	}
-	defer func() {
-		err = listener.Close()
-	}()
 
 	go func() {
 		for {
@@ -55,5 +51,5 @@ func (s ProxyRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) (err e
 
 	close(ready)
 	<-signals
-	return
+	return listener.Close()
 }

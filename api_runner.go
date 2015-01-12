@@ -39,8 +39,7 @@ func (a APIRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 	select {
 	case <-signals:
-		listener.Close()
-		return nil
+		return listener.Close()
 	case err := <-errChan:
 		return err
 	}

@@ -107,6 +107,8 @@ var _ = Describe("Switchboard", func() {
 
 			Expect(returnedBackends[1]["ip"]).To(Equal("localhost"))
 			Expect(returnedBackends[1]["healthy"]).To(BeTrue())
+
+			Expect(returnedBackends[0]["active"]).NotTo(Equal(returnedBackends[1]["active"]))
 		})
 	})
 

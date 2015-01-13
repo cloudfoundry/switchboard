@@ -15,6 +15,7 @@ type Backend interface {
 	HealthcheckUrl() string
 	Bridge(clientConn net.Conn) error
 	SeverConnections()
+	AsJSON() BackendJSON
 }
 
 type backend struct {
@@ -23,6 +24,10 @@ type backend struct {
 	healthcheckPort uint
 	logger          lager.Logger
 	bridges         Bridges
+}
+
+type BackendJSON struct {
+	IP string `json:"ip"`
 }
 
 func NewBackend(ipAddress string, port uint, healthcheckPort uint, logger lager.Logger) Backend {
@@ -56,4 +61,10 @@ func (b backend) Bridge(clientConn net.Conn) error {
 
 func (b backend) SeverConnections() {
 	b.bridges.RemoveAndCloseAll()
+}
+
+func (b backend) AsJSON() BackendJSON {
+	return BackendJSON{
+		IP: b.ipAddress,
+	}
 }

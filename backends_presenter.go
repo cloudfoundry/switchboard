@@ -13,10 +13,10 @@ func NewBackendsPresenter(backends Backends) backendsPresenter {
 }
 
 func (bp backendsPresenter) Present() ([]byte, error) {
-	backendsResponse := []string{}
-	for _ = range bp.backends.All() {
-		backendsResponse = append(backendsResponse, "")
+	backendsAsJSON := []BackendJSON{}
+	for backend := range bp.backends.All() {
+		backendsAsJSON = append(backendsAsJSON, backend.AsJSON())
 	}
 
-	return json.Marshal(backendsResponse)
+	return json.Marshal(backendsAsJSON)
 }

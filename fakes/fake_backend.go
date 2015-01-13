@@ -26,6 +26,12 @@ type FakeBackend struct {
 	SeverConnectionsStub        func()
 	severConnectionsMutex       sync.RWMutex
 	severConnectionsArgsForCall []struct{}
+	AsJSONStub        func() switchboard.BackendJSON
+	asJSONMutex       sync.RWMutex
+	asJSONArgsForCall []struct{}
+	asJSONReturns struct {
+		result1 switchboard.BackendJSON
+	}
 }
 
 func (fake *FakeBackend) HealthcheckUrl() string {
@@ -97,6 +103,30 @@ func (fake *FakeBackend) SeverConnectionsCallCount() int {
 	fake.severConnectionsMutex.RLock()
 	defer fake.severConnectionsMutex.RUnlock()
 	return len(fake.severConnectionsArgsForCall)
+}
+
+func (fake *FakeBackend) AsJSON() switchboard.BackendJSON {
+	fake.asJSONMutex.Lock()
+	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
+	fake.asJSONMutex.Unlock()
+	if fake.AsJSONStub != nil {
+		return fake.AsJSONStub()
+	} else {
+		return fake.asJSONReturns.result1
+	}
+}
+
+func (fake *FakeBackend) AsJSONCallCount() int {
+	fake.asJSONMutex.RLock()
+	defer fake.asJSONMutex.RUnlock()
+	return len(fake.asJSONArgsForCall)
+}
+
+func (fake *FakeBackend) AsJSONReturns(result1 switchboard.BackendJSON) {
+	fake.AsJSONStub = nil
+	fake.asJSONReturns = struct {
+		result1 switchboard.BackendJSON
+	}{result1}
 }
 
 var _ switchboard.Backend = new(FakeBackend)

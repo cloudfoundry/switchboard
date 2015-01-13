@@ -94,11 +94,13 @@ var _ = Describe("Switchboard", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			returnedBackends := []string{}
+			returnedBackends := []map[string]interface{}{}
+
 			decoder := json.NewDecoder(resp.Body)
 			err = decoder.Decode(&returnedBackends)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(returnedBackends)).To(Equal(2))
+			Expect(returnedBackends[0]["ip"]).To(Equal("localhost"))
 		})
 	})
 

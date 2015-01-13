@@ -42,6 +42,12 @@ type FakeBackends struct {
 	healthyReturns struct {
 		result1 <-chan switchboard.Backend
 	}
+	AsJSONStub        func() []switchboard.BackendJSON
+	asJSONMutex       sync.RWMutex
+	asJSONArgsForCall []struct{}
+	asJSONReturns struct {
+		result1 []switchboard.BackendJSON
+	}
 }
 
 func (fake *FakeBackends) All() <-chan switchboard.Backend {
@@ -183,6 +189,30 @@ func (fake *FakeBackends) HealthyReturns(result1 <-chan switchboard.Backend) {
 	fake.HealthyStub = nil
 	fake.healthyReturns = struct {
 		result1 <-chan switchboard.Backend
+	}{result1}
+}
+
+func (fake *FakeBackends) AsJSON() []switchboard.BackendJSON {
+	fake.asJSONMutex.Lock()
+	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
+	fake.asJSONMutex.Unlock()
+	if fake.AsJSONStub != nil {
+		return fake.AsJSONStub()
+	} else {
+		return fake.asJSONReturns.result1
+	}
+}
+
+func (fake *FakeBackends) AsJSONCallCount() int {
+	fake.asJSONMutex.RLock()
+	defer fake.asJSONMutex.RUnlock()
+	return len(fake.asJSONArgsForCall)
+}
+
+func (fake *FakeBackends) AsJSONReturns(result1 []switchboard.BackendJSON) {
+	fake.AsJSONStub = nil
+	fake.asJSONReturns = struct {
+		result1 []switchboard.BackendJSON
 	}{result1}
 }
 

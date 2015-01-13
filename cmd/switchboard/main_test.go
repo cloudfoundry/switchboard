@@ -99,8 +99,14 @@ var _ = Describe("Switchboard", func() {
 			decoder := json.NewDecoder(resp.Body)
 			err = decoder.Decode(&returnedBackends)
 			Expect(err).NotTo(HaveOccurred())
+
 			Expect(len(returnedBackends)).To(Equal(2))
+
 			Expect(returnedBackends[0]["ip"]).To(Equal("localhost"))
+			Expect(returnedBackends[0]["healthy"]).To(BeTrue())
+
+			Expect(returnedBackends[1]["ip"]).To(Equal("localhost"))
+			Expect(returnedBackends[1]["healthy"]).To(BeTrue())
 		})
 	})
 

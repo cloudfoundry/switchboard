@@ -27,7 +27,8 @@ type backend struct {
 }
 
 type BackendJSON struct {
-	IP string `json:"ip"`
+	IP      string `json:"ip"`
+	Healthy bool   `json:"healthy"`
 }
 
 func NewBackend(ipAddress string, port uint, healthcheckPort uint, logger lager.Logger) Backend {

@@ -16,6 +16,7 @@ type Backends interface {
 	SetHealthy(backend Backend)
 	SetUnhealthy(backend Backend)
 	Healthy() <-chan Backend
+	AsJSON() []BackendJSON
 }
 
 type backends struct {
@@ -123,6 +124,20 @@ func (b *backends) SetUnhealthy(backend Backend) {
 		backend.SeverConnections()
 		b.active = b.unsafeNextHealthy()
 	}
+}
+
+func (b backends) AsJSON() []BackendJSON {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	backendsJSON := []BackendJSON{}
+	for backend, healthy := range b.all {
+		backendJSON := backend.AsJSON()
+		backendJSON.Healthy = healthy
+		backendsJSON = append(backendsJSON, backendJSON)
+	}
+
+	return backendsJSON
 }
 
 func (b *backends) unsafeNextHealthy() Backend {

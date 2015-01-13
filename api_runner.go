@@ -1,6 +1,7 @@
 package switchboard
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -21,8 +22,7 @@ func NewAPIRunner(port uint, backends Backends) APIRunner {
 
 func (a APIRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		backendsPresenter := NewBackendsPresenter(a.backends)
-		backendsJSON, err := backendsPresenter.Present()
+		backendsJSON, err := json.Marshal(a.backends.AsJSON())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

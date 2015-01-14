@@ -21,7 +21,7 @@ func NewAPIRunner(port uint, backends Backends) APIRunner {
 }
 
 func (a APIRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
-	http.HandleFunc("/api/v0/servers/", func(w http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/v0/servers", func(w http.ResponseWriter, req *http.Request) {
 		backendsJSON, err := json.Marshal(a.backends.AsJSON())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

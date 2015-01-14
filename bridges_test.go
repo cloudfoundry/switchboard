@@ -8,6 +8,7 @@ import (
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/fakes"
 	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Bridges", func() {
@@ -17,7 +18,8 @@ var _ = Describe("Bridges", func() {
 	var bridge3 switchboard.Bridge
 
 	BeforeEach(func() {
-		bridges = switchboard.NewBridges()
+		logger := lagertest.NewTestLogger("Bridges Test")
+		bridges = switchboard.NewBridges(logger)
 	})
 
 	JustBeforeEach(func() {

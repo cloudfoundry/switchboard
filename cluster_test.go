@@ -12,6 +12,7 @@ import (
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/fakes"
 	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Cluster", func() {
@@ -21,7 +22,7 @@ var _ = Describe("Cluster", func() {
 
 	BeforeEach(func() {
 		backends = &fakes.FakeBackends{}
-		logger = lager.NewLogger("Cluster test")
+		logger = lagertest.NewTestLogger("Cluster test")
 		cluster = switchboard.NewCluster(backends, time.Second, logger)
 	})
 

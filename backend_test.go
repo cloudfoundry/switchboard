@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/fakes"
+	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("Backend", func() {
@@ -16,7 +17,7 @@ var _ = Describe("Backend", func() {
 	BeforeEach(func() {
 		bridges = &fakes.FakeBridges{}
 
-		switchboard.BridgesProvider = func() switchboard.Bridges {
+		switchboard.BridgesProvider = func(lager.Logger) switchboard.Bridges {
 			return bridges
 		}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/pivotal-cf-experimental/switchboard/config"
 	"github.com/pivotal-cf-experimental/switchboard/fakes"
 	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Backends", func() {
@@ -23,7 +24,7 @@ var _ = Describe("Backends", func() {
 	}
 
 	JustBeforeEach(func() {
-		logger := lager.NewLogger("Backends test")
+		logger := lagertest.NewTestLogger("Backends test")
 
 		backendConfigs := []config.Backend{
 			{"localhost", 50000, 60000},

@@ -38,7 +38,7 @@ func NewBackend(ipAddress string, port uint, healthcheckPort uint, logger lager.
 		port:            port,
 		healthcheckPort: healthcheckPort,
 		logger:          logger,
-		bridges:         BridgesProvider(),
+		bridges:         BridgesProvider(logger),
 	}
 }
 

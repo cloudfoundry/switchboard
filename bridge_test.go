@@ -9,6 +9,7 @@ import (
 	. "github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/fakes"
 	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Bridge", func() {
@@ -18,7 +19,7 @@ var _ = Describe("Bridge", func() {
 		var logger lager.Logger
 
 		BeforeEach(func() {
-			logger = lager.NewLogger("Bridge test")
+			logger = lagertest.NewTestLogger("Bridge test")
 			backend = &fakes.FakeReadWriteCloser{}
 			client = &fakes.FakeReadWriteCloser{}
 			bridge = NewBridge(client, backend, logger)

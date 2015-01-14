@@ -5,7 +5,6 @@ import (
 	"io"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -25,9 +24,9 @@ type concurrentBridges struct {
 	logger  lager.Logger
 }
 
-func NewBridges() Bridges {
+func NewBridges(logger lager.Logger) Bridges {
 	return &concurrentBridges{
-		logger: cf_lager.New("bridges"),
+		logger: logger,
 	}
 }
 

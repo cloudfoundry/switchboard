@@ -29,6 +29,7 @@ type backend struct {
 
 type BackendJSON struct {
 	Host    string `json:"host"`
+	Port    uint   `json:"port"`
 	Healthy bool   `json:"healthy"`
 	Active  bool   `json:"active"`
 	Name    string `json:"name"`
@@ -77,6 +78,7 @@ func (b backend) SeverConnections() {
 func (b backend) AsJSON() BackendJSON {
 	return BackendJSON{
 		Host: b.host,
+		Port: b.port,
 		Name: b.name,
 	}
 }

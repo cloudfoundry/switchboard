@@ -117,11 +117,16 @@ var _ = Describe("Switchboard", func() {
 
 				Expect(returnedBackends[0]["active"]).NotTo(Equal(returnedBackends[1]["active"]))
 
-				if returnedBackends[0]["name"] == "backend-0" {
-					Expect(returnedBackends[1]["name"]).To(Equal("backend-1"))
-				} else if returnedBackends[0]["name"] == "backend-1" {
-					Expect(returnedBackends[1]["name"]).To(Equal("backend-0"))
-				} else {
+				switch returnedBackends[0]["name"] {
+				case backends[0].BackendName:
+					Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[0].BackendPort))
+					Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[1].BackendPort))
+					Expect(returnedBackends[1]["name"]).To(Equal(backends[1].BackendName))
+				case backends[1].BackendName: // order reversed in response
+					Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[0].BackendPort))
+					Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[1].BackendPort))
+					Expect(returnedBackends[0]["name"]).To(Equal(backends[1].BackendName))
+				default:
 					Fail(fmt.Sprintf("Invalid backend name: %s", returnedBackends[0]["name"]))
 				}
 			})

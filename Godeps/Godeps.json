@@ -7,7 +7,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/cloudfoundry-incubator/cf-lager",
-			"Rev": "94308c799cf61ac0818667ddcc25046c8c5659d1"
+			"Rev": "d308139cfb9eb10924f6a1c019ec2e56be6e2f44"
 		},
 		{
 			"ImportPath": "github.com/fraenkel/candiedyaml",

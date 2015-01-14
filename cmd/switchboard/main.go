@@ -16,17 +16,14 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-var (
-	configFlag = flag.String("config", "", "Path to config file")
-	pidFile    = flag.String("pidFile", "", "Path to pid file")
-
-	logger lager.Logger
-)
-
 func main() {
-	flag.Parse()
+	flags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	configFlag := flags.String("config", "", "Path to config file")
+	pidFile := flags.String("pidFile", "", "Path to pid file")
+	cf_lager.AddFlags(flags)
+	flags.Parse(os.Args[1:])
 
-	logger = cf_lager.New("main")
+	logger := cf_lager.New("Switchboard")
 
 	proxyConfig, err := config.Load(*configFlag)
 	if err != nil {

@@ -52,7 +52,8 @@ func main() {
 	})
 	process := ifrit.Invoke(group)
 
-	logger.Info(fmt.Sprintf("Proxy started on port %d\n", proxyConfig.Port))
+	logger.Info(fmt.Sprintf("Proxy listening on port %d\n", proxyConfig.Port))
+	logger.Info(fmt.Sprintf("Proxy api listening on port %d\n", proxyConfig.APIPort))
 	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v\n", proxyConfig))
 
 	err = <-process.Wait()

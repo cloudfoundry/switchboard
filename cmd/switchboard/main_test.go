@@ -89,26 +89,34 @@ var _ = Describe("Switchboard", func() {
 	})
 
 	Describe("api", func() {
-		It("responds with valid json", func() {
-			resp, err := http.Get(fmt.Sprintf("http://localhost:%d", switchboardAPIPort))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		Describe("/servers/", func() {
+			var url string
 
-			returnedBackends := []map[string]interface{}{}
+			BeforeEach(func() {
+				url = fmt.Sprintf("http://localhost:%d/api/v0/servers/", switchboardAPIPort)
+			})
 
-			decoder := json.NewDecoder(resp.Body)
-			err = decoder.Decode(&returnedBackends)
-			Expect(err).NotTo(HaveOccurred())
+			It("responds with valid json", func() {
+				resp, err := http.Get(url)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			Expect(len(returnedBackends)).To(Equal(2))
+				returnedBackends := []map[string]interface{}{}
 
-			Expect(returnedBackends[0]["ip"]).To(Equal("localhost"))
-			Expect(returnedBackends[0]["healthy"]).To(BeTrue())
+				decoder := json.NewDecoder(resp.Body)
+				err = decoder.Decode(&returnedBackends)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(returnedBackends[1]["ip"]).To(Equal("localhost"))
-			Expect(returnedBackends[1]["healthy"]).To(BeTrue())
+				Expect(len(returnedBackends)).To(Equal(2))
 
-			Expect(returnedBackends[0]["active"]).NotTo(Equal(returnedBackends[1]["active"]))
+				Expect(returnedBackends[0]["ip"]).To(Equal("localhost"))
+				Expect(returnedBackends[0]["healthy"]).To(BeTrue())
+
+				Expect(returnedBackends[1]["ip"]).To(Equal("localhost"))
+				Expect(returnedBackends[1]["healthy"]).To(BeTrue())
+
+				Expect(returnedBackends[0]["active"]).NotTo(Equal(returnedBackends[1]["active"]))
+			})
 		})
 	})
 

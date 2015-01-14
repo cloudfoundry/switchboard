@@ -14,7 +14,7 @@ type Bridges interface {
 	Create(clientConn, backendConn io.ReadWriteCloser) Bridge
 	Remove(bridge Bridge) error
 	RemoveAndCloseAll()
-	Size() int
+	Size() uint
 	Contains(bridge Bridge) bool
 }
 
@@ -64,11 +64,11 @@ func (b *concurrentBridges) RemoveAndCloseAll() {
 	b.bridges = []Bridge{}
 }
 
-func (b *concurrentBridges) Size() int {
+func (b *concurrentBridges) Size() uint {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 
-	return len(b.bridges)
+	return uint(len(b.bridges))
 }
 
 func (b *concurrentBridges) Contains(bridge Bridge) bool {

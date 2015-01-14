@@ -81,6 +81,6 @@ func (b backend) AsJSON() BackendJSON {
 		Host:                b.host,
 		Port:                b.port,
 		Name:                b.name,
-		CurrentSessionCount: uint(b.bridges.Size()),
+		CurrentSessionCount: b.bridges.Size(),
 	}
 }

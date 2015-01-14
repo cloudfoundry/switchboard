@@ -29,11 +29,11 @@ type FakeBridges struct {
 	RemoveAndCloseAllStub        func()
 	removeAndCloseAllMutex       sync.RWMutex
 	removeAndCloseAllArgsForCall []struct{}
-	SizeStub                     func() int
-	sizeMutex                    sync.RWMutex
-	sizeArgsForCall              []struct{}
-	sizeReturns                  struct {
-		result1 int
+	SizeStub        func() uint
+	sizeMutex       sync.RWMutex
+	sizeArgsForCall []struct{}
+	sizeReturns struct {
+		result1 uint
 	}
 	ContainsStub        func(bridge switchboard.Bridge) bool
 	containsMutex       sync.RWMutex
@@ -125,7 +125,7 @@ func (fake *FakeBridges) RemoveAndCloseAllCallCount() int {
 	return len(fake.removeAndCloseAllArgsForCall)
 }
 
-func (fake *FakeBridges) Size() int {
+func (fake *FakeBridges) Size() uint {
 	fake.sizeMutex.Lock()
 	fake.sizeArgsForCall = append(fake.sizeArgsForCall, struct{}{})
 	fake.sizeMutex.Unlock()
@@ -142,10 +142,10 @@ func (fake *FakeBridges) SizeCallCount() int {
 	return len(fake.sizeArgsForCall)
 }
 
-func (fake *FakeBridges) SizeReturns(result1 int) {
+func (fake *FakeBridges) SizeReturns(result1 uint) {
 	fake.SizeStub = nil
 	fake.sizeReturns = struct {
-		result1 int
+		result1 uint
 	}{result1}
 }
 

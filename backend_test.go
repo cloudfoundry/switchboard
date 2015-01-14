@@ -29,7 +29,7 @@ var _ = Describe("Backend", func() {
 	})
 
 	Describe("HealthcheckUrl", func() {
-		It("has the correct scheme, backend ip and health check port", func() {
+		It("has the correct protocol, backend host and health check port", func() {
 			healthcheckURL := backend.HealthcheckUrl()
 			Expect(healthcheckURL).To(Equal("http://1.2.3.4:9902"))
 		})

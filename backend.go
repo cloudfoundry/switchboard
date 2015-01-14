@@ -19,7 +19,7 @@ type Backend interface {
 }
 
 type backend struct {
-	ipAddress       string
+	host            string
 	port            uint
 	healthcheckPort uint
 	logger          lager.Logger
@@ -28,7 +28,7 @@ type backend struct {
 }
 
 type BackendJSON struct {
-	IP      string `json:"ip"`
+	Host    string `json:"host"`
 	Healthy bool   `json:"healthy"`
 	Active  bool   `json:"active"`
 	Name    string `json:"name"`
@@ -36,14 +36,14 @@ type BackendJSON struct {
 
 func NewBackend(
 	name string,
-	ipAddress string,
+	host string,
 	port uint,
 	healthcheckPort uint,
 	logger lager.Logger) Backend {
 
 	return &backend{
 		name:            name,
-		ipAddress:       ipAddress,
+		host:            host,
 		port:            port,
 		healthcheckPort: healthcheckPort,
 		logger:          logger,
@@ -52,11 +52,11 @@ func NewBackend(
 }
 
 func (b backend) HealthcheckUrl() string {
-	return fmt.Sprintf("http://%s:%d", b.ipAddress, b.healthcheckPort)
+	return fmt.Sprintf("http://%s:%d", b.host, b.healthcheckPort)
 }
 
 func (b backend) Bridge(clientConn net.Conn) error {
-	backendConn, err := Dialer("tcp", fmt.Sprintf("%s:%d", b.ipAddress, b.port))
+	backendConn, err := Dialer("tcp", fmt.Sprintf("%s:%d", b.host, b.port))
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error connection to backend: %v", err))
 	}
@@ -76,7 +76,7 @@ func (b backend) SeverConnections() {
 
 func (b backend) AsJSON() BackendJSON {
 	return BackendJSON{
-		IP:   b.ipAddress,
+		Host: b.host,
 		Name: b.name,
 	}
 }

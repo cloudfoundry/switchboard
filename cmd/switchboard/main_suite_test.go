@@ -35,14 +35,14 @@ var _ = BeforeSuite(func() {
 	switchboardAPIPort = uint(39000 + GinkgoParallelNode())
 
 	backend1 := config.Backend{
-		BackendIP:       "localhost",
+		BackendHost:     "localhost",
 		BackendPort:     uint(45000 + GinkgoParallelNode()),
 		HealthcheckPort: uint(45500 + GinkgoParallelNode()),
 		BackendName:     "backend-0",
 	}
 
 	backend2 := config.Backend{
-		BackendIP:       "localhost",
+		BackendHost:     "localhost",
 		BackendPort:     uint(46000 + GinkgoParallelNode()),
 		HealthcheckPort: uint(46500 + GinkgoParallelNode()),
 		BackendName:     "backend-1",

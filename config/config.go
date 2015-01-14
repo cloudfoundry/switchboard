@@ -36,7 +36,7 @@ func (p Proxy) HealthcheckTimeout() time.Duration {
 }
 
 type Backend struct {
-	BackendIP       string
+	BackendHost     string
 	BackendPort     uint
 	HealthcheckPort uint
 	BackendName     string

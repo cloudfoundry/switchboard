@@ -115,7 +115,15 @@ var _ = Describe("Switchboard", func() {
 				Expect(returnedBackends[1]["host"]).To(Equal("localhost"))
 				Expect(returnedBackends[1]["healthy"]).To(BeTrue())
 
-				Expect(returnedBackends[0]["active"]).NotTo(Equal(returnedBackends[1]["active"]))
+				if returnedBackends[0]["active"].(bool) {
+					Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 1))
+					Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 0))
+					Expect(returnedBackends[1]["active"]).To(BeFalse())
+				} else {
+					Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 1))
+					Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 0))
+					Expect(returnedBackends[0]["active"]).To(BeFalse())
+				}
 
 				switch returnedBackends[0]["name"] {
 				case backends[0].BackendName:

@@ -28,11 +28,12 @@ type backend struct {
 }
 
 type BackendJSON struct {
-	Host    string `json:"host"`
-	Port    uint   `json:"port"`
-	Healthy bool   `json:"healthy"`
-	Active  bool   `json:"active"`
-	Name    string `json:"name"`
+	Host                string `json:"host"`
+	Port                uint   `json:"port"`
+	Healthy             bool   `json:"healthy"`
+	Active              bool   `json:"active"`
+	Name                string `json:"name"`
+	CurrentSessionCount uint   `json:"currentSessionCount"`
 }
 
 func NewBackend(
@@ -77,8 +78,9 @@ func (b backend) SeverConnections() {
 
 func (b backend) AsJSON() BackendJSON {
 	return BackendJSON{
-		Host: b.host,
-		Port: b.port,
-		Name: b.name,
+		Host:                b.host,
+		Port:                b.port,
+		Name:                b.name,
+		CurrentSessionCount: uint(b.bridges.Size()),
 	}
 }

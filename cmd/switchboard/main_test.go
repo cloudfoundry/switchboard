@@ -54,7 +54,7 @@ var _ = Describe("Switchboard", func() {
 		switchboardRunner := ginkgomon.New(ginkgomon.Config{
 			Command: exec.Command(
 				switchboardBinPath,
-				fmt.Sprintf("-config=%s", proxyConfigFile),
+				fmt.Sprintf("-configFile=%s", proxyConfigFile),
 				fmt.Sprintf("-pidFile=%s", pidFile),
 			),
 			Name:       fmt.Sprintf("switchboard"),

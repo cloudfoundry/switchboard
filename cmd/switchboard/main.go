@@ -18,16 +18,16 @@ import (
 
 func main() {
 	flags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	configFlag := flags.String("config", "", "Path to config file")
+	configFile := flags.String("configFile", "", "Path to config file")
 	pidFile := flags.String("pidFile", "", "Path to pid file")
 	cf_lager.AddFlags(flags)
 	flags.Parse(os.Args[1:])
 
 	logger := cf_lager.New("Switchboard")
 
-	proxyConfig, err := config.Load(*configFlag)
+	proxyConfig, err := config.Load(*configFile)
 	if err != nil {
-		logger.Fatal("Error loading config file:", err, lager.Data{"config": *configFlag})
+		logger.Fatal("Error loading config file:", err, lager.Data{"config": *configFile})
 	}
 
 	err = ioutil.WriteFile(*pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)

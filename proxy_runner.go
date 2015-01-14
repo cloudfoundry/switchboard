@@ -22,28 +22,28 @@ func NewProxyRunner(cluster Cluster, port uint, logger lager.Logger) ProxyRunner
 	}
 }
 
-func (s ProxyRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
-	s.logger.Info("Running switchboard ...")
-	s.cluster.Monitor()
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", s.port))
+func (pr ProxyRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+	pr.logger.Info(fmt.Sprintf("Proxy listening on port %d\n", pr.port))
+	pr.cluster.Monitor()
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", pr.port))
 	if err != nil {
 		return err
 	}
 
 	go func() {
 		for {
-			s.logger.Info("Accepting connections ...")
+			pr.logger.Info("Accepting connections ...")
 			clientConn, err := listener.Accept()
 
 			if err != nil {
-				s.logger.Error("Error accepting client connection", err)
+				pr.logger.Error("Error accepting client connection", err)
 			} else {
-				s.logger.Info("Serving Connections.")
+				pr.logger.Info("Serving Connections.")
 
-				err := s.cluster.RouteToBackend(clientConn)
+				err := pr.cluster.RouteToBackend(clientConn)
 				if err != nil {
 					clientConn.Close()
-					s.logger.Error("Error routing to backend", err)
+					pr.logger.Error("Error routing to backend", err)
 				}
 			}
 		}

@@ -45,15 +45,13 @@ func main() {
 	)
 
 	proxyRunner := switchboard.NewProxyRunner(cluster, proxyConfig.Port, logger)
-	apiRunner := switchboard.NewAPIRunner(proxyConfig.APIPort, backends)
+	apiRunner := switchboard.NewAPIRunner(proxyConfig.APIPort, backends, logger)
 	group := grouper.NewParallel(os.Kill, grouper.Members{
 		grouper.Member{"proxy", proxyRunner},
 		grouper.Member{"api", apiRunner},
 	})
 	process := ifrit.Invoke(group)
 
-	logger.Info(fmt.Sprintf("Proxy listening on port %d\n", proxyConfig.Port))
-	logger.Info(fmt.Sprintf("Proxy api listening on port %d\n", proxyConfig.APIPort))
 	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v\n", proxyConfig))
 
 	err = <-process.Wait()

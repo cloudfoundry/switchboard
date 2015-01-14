@@ -38,12 +38,14 @@ var _ = BeforeSuite(func() {
 		BackendIP:       "localhost",
 		BackendPort:     uint(45000 + GinkgoParallelNode()),
 		HealthcheckPort: uint(45500 + GinkgoParallelNode()),
+		BackendName:     "backend-0",
 	}
 
 	backend2 := config.Backend{
 		BackendIP:       "localhost",
 		BackendPort:     uint(46000 + GinkgoParallelNode()),
 		HealthcheckPort: uint(46500 + GinkgoParallelNode()),
+		BackendName:     "backend-1",
 	}
 
 	backends = []config.Backend{backend1, backend2}

@@ -39,4 +39,5 @@ type Backend struct {
 	BackendIP       string
 	BackendPort     uint
 	HealthcheckPort uint
+	BackendName     string
 }

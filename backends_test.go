@@ -27,9 +27,9 @@ var _ = Describe("Backends", func() {
 		logger := lagertest.NewTestLogger("Backends test")
 
 		backendConfigs := []config.Backend{
-			{"localhost", 50000, 60000},
-			{"localhost", 50001, 60001},
-			{"localhost", 50002, 60002},
+			{"localhost", 50000, 60000, "backend-0"},
+			{"localhost", 50001, 60001, "backend-1"},
+			{"localhost", 50002, 60002, "backend-2"},
 		}
 
 		backends = switchboard.NewBackends(backendConfigs, logger)
@@ -156,7 +156,7 @@ var _ = Describe("Backends", func() {
 
 		Context("when this is active", func() {
 			BeforeEach(func() {
-				switchboard.BackendProvider = func(string, uint, uint, lager.Logger) switchboard.Backend {
+				switchboard.BackendProvider = func(string, string, uint, uint, lager.Logger) switchboard.Backend {
 					return &fakes.FakeBackend{}
 				}
 			})

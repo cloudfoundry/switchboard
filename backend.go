@@ -24,16 +24,25 @@ type backend struct {
 	healthcheckPort uint
 	logger          lager.Logger
 	bridges         Bridges
+	name            string
 }
 
 type BackendJSON struct {
 	IP      string `json:"ip"`
 	Healthy bool   `json:"healthy"`
 	Active  bool   `json:"active"`
+	Name    string `json:"name"`
 }
 
-func NewBackend(ipAddress string, port uint, healthcheckPort uint, logger lager.Logger) Backend {
+func NewBackend(
+	name string,
+	ipAddress string,
+	port uint,
+	healthcheckPort uint,
+	logger lager.Logger) Backend {
+
 	return &backend{
+		name:            name,
 		ipAddress:       ipAddress,
 		port:            port,
 		healthcheckPort: healthcheckPort,
@@ -67,6 +76,7 @@ func (b backend) SeverConnections() {
 
 func (b backend) AsJSON() BackendJSON {
 	return BackendJSON{
-		IP: b.ipAddress,
+		IP:   b.ipAddress,
+		Name: b.name,
 	}
 }

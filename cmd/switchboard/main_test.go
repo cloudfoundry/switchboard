@@ -116,6 +116,14 @@ var _ = Describe("Switchboard", func() {
 				Expect(returnedBackends[1]["healthy"]).To(BeTrue())
 
 				Expect(returnedBackends[0]["active"]).NotTo(Equal(returnedBackends[1]["active"]))
+
+				if returnedBackends[0]["name"] == "backend-0" {
+					Expect(returnedBackends[1]["name"]).To(Equal("backend-1"))
+				} else if returnedBackends[0]["name"] == "backend-1" {
+					Expect(returnedBackends[1]["name"]).To(Equal("backend-0"))
+				} else {
+					Fail(fmt.Sprintf("Invalid backend name: %s", returnedBackends[0]["name"]))
+				}
 			})
 		})
 	})

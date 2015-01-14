@@ -93,7 +93,7 @@ var _ = Describe("Switchboard", func() {
 			var url string
 
 			BeforeEach(func() {
-				url = fmt.Sprintf("http://localhost:%d/v0/servers", switchboardAPIPort)
+				url = fmt.Sprintf("http://localhost:%d/v0/backends", switchboardAPIPort)
 			})
 
 			It("responds with valid json", func() {

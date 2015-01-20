@@ -45,10 +45,11 @@ func main() {
 		proxyConfig.HealthcheckTimeout(),
 		logger,
 	)
+	handler := api.NewHandler(backends)
 
 	group := grouper.NewParallel(os.Kill, grouper.Members{
 		grouper.Member{"proxy", proxy.NewRunner(cluster, proxyConfig.Port, logger)},
-		grouper.Member{"api", api.NewRunner(proxyConfig.APIPort, backends, logger)},
+		grouper.Member{"api", api.NewRunner(proxyConfig.APIPort, handler, logger)},
 	})
 	process := ifrit.Invoke(group)
 

@@ -1,4 +1,4 @@
-package switchboard
+package proxy
 
 import (
 	"fmt"
@@ -9,21 +9,21 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-type ProxyRunner struct {
+type Runner struct {
 	logger  lager.Logger
 	port    uint
 	cluster domain.Cluster
 }
 
-func NewProxyRunner(cluster domain.Cluster, port uint, logger lager.Logger) ProxyRunner {
-	return ProxyRunner{
+func NewRunner(cluster domain.Cluster, port uint, logger lager.Logger) Runner {
+	return Runner{
 		logger:  logger,
 		port:    port,
 		cluster: cluster,
 	}
 }
 
-func (pr ProxyRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	pr.logger.Info(fmt.Sprintf("Proxy listening on port %d\n", pr.port))
 	pr.cluster.Monitor()
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", pr.port))

@@ -1,11 +1,11 @@
-package switchboard_test
+package api_test
 
 import (
 	"fmt"
 	"net"
 	"os"
 
-	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/api"
 	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager/lagertest"
 
@@ -19,7 +19,7 @@ var _ = Describe("APIRunner", func() {
 		apiPort := 10000 + GinkgoParallelNode()
 		backends := &fakes.FakeBackends{}
 		logger := lagertest.NewTestLogger("APIRunner Test")
-		apiRunner := switchboard.NewAPIRunner(uint(apiPort), backends, logger)
+		apiRunner := api.NewRunner(uint(apiPort), backends, logger)
 		apiProcess := ifrit.Invoke(apiRunner)
 		apiProcess.Signal(os.Kill)
 		Eventually(apiProcess.Wait()).Should(Receive())

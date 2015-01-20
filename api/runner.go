@@ -1,4 +1,4 @@
-package switchboard
+package api
 
 import (
 	"encoding/json"
@@ -11,21 +11,21 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-type APIRunner struct {
+type Runner struct {
 	logger   lager.Logger
 	port     uint
 	backends domain.Backends
 }
 
-func NewAPIRunner(port uint, backends domain.Backends, logger lager.Logger) APIRunner {
-	return APIRunner{
+func NewRunner(port uint, backends domain.Backends, logger lager.Logger) Runner {
+	return Runner{
 		logger:   logger,
 		port:     port,
 		backends: backends,
 	}
 }
 
-func (a APIRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+func (a Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	a.logger.Info(fmt.Sprintf("Proxy api listening on port %d\n", a.port))
 	http.HandleFunc("/v0/backends", func(w http.ResponseWriter, req *http.Request) {
 		backendsJSON, err := json.Marshal(a.backends.AsJSON())

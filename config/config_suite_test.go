@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestConfig(t *testing.T) {
+func TestSwitchboarConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Config Suite")
+	RunSpecs(t, "Switchboard Config Suite")
 }

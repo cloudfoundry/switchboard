@@ -1,4 +1,4 @@
-package switchboard_test
+package proxy_test
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/proxy"
 	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit"
 )
@@ -18,7 +18,7 @@ var _ = Describe("ProxyRunner", func() {
 		cluster := &fakes.FakeCluster{}
 		proxyPort := 10000 + GinkgoParallelNode()
 		logger := lagertest.NewTestLogger("ProxyRunner test")
-		proxyRunner := switchboard.NewProxyRunner(cluster, uint(proxyPort), logger)
+		proxyRunner := proxy.NewRunner(cluster, uint(proxyPort), logger)
 		proxyProcess := ifrit.Invoke(proxyRunner)
 		proxyProcess.Signal(os.Kill)
 		Eventually(proxyProcess.Wait()).Should(Receive())

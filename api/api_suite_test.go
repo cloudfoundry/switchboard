@@ -1,4 +1,4 @@
-package switchboard_test
+package api_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSwitchboard(t *testing.T) {
+func TestSwitchboardAPI(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Switchboard Library Suite")
+	RunSpecs(t, "Switchboard API Suite")
 }

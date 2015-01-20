@@ -8,9 +8,10 @@ import (
 	"strconv"
 
 	"github.com/cloudfoundry-incubator/cf-lager"
-	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/api"
 	"github.com/pivotal-cf-experimental/switchboard/config"
 	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/pivotal-cf-experimental/switchboard/proxy"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 
@@ -45,11 +46,9 @@ func main() {
 		logger,
 	)
 
-	proxyRunner := switchboard.NewProxyRunner(cluster, proxyConfig.Port, logger)
-	apiRunner := switchboard.NewAPIRunner(proxyConfig.APIPort, backends, logger)
 	group := grouper.NewParallel(os.Kill, grouper.Members{
-		grouper.Member{"proxy", proxyRunner},
-		grouper.Member{"api", apiRunner},
+		grouper.Member{"proxy", proxy.NewRunner(cluster, proxyConfig.Port, logger)},
+		grouper.Member{"api", api.NewRunner(proxyConfig.APIPort, backends, logger)},
 	})
 	process := ifrit.Invoke(group)
 

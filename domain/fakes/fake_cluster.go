@@ -5,7 +5,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
 )
 
 type FakeCluster struct {
@@ -81,4 +81,4 @@ func (fake *FakeCluster) RouteToBackendReturns(result1 error) {
 	}{result1}
 }
 
-var _ switchboard.Cluster = new(FakeCluster)
+var _ domain.Cluster = new(FakeCluster)

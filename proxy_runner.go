@@ -5,16 +5,17 @@ import (
 	"net"
 	"os"
 
+	"github.com/pivotal-cf-experimental/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
 type ProxyRunner struct {
 	logger  lager.Logger
 	port    uint
-	cluster Cluster
+	cluster domain.Cluster
 }
 
-func NewProxyRunner(cluster Cluster, port uint, logger lager.Logger) ProxyRunner {
+func NewProxyRunner(cluster domain.Cluster, port uint, logger lager.Logger) ProxyRunner {
 	return ProxyRunner{
 		logger:  logger,
 		port:    port,

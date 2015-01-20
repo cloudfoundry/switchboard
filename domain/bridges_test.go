@@ -1,25 +1,25 @@
-package switchboard_test
+package domain_test
 
 import (
 	"io"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf-experimental/switchboard"
-	"github.com/pivotal-cf-experimental/switchboard/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Bridges", func() {
-	var bridges switchboard.Bridges
-	var bridge1 switchboard.Bridge
-	var bridge2 switchboard.Bridge
-	var bridge3 switchboard.Bridge
+	var bridges domain.Bridges
+	var bridge1 domain.Bridge
+	var bridge2 domain.Bridge
+	var bridge3 domain.Bridge
 
 	BeforeEach(func() {
 		logger := lagertest.NewTestLogger("Bridges Test")
-		bridges = switchboard.NewBridges(logger)
+		bridges = domain.NewBridges(logger)
 	})
 
 	JustBeforeEach(func() {
@@ -92,7 +92,7 @@ var _ = Describe("Bridges", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := bridges.Remove(switchboard.NewBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, nil))
+				err := bridges.Remove(domain.NewBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, nil))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found"))
 			})
@@ -101,13 +101,13 @@ var _ = Describe("Bridges", func() {
 
 	Describe("RemoveAndCloseAll", func() {
 		BeforeEach(func() {
-			switchboard.BridgeProvider = func(_, _ io.ReadWriteCloser, logger lager.Logger) switchboard.Bridge {
+			domain.BridgeProvider = func(_, _ io.ReadWriteCloser, logger lager.Logger) domain.Bridge {
 				return &fakes.FakeBridge{}
 			}
 		})
 
 		AfterEach(func() {
-			switchboard.BridgeProvider = switchboard.NewBridge
+			domain.BridgeProvider = domain.NewBridge
 		})
 
 		It("closes all bridges", func() {

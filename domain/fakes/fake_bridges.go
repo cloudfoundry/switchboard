@@ -5,23 +5,23 @@ import (
 	"io"
 	"sync"
 
-	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
 )
 
 type FakeBridges struct {
-	CreateStub        func(clientConn, backendConn io.ReadWriteCloser) switchboard.Bridge
+	CreateStub        func(clientConn, backendConn io.ReadWriteCloser) domain.Bridge
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		clientConn  io.ReadWriteCloser
 		backendConn io.ReadWriteCloser
 	}
 	createReturns struct {
-		result1 switchboard.Bridge
+		result1 domain.Bridge
 	}
-	RemoveStub        func(bridge switchboard.Bridge) error
+	RemoveStub        func(bridge domain.Bridge) error
 	removeMutex       sync.RWMutex
 	removeArgsForCall []struct {
-		bridge switchboard.Bridge
+		bridge domain.Bridge
 	}
 	removeReturns struct {
 		result1 error
@@ -35,17 +35,17 @@ type FakeBridges struct {
 	sizeReturns struct {
 		result1 uint
 	}
-	ContainsStub        func(bridge switchboard.Bridge) bool
+	ContainsStub        func(bridge domain.Bridge) bool
 	containsMutex       sync.RWMutex
 	containsArgsForCall []struct {
-		bridge switchboard.Bridge
+		bridge domain.Bridge
 	}
 	containsReturns struct {
 		result1 bool
 	}
 }
 
-func (fake *FakeBridges) Create(clientConn io.ReadWriteCloser, backendConn io.ReadWriteCloser) switchboard.Bridge {
+func (fake *FakeBridges) Create(clientConn io.ReadWriteCloser, backendConn io.ReadWriteCloser) domain.Bridge {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		clientConn  io.ReadWriteCloser
@@ -71,17 +71,17 @@ func (fake *FakeBridges) CreateArgsForCall(i int) (io.ReadWriteCloser, io.ReadWr
 	return fake.createArgsForCall[i].clientConn, fake.createArgsForCall[i].backendConn
 }
 
-func (fake *FakeBridges) CreateReturns(result1 switchboard.Bridge) {
+func (fake *FakeBridges) CreateReturns(result1 domain.Bridge) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
-		result1 switchboard.Bridge
+		result1 domain.Bridge
 	}{result1}
 }
 
-func (fake *FakeBridges) Remove(bridge switchboard.Bridge) error {
+func (fake *FakeBridges) Remove(bridge domain.Bridge) error {
 	fake.removeMutex.Lock()
 	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
-		bridge switchboard.Bridge
+		bridge domain.Bridge
 	}{bridge})
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
@@ -97,7 +97,7 @@ func (fake *FakeBridges) RemoveCallCount() int {
 	return len(fake.removeArgsForCall)
 }
 
-func (fake *FakeBridges) RemoveArgsForCall(i int) switchboard.Bridge {
+func (fake *FakeBridges) RemoveArgsForCall(i int) domain.Bridge {
 	fake.removeMutex.RLock()
 	defer fake.removeMutex.RUnlock()
 	return fake.removeArgsForCall[i].bridge
@@ -149,10 +149,10 @@ func (fake *FakeBridges) SizeReturns(result1 uint) {
 	}{result1}
 }
 
-func (fake *FakeBridges) Contains(bridge switchboard.Bridge) bool {
+func (fake *FakeBridges) Contains(bridge domain.Bridge) bool {
 	fake.containsMutex.Lock()
 	fake.containsArgsForCall = append(fake.containsArgsForCall, struct {
-		bridge switchboard.Bridge
+		bridge domain.Bridge
 	}{bridge})
 	fake.containsMutex.Unlock()
 	if fake.ContainsStub != nil {
@@ -168,7 +168,7 @@ func (fake *FakeBridges) ContainsCallCount() int {
 	return len(fake.containsArgsForCall)
 }
 
-func (fake *FakeBridges) ContainsArgsForCall(i int) switchboard.Bridge {
+func (fake *FakeBridges) ContainsArgsForCall(i int) domain.Bridge {
 	fake.containsMutex.RLock()
 	defer fake.containsMutex.RUnlock()
 	return fake.containsArgsForCall[i].bridge
@@ -181,4 +181,4 @@ func (fake *FakeBridges) ContainsReturns(result1 bool) {
 	}{result1}
 }
 
-var _ switchboard.Bridges = new(FakeBridges)
+var _ domain.Bridges = new(FakeBridges)

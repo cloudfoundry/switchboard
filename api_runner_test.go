@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/pivotal-cf-experimental/switchboard"
-	"github.com/pivotal-cf-experimental/switchboard/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"

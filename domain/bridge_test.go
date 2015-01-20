@@ -1,4 +1,4 @@
-package switchboard_test
+package domain_test
 
 import (
 	"errors"
@@ -6,15 +6,15 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/pivotal-cf-experimental/switchboard"
-	"github.com/pivotal-cf-experimental/switchboard/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Bridge", func() {
 	Describe("#Connect", func() {
-		var bridge Bridge
+		var bridge domain.Bridge
 		var client, backend *fakes.FakeReadWriteCloser
 		var logger lager.Logger
 
@@ -22,7 +22,7 @@ var _ = Describe("Bridge", func() {
 			logger = lagertest.NewTestLogger("Bridge test")
 			backend = &fakes.FakeReadWriteCloser{}
 			client = &fakes.FakeReadWriteCloser{}
-			bridge = NewBridge(client, backend, logger)
+			bridge = domain.NewBridge(client, backend, logger)
 		})
 
 		Context("When operating normally", func() {

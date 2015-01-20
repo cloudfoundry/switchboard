@@ -1,22 +1,22 @@
-package switchboard_test
+package domain_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/config"
-	"github.com/pivotal-cf-experimental/switchboard/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Backends", func() {
 	var (
-		backends switchboard.Backends
+		backends domain.Backends
 	)
 
-	var backendChanToSlice = func(c <-chan switchboard.Backend) []switchboard.Backend {
-		var result []switchboard.Backend
+	var backendChanToSlice = func(c <-chan domain.Backend) []domain.Backend {
+		var result []domain.Backend
 		for b := range c {
 			result = append(result, b)
 		}
@@ -32,7 +32,7 @@ var _ = Describe("Backends", func() {
 			{"localhost", 50002, 60002, "backend-2"},
 		}
 
-		backends = switchboard.NewBackends(backendConfigs, logger)
+		backends = domain.NewBackends(backendConfigs, logger)
 	})
 
 	Describe("Concurrent operations", func() {
@@ -117,7 +117,7 @@ var _ = Describe("Backends", func() {
 	})
 
 	Describe("SetHealthy", func() {
-		var unhealthy switchboard.Backend
+		var unhealthy domain.Backend
 
 		JustBeforeEach(func() {
 			unhealthy = backendChanToSlice(backends.Healthy())[0]
@@ -156,13 +156,13 @@ var _ = Describe("Backends", func() {
 
 		Context("when this is active", func() {
 			BeforeEach(func() {
-				switchboard.BackendProvider = func(string, string, uint, uint, lager.Logger) switchboard.Backend {
+				domain.BackendProvider = func(string, string, uint, uint, lager.Logger) domain.Backend {
 					return &fakes.FakeBackend{}
 				}
 			})
 
 			AfterEach(func() {
-				switchboard.BackendProvider = switchboard.NewBackend
+				domain.BackendProvider = domain.NewBackend
 			})
 
 			It("severs all open connections", func() {

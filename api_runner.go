@@ -7,16 +7,17 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/pivotal-cf-experimental/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
 type APIRunner struct {
 	logger   lager.Logger
 	port     uint
-	backends Backends
+	backends domain.Backends
 }
 
-func NewAPIRunner(port uint, backends Backends, logger lager.Logger) APIRunner {
+func NewAPIRunner(port uint, backends domain.Backends, logger lager.Logger) APIRunner {
 	return APIRunner{
 		logger:   logger,
 		port:     port,

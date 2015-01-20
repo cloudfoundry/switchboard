@@ -4,53 +4,53 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
 )
 
 type FakeBackends struct {
-	AllStub        func() <-chan switchboard.Backend
+	AllStub        func() <-chan domain.Backend
 	allMutex       sync.RWMutex
 	allArgsForCall []struct{}
 	allReturns struct {
-		result1 <-chan switchboard.Backend
+		result1 <-chan domain.Backend
 	}
-	AnyStub        func() switchboard.Backend
+	AnyStub        func() domain.Backend
 	anyMutex       sync.RWMutex
 	anyArgsForCall []struct{}
 	anyReturns struct {
-		result1 switchboard.Backend
+		result1 domain.Backend
 	}
-	ActiveStub        func() switchboard.Backend
+	ActiveStub        func() domain.Backend
 	activeMutex       sync.RWMutex
 	activeArgsForCall []struct{}
 	activeReturns struct {
-		result1 switchboard.Backend
+		result1 domain.Backend
 	}
-	SetHealthyStub        func(backend switchboard.Backend)
+	SetHealthyStub        func(backend domain.Backend)
 	setHealthyMutex       sync.RWMutex
 	setHealthyArgsForCall []struct {
-		backend switchboard.Backend
+		backend domain.Backend
 	}
-	SetUnhealthyStub        func(backend switchboard.Backend)
+	SetUnhealthyStub        func(backend domain.Backend)
 	setUnhealthyMutex       sync.RWMutex
 	setUnhealthyArgsForCall []struct {
-		backend switchboard.Backend
+		backend domain.Backend
 	}
-	HealthyStub        func() <-chan switchboard.Backend
+	HealthyStub        func() <-chan domain.Backend
 	healthyMutex       sync.RWMutex
 	healthyArgsForCall []struct{}
 	healthyReturns struct {
-		result1 <-chan switchboard.Backend
+		result1 <-chan domain.Backend
 	}
-	AsJSONStub        func() []switchboard.BackendJSON
+	AsJSONStub        func() []domain.BackendJSON
 	asJSONMutex       sync.RWMutex
 	asJSONArgsForCall []struct{}
 	asJSONReturns struct {
-		result1 []switchboard.BackendJSON
+		result1 []domain.BackendJSON
 	}
 }
 
-func (fake *FakeBackends) All() <-chan switchboard.Backend {
+func (fake *FakeBackends) All() <-chan domain.Backend {
 	fake.allMutex.Lock()
 	fake.allArgsForCall = append(fake.allArgsForCall, struct{}{})
 	fake.allMutex.Unlock()
@@ -67,14 +67,14 @@ func (fake *FakeBackends) AllCallCount() int {
 	return len(fake.allArgsForCall)
 }
 
-func (fake *FakeBackends) AllReturns(result1 <-chan switchboard.Backend) {
+func (fake *FakeBackends) AllReturns(result1 <-chan domain.Backend) {
 	fake.AllStub = nil
 	fake.allReturns = struct {
-		result1 <-chan switchboard.Backend
+		result1 <-chan domain.Backend
 	}{result1}
 }
 
-func (fake *FakeBackends) Any() switchboard.Backend {
+func (fake *FakeBackends) Any() domain.Backend {
 	fake.anyMutex.Lock()
 	fake.anyArgsForCall = append(fake.anyArgsForCall, struct{}{})
 	fake.anyMutex.Unlock()
@@ -91,14 +91,14 @@ func (fake *FakeBackends) AnyCallCount() int {
 	return len(fake.anyArgsForCall)
 }
 
-func (fake *FakeBackends) AnyReturns(result1 switchboard.Backend) {
+func (fake *FakeBackends) AnyReturns(result1 domain.Backend) {
 	fake.AnyStub = nil
 	fake.anyReturns = struct {
-		result1 switchboard.Backend
+		result1 domain.Backend
 	}{result1}
 }
 
-func (fake *FakeBackends) Active() switchboard.Backend {
+func (fake *FakeBackends) Active() domain.Backend {
 	fake.activeMutex.Lock()
 	fake.activeArgsForCall = append(fake.activeArgsForCall, struct{}{})
 	fake.activeMutex.Unlock()
@@ -115,17 +115,17 @@ func (fake *FakeBackends) ActiveCallCount() int {
 	return len(fake.activeArgsForCall)
 }
 
-func (fake *FakeBackends) ActiveReturns(result1 switchboard.Backend) {
+func (fake *FakeBackends) ActiveReturns(result1 domain.Backend) {
 	fake.ActiveStub = nil
 	fake.activeReturns = struct {
-		result1 switchboard.Backend
+		result1 domain.Backend
 	}{result1}
 }
 
-func (fake *FakeBackends) SetHealthy(backend switchboard.Backend) {
+func (fake *FakeBackends) SetHealthy(backend domain.Backend) {
 	fake.setHealthyMutex.Lock()
 	fake.setHealthyArgsForCall = append(fake.setHealthyArgsForCall, struct {
-		backend switchboard.Backend
+		backend domain.Backend
 	}{backend})
 	fake.setHealthyMutex.Unlock()
 	if fake.SetHealthyStub != nil {
@@ -139,16 +139,16 @@ func (fake *FakeBackends) SetHealthyCallCount() int {
 	return len(fake.setHealthyArgsForCall)
 }
 
-func (fake *FakeBackends) SetHealthyArgsForCall(i int) switchboard.Backend {
+func (fake *FakeBackends) SetHealthyArgsForCall(i int) domain.Backend {
 	fake.setHealthyMutex.RLock()
 	defer fake.setHealthyMutex.RUnlock()
 	return fake.setHealthyArgsForCall[i].backend
 }
 
-func (fake *FakeBackends) SetUnhealthy(backend switchboard.Backend) {
+func (fake *FakeBackends) SetUnhealthy(backend domain.Backend) {
 	fake.setUnhealthyMutex.Lock()
 	fake.setUnhealthyArgsForCall = append(fake.setUnhealthyArgsForCall, struct {
-		backend switchboard.Backend
+		backend domain.Backend
 	}{backend})
 	fake.setUnhealthyMutex.Unlock()
 	if fake.SetUnhealthyStub != nil {
@@ -162,13 +162,13 @@ func (fake *FakeBackends) SetUnhealthyCallCount() int {
 	return len(fake.setUnhealthyArgsForCall)
 }
 
-func (fake *FakeBackends) SetUnhealthyArgsForCall(i int) switchboard.Backend {
+func (fake *FakeBackends) SetUnhealthyArgsForCall(i int) domain.Backend {
 	fake.setUnhealthyMutex.RLock()
 	defer fake.setUnhealthyMutex.RUnlock()
 	return fake.setUnhealthyArgsForCall[i].backend
 }
 
-func (fake *FakeBackends) Healthy() <-chan switchboard.Backend {
+func (fake *FakeBackends) Healthy() <-chan domain.Backend {
 	fake.healthyMutex.Lock()
 	fake.healthyArgsForCall = append(fake.healthyArgsForCall, struct{}{})
 	fake.healthyMutex.Unlock()
@@ -185,14 +185,14 @@ func (fake *FakeBackends) HealthyCallCount() int {
 	return len(fake.healthyArgsForCall)
 }
 
-func (fake *FakeBackends) HealthyReturns(result1 <-chan switchboard.Backend) {
+func (fake *FakeBackends) HealthyReturns(result1 <-chan domain.Backend) {
 	fake.HealthyStub = nil
 	fake.healthyReturns = struct {
-		result1 <-chan switchboard.Backend
+		result1 <-chan domain.Backend
 	}{result1}
 }
 
-func (fake *FakeBackends) AsJSON() []switchboard.BackendJSON {
+func (fake *FakeBackends) AsJSON() []domain.BackendJSON {
 	fake.asJSONMutex.Lock()
 	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
 	fake.asJSONMutex.Unlock()
@@ -209,11 +209,11 @@ func (fake *FakeBackends) AsJSONCallCount() int {
 	return len(fake.asJSONArgsForCall)
 }
 
-func (fake *FakeBackends) AsJSONReturns(result1 []switchboard.BackendJSON) {
+func (fake *FakeBackends) AsJSONReturns(result1 []domain.BackendJSON) {
 	fake.AsJSONStub = nil
 	fake.asJSONReturns = struct {
-		result1 []switchboard.BackendJSON
+		result1 []domain.BackendJSON
 	}{result1}
 }
 
-var _ switchboard.Backends = new(FakeBackends)
+var _ domain.Backends = new(FakeBackends)

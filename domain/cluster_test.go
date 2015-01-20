@@ -1,4 +1,4 @@
-package switchboard_test
+package domain_test
 
 import (
 	"errors"
@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pivotal-cf-experimental/switchboard"
-	"github.com/pivotal-cf-experimental/switchboard/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
@@ -18,12 +18,12 @@ import (
 var _ = Describe("Cluster", func() {
 	var backends *fakes.FakeBackends
 	var logger lager.Logger
-	var cluster switchboard.Cluster
+	var cluster domain.Cluster
 
 	BeforeEach(func() {
 		backends = &fakes.FakeBackends{}
 		logger = lagertest.NewTestLogger("Cluster test")
-		cluster = switchboard.NewCluster(backends, time.Second, logger)
+		cluster = domain.NewCluster(backends, time.Second, logger)
 	})
 
 	Describe("Monitor", func() {
@@ -44,8 +44,8 @@ var _ = Describe("Cluster", func() {
 			backend3 = &fakes.FakeBackend{}
 			backend3.HealthcheckUrlReturns("backend3")
 
-			backends.AllStub = func() <-chan switchboard.Backend {
-				c := make(chan switchboard.Backend)
+			backends.AllStub = func() <-chan domain.Backend {
+				c := make(chan domain.Backend)
 				go func() {
 					c <- backend1
 					c <- backend2
@@ -57,7 +57,7 @@ var _ = Describe("Cluster", func() {
 
 			urlGetter = &fakes.FakeUrlGetter{}
 			urlGetter := urlGetter
-			switchboard.UrlGetterProvider = func(time.Duration) switchboard.UrlGetter {
+			domain.UrlGetterProvider = func(time.Duration) domain.UrlGetter {
 				return urlGetter
 			}
 
@@ -65,7 +65,7 @@ var _ = Describe("Cluster", func() {
 		})
 
 		AfterEach(func() {
-			switchboard.UrlGetterProvider = switchboard.HttpUrlGetterProvider
+			domain.UrlGetterProvider = domain.HttpUrlGetterProvider
 		})
 
 		It("notices when each backend stays healthy", func(done Done) {

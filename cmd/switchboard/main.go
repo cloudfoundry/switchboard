@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-cf-experimental/switchboard"
 	"github.com/pivotal-cf-experimental/switchboard/config"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 
@@ -37,8 +38,8 @@ func main() {
 		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": *pidFile})
 	}
 
-	backends := switchboard.NewBackends(proxyConfig.Backends, logger)
-	cluster := switchboard.NewCluster(
+	backends := domain.NewBackends(proxyConfig.Backends, logger)
+	cluster := domain.NewCluster(
 		backends,
 		proxyConfig.HealthcheckTimeout(),
 		logger,

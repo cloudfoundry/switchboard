@@ -5,7 +5,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
 )
 
 type FakeBackend struct {
@@ -26,11 +26,11 @@ type FakeBackend struct {
 	SeverConnectionsStub        func()
 	severConnectionsMutex       sync.RWMutex
 	severConnectionsArgsForCall []struct{}
-	AsJSONStub        func() switchboard.BackendJSON
+	AsJSONStub        func() domain.BackendJSON
 	asJSONMutex       sync.RWMutex
 	asJSONArgsForCall []struct{}
 	asJSONReturns struct {
-		result1 switchboard.BackendJSON
+		result1 domain.BackendJSON
 	}
 }
 
@@ -105,7 +105,7 @@ func (fake *FakeBackend) SeverConnectionsCallCount() int {
 	return len(fake.severConnectionsArgsForCall)
 }
 
-func (fake *FakeBackend) AsJSON() switchboard.BackendJSON {
+func (fake *FakeBackend) AsJSON() domain.BackendJSON {
 	fake.asJSONMutex.Lock()
 	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
 	fake.asJSONMutex.Unlock()
@@ -122,11 +122,11 @@ func (fake *FakeBackend) AsJSONCallCount() int {
 	return len(fake.asJSONArgsForCall)
 }
 
-func (fake *FakeBackend) AsJSONReturns(result1 switchboard.BackendJSON) {
+func (fake *FakeBackend) AsJSONReturns(result1 domain.BackendJSON) {
 	fake.AsJSONStub = nil
 	fake.asJSONReturns = struct {
-		result1 switchboard.BackendJSON
+		result1 domain.BackendJSON
 	}{result1}
 }
 
-var _ switchboard.Backend = new(FakeBackend)
+var _ domain.Backend = new(FakeBackend)

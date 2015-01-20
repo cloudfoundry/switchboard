@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
 )
 
 type FakeBridge struct {
@@ -46,4 +46,4 @@ func (fake *FakeBridge) CloseCallCount() int {
 	return len(fake.closeArgsForCall)
 }
 
-var _ switchboard.Bridge = new(FakeBridge)
+var _ domain.Bridge = new(FakeBridge)

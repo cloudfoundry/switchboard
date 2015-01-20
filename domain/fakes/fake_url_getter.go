@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/pivotal-cf-experimental/switchboard"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
 )
 
 type FakeUrlGetter struct {
@@ -53,4 +53,4 @@ func (fake *FakeUrlGetter) GetReturns(result1 *http.Response, result2 error) {
 	}{result1, result2}
 }
 
-var _ switchboard.UrlGetter = new(FakeUrlGetter)
+var _ domain.UrlGetter = new(FakeUrlGetter)

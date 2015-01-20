@@ -1,31 +1,31 @@
-package switchboard_test
+package domain_test
 
 import (
 	"net"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf-experimental/switchboard"
-	"github.com/pivotal-cf-experimental/switchboard/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager"
 )
 
 var _ = Describe("Backend", func() {
-	var backend switchboard.Backend
+	var backend domain.Backend
 	var bridges *fakes.FakeBridges
 
 	BeforeEach(func() {
 		bridges = &fakes.FakeBridges{}
 
-		switchboard.BridgesProvider = func(lager.Logger) switchboard.Bridges {
+		domain.BridgesProvider = func(lager.Logger) domain.Bridges {
 			return bridges
 		}
 
-		backend = switchboard.NewBackend("backend-0", "1.2.3.4", 3306, 9902, nil)
+		backend = domain.NewBackend("backend-0", "1.2.3.4", 3306, 9902, nil)
 	})
 
 	AfterEach(func() {
-		switchboard.BridgesProvider = switchboard.NewBridges
+		domain.BridgesProvider = domain.NewBridges
 	})
 
 	Describe("HealthcheckUrl", func() {
@@ -71,7 +71,7 @@ var _ = Describe("Backend", func() {
 			dialErr = nil
 			dialedAddress = ""
 
-			switchboard.Dialer = func(protocol, address string) (net.Conn, error) {
+			domain.Dialer = func(protocol, address string) (net.Conn, error) {
 				dialedProtocol = protocol
 				dialedAddress = address
 				return backendConn, dialErr
@@ -79,7 +79,7 @@ var _ = Describe("Backend", func() {
 		})
 
 		AfterEach(func() {
-			switchboard.Dialer = net.Dial
+			domain.Dialer = net.Dial
 		})
 
 		It("dials the backend address", func(done Done) {

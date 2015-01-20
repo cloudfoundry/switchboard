@@ -25,7 +25,8 @@ func NewRunner(port uint, backends domain.Backends, logger lager.Logger) Runner 
 }
 
 func (a Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
-	http.HandleFunc("/v0/backends", backendsIndex(a.backends))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v0/backends", backendsIndex(a.backends))
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", a.port))
 	if err != nil {
@@ -36,7 +37,7 @@ func (a Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 	errChan := make(chan error)
 	go func() {
-		err := http.Serve(listener, nil)
+		err := http.Serve(listener, mux)
 		if err != nil {
 			errChan <- err
 		}

@@ -96,8 +96,28 @@ var _ = Describe("Switchboard", func() {
 				url = fmt.Sprintf("http://localhost:%d/v0/backends", switchboardAPIPort)
 			})
 
-			It("responds with valid json", func() {
+			It("prompts for Basic Auth creds when they aren't provided", func() {
 				resp, err := http.Get(url)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+				Expect(resp.Header.Get("WWW-Authenticate")).To(Equal(`Basic realm="Authorization Required"`))
+			})
+
+			It("does not accept bad Basic Auth creds", func() {
+				req, err := http.NewRequest("GET", url, nil)
+				req.SetBasicAuth("bad_username", "bad_password")
+				client := &http.Client{}
+				resp, err := client.Do(req)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
+			It("returns valid JSON with valid Basic Auth", func() {
+				req, err := http.NewRequest("GET", url, nil)
+				req.SetBasicAuth("username", "password")
+				client := &http.Client{}
+				resp, err := client.Do(req)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 

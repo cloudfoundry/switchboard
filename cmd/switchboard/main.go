@@ -45,7 +45,8 @@ func main() {
 		proxyConfig.HealthcheckTimeout(),
 		logger,
 	)
-	handler := api.NewHandler(backends, logger)
+
+	handler := api.NewHandler(backends, logger, *proxyConfig)
 
 	group := grouper.NewParallel(os.Kill, grouper.Members{
 		grouper.Member{"proxy", proxy.NewRunner(cluster, proxyConfig.Port, logger)},

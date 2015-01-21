@@ -57,8 +57,10 @@ var _ = BeforeSuite(func() {
 	proxyConfig = config.Proxy{
 		Backends:                 backends,
 		HealthcheckTimeoutMillis: 500,
-		Port:    switchboardPort,
-		APIPort: switchboardAPIPort,
+		Port:     switchboardPort,
+		APIPort:  switchboardAPIPort,
+		Username: "username",
+		Password: "password",
 	}
 
 	proxyConfigFile = filepath.Join(tempDir, "proxyConfig.yml")

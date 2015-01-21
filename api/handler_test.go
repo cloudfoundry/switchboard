@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-cf-experimental/switchboard/api"
 	apifakes "github.com/pivotal-cf-experimental/switchboard/api/fakes"
+	"github.com/pivotal-cf-experimental/switchboard/config"
 	"github.com/pivotal-cf-experimental/switchboard/domain"
 	domainfakes "github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager/lagertest"
@@ -18,7 +19,8 @@ var _ = Describe("Handler", func() {
 	JustBeforeEach(func() {
 		backends := &domainfakes.FakeBackends{}
 		logger := lagertest.NewTestLogger("Handler Test")
-		handler = api.NewHandler(backends, logger)
+		config := config.Proxy{}
+		handler = api.NewHandler(backends, logger, config)
 	})
 
 	Context("when a request panics", func() {

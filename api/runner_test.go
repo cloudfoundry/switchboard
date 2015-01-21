@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/pivotal-cf-experimental/switchboard/api"
+	"github.com/pivotal-cf-experimental/switchboard/config"
 	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager/lagertest"
 
@@ -19,7 +20,8 @@ var _ = Describe("APIRunner", func() {
 		apiPort := 10000 + GinkgoParallelNode()
 		backends := &fakes.FakeBackends{}
 		logger := lagertest.NewTestLogger("APIRunner Test")
-		handler := api.NewHandler(backends, logger)
+		config := config.Proxy{}
+		handler := api.NewHandler(backends, logger, config)
 		apiRunner := api.NewRunner(uint(apiPort), handler, logger)
 		apiProcess := ifrit.Invoke(apiRunner)
 		apiProcess.Signal(os.Kill)

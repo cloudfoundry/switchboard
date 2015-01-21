@@ -29,6 +29,8 @@ type Proxy struct {
 	Port                     uint
 	Backends                 []Backend
 	HealthcheckTimeoutMillis uint
+	Username                 string
+	Password                 string
 }
 
 func (p Proxy) HealthcheckTimeout() time.Duration {

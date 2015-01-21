@@ -19,7 +19,8 @@ var _ = Describe("APIRunner", func() {
 		apiPort := 10000 + GinkgoParallelNode()
 		backends := &fakes.FakeBackends{}
 		logger := lagertest.NewTestLogger("APIRunner Test")
-		apiRunner := api.NewRunner(uint(apiPort), api.NewHandler(backends), logger)
+		handler := api.NewHandler(backends, logger)
+		apiRunner := api.NewRunner(uint(apiPort), handler, logger)
 		apiProcess := ifrit.Invoke(apiRunner)
 		apiProcess.Signal(os.Kill)
 		Eventually(apiProcess.Wait()).Should(Receive())

@@ -7,7 +7,7 @@ import (
 	"github.com/pivotal-cf-experimental/switchboard/domain"
 )
 
-func backendsIndex(backends domain.Backends) func(http.ResponseWriter, *http.Request) {
+var BackendsIndex = func(backends domain.Backends) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		backendsJSON, err := json.Marshal(backends.AsJSON())
 		if err != nil {

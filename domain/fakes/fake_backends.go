@@ -11,19 +11,19 @@ type FakeBackends struct {
 	AllStub        func() <-chan domain.Backend
 	allMutex       sync.RWMutex
 	allArgsForCall []struct{}
-	allReturns struct {
+	allReturns     struct {
 		result1 <-chan domain.Backend
 	}
 	AnyStub        func() domain.Backend
 	anyMutex       sync.RWMutex
 	anyArgsForCall []struct{}
-	anyReturns struct {
+	anyReturns     struct {
 		result1 domain.Backend
 	}
 	ActiveStub        func() domain.Backend
 	activeMutex       sync.RWMutex
 	activeArgsForCall []struct{}
-	activeReturns struct {
+	activeReturns     struct {
 		result1 domain.Backend
 	}
 	SetHealthyStub        func(backend domain.Backend)
@@ -39,13 +39,13 @@ type FakeBackends struct {
 	HealthyStub        func() <-chan domain.Backend
 	healthyMutex       sync.RWMutex
 	healthyArgsForCall []struct{}
-	healthyReturns struct {
+	healthyReturns     struct {
 		result1 <-chan domain.Backend
 	}
 	AsJSONStub        func() []domain.BackendJSON
 	asJSONMutex       sync.RWMutex
 	asJSONArgsForCall []struct{}
-	asJSONReturns struct {
+	asJSONReturns     struct {
 		result1 []domain.BackendJSON
 	}
 }

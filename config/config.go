@@ -7,34 +7,38 @@ import (
 	"github.com/fraenkel/candiedyaml"
 )
 
-func Load(configFilePath string) (*Proxy, error) {
+func Load(configFilePath string) (*Root, error) {
 	file, err := os.Open(configFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	proxyConfig := new(Proxy)
+	rootConfig := new(Root)
 
 	decoder := candiedyaml.NewDecoder(file)
-	err = decoder.Decode(proxyConfig)
+	err = decoder.Decode(rootConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return proxyConfig, nil
+	return rootConfig, nil
+}
+
+type Root struct {
+	Proxy Proxy
+	API   API
 }
 
 type Proxy struct {
-	APIPort                  uint
 	Port                     uint
 	Backends                 []Backend
 	HealthcheckTimeoutMillis uint
-	Username                 string
-	Password                 string
 }
 
-func (p Proxy) HealthcheckTimeout() time.Duration {
-	return time.Duration(p.HealthcheckTimeoutMillis) * time.Millisecond
+type API struct {
+	Port     uint
+	Username string
+	Password string
 }
 
 type Backend struct {
@@ -42,4 +46,8 @@ type Backend struct {
 	BackendPort     uint
 	HealthcheckPort uint
 	BackendName     string
+}
+
+func (p Proxy) HealthcheckTimeout() time.Duration {
+	return time.Duration(p.HealthcheckTimeoutMillis) * time.Millisecond
 }

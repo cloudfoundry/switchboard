@@ -29,19 +29,19 @@ type FakeConn struct {
 	CloseStub        func() error
 	closeMutex       sync.RWMutex
 	closeArgsForCall []struct{}
-	closeReturns struct {
+	closeReturns     struct {
 		result1 error
 	}
 	LocalAddrStub        func() net.Addr
 	localAddrMutex       sync.RWMutex
 	localAddrArgsForCall []struct{}
-	localAddrReturns struct {
+	localAddrReturns     struct {
 		result1 net.Addr
 	}
 	RemoteAddrStub        func() net.Addr
 	remoteAddrMutex       sync.RWMutex
 	remoteAddrArgsForCall []struct{}
-	remoteAddrReturns struct {
+	remoteAddrReturns     struct {
 		result1 net.Addr
 	}
 	SetDeadlineStub        func(t time.Time) error

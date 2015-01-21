@@ -12,7 +12,7 @@ type FakeCluster struct {
 	MonitorStub        func() chan<- interface{}
 	monitorMutex       sync.RWMutex
 	monitorArgsForCall []struct{}
-	monitorReturns struct {
+	monitorReturns     struct {
 		result1 chan<- interface{}
 	}
 	RouteToBackendStub        func(clientConn net.Conn) error

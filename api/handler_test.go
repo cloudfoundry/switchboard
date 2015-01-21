@@ -19,7 +19,7 @@ var _ = Describe("Handler", func() {
 	JustBeforeEach(func() {
 		backends := &domainfakes.FakeBackends{}
 		logger := lagertest.NewTestLogger("Handler Test")
-		config := config.Proxy{}
+		config := config.API{}
 		handler = api.NewHandler(backends, logger, config)
 	})
 

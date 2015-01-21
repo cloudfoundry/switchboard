@@ -10,7 +10,7 @@ type FakeResponseWriter struct {
 	HeaderStub        func() http.Header
 	headerMutex       sync.RWMutex
 	headerArgsForCall []struct{}
-	headerReturns struct {
+	headerReturns     struct {
 		result1 http.Header
 	}
 	WriteStub        func([]byte) (int, error)

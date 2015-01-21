@@ -11,9 +11,9 @@ type FakeBridge struct {
 	ConnectStub        func()
 	connectMutex       sync.RWMutex
 	connectArgsForCall []struct{}
-	CloseStub        func()
-	closeMutex       sync.RWMutex
-	closeArgsForCall []struct{}
+	CloseStub          func()
+	closeMutex         sync.RWMutex
+	closeArgsForCall   []struct{}
 }
 
 func (fake *FakeBridge) Connect() {

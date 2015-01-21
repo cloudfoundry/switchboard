@@ -22,8 +22,9 @@ var switchboardBinPath string
 var switchboardPort uint
 var switchboardAPIPort uint
 var backends []config.Backend
-var proxyConfigFile string
+var configFile string
 var proxyConfig config.Proxy
+var apiConfig config.API
 var pidFile string
 
 var _ = BeforeSuite(func() {
@@ -57,18 +58,24 @@ var _ = BeforeSuite(func() {
 	proxyConfig = config.Proxy{
 		Backends:                 backends,
 		HealthcheckTimeoutMillis: 500,
-		Port:     switchboardPort,
-		APIPort:  switchboardAPIPort,
+		Port: switchboardPort,
+	}
+	apiConfig = config.API{
+		Port:     switchboardAPIPort,
 		Username: "username",
 		Password: "password",
 	}
+	rootConfig := config.Root{
+		Proxy: proxyConfig,
+		API:   apiConfig,
+	}
 
-	proxyConfigFile = filepath.Join(tempDir, "proxyConfig.yml")
-	fileToWrite, err := os.Create(proxyConfigFile)
+	configFile = filepath.Join(tempDir, "proxyConfig.yml")
+	fileToWrite, err := os.Create(configFile)
 	Ω(err).ShouldNot(HaveOccurred())
 
 	encoder := candiedyaml.NewEncoder(fileToWrite)
-	err = encoder.Encode(proxyConfig)
+	err = encoder.Encode(rootConfig)
 	Ω(err).ShouldNot(HaveOccurred())
 })
 

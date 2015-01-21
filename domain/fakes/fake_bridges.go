@@ -29,10 +29,10 @@ type FakeBridges struct {
 	RemoveAndCloseAllStub        func()
 	removeAndCloseAllMutex       sync.RWMutex
 	removeAndCloseAllArgsForCall []struct{}
-	SizeStub        func() uint
-	sizeMutex       sync.RWMutex
-	sizeArgsForCall []struct{}
-	sizeReturns struct {
+	SizeStub                     func() uint
+	sizeMutex                    sync.RWMutex
+	sizeArgsForCall              []struct{}
+	sizeReturns                  struct {
 		result1 uint
 	}
 	ContainsStub        func(bridge domain.Bridge) bool

@@ -27,7 +27,7 @@ func main() {
 
 	logger := cf_lager.New("Switchboard")
 
-	proxyConfig, err := config.Load(*configFile)
+	rootConfig, err := config.Load(*configFile)
 	if err != nil {
 		logger.Fatal("Error loading config file:", err, lager.Data{"config": *configFile})
 	}
@@ -39,25 +39,25 @@ func main() {
 		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": *pidFile})
 	}
 
-	backends := domain.NewBackends(proxyConfig.Backends, logger)
+	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
 	cluster := domain.NewCluster(
 		backends,
-		proxyConfig.HealthcheckTimeout(),
+		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
 	)
 
-	handler := api.NewHandler(backends, logger, *proxyConfig)
+	handler := api.NewHandler(backends, logger, rootConfig.API)
 
 	group := grouper.NewParallel(os.Kill, grouper.Members{
-		grouper.Member{"proxy", proxy.NewRunner(cluster, proxyConfig.Port, logger)},
-		grouper.Member{"api", api.NewRunner(proxyConfig.APIPort, handler, logger)},
+		grouper.Member{"proxy", proxy.NewRunner(cluster, rootConfig.Proxy.Port, logger)},
+		grouper.Member{"api", api.NewRunner(rootConfig.API.Port, handler, logger)},
 	})
 	process := ifrit.Invoke(group)
 
-	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v\n", proxyConfig))
+	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v\n", rootConfig))
 
 	err = <-process.Wait()
 	if err != nil {
-		logger.Fatal("Error starting switchboard", err, lager.Data{"proxyConfig": proxyConfig})
+		logger.Fatal("Error starting switchboard", err, lager.Data{"rootConfig": rootConfig})
 	}
 }

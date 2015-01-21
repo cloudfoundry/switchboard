@@ -9,12 +9,12 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-func NewHandler(backends domain.Backends, logger lager.Logger, proxyConfig config.Proxy) http.Handler {
+func NewHandler(backends domain.Backends, logger lager.Logger, apiConfig config.API) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/v0/backends", BackendsIndex(backends))
 
 	return middleware.Chain{
 		middleware.NewPanicRecovery(logger),
-		middleware.NewBasicAuth(proxyConfig.Username, proxyConfig.Password),
+		middleware.NewBasicAuth(apiConfig.Username, apiConfig.Password),
 	}.Wrap(mux)
 }

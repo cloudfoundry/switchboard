@@ -23,17 +23,17 @@ var _ = Describe("Handler", func() {
 
 	Context("when a request panics", func() {
 		var (
-			realBackendsIndex func(backends domain.Backends) http.HandlerFunc
+			realBackendsIndex func(backends domain.Backends) http.Handler
 			responseWriter    *apifakes.FakeResponseWriter
 			request           *http.Request
 		)
 
 		BeforeEach(func() {
 			realBackendsIndex = api.BackendsIndex
-			api.BackendsIndex = func(domain.Backends) http.HandlerFunc {
-				return func(http.ResponseWriter, *http.Request) {
+			api.BackendsIndex = func(domain.Backends) http.Handler {
+				return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 					panic("fake request panic")
-				}
+				})
 			}
 
 			responseWriter = &apifakes.FakeResponseWriter{}

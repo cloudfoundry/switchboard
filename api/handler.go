@@ -10,8 +10,7 @@ import (
 
 func NewHandler(backends domain.Backends, logger lager.Logger) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/v0/backends",
-		basicAuthHandler(BackendsIndex(backends)))
+	mux.Handle("/v0/backends", basicAuthHandler(BackendsIndex(backends)))
 
 	return panicRecoveryHandler(mux, logger)
 }
@@ -31,8 +30,8 @@ func panicRecoveryHandler(next http.Handler, logger lager.Logger) http.Handler {
 	})
 }
 
-func basicAuthHandler(next http.HandlerFunc) http.HandlerFunc {
-	return func(rw http.ResponseWriter, req *http.Request) {
+func basicAuthHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		username, password, ok := req.BasicAuth()
 		if ok &&
 			secureCompare(username, "username") &&
@@ -42,7 +41,7 @@ func basicAuthHandler(next http.HandlerFunc) http.HandlerFunc {
 			rw.Header().Set("WWW-Authenticate", "Basic realm=\"Authorization Required\"")
 			http.Error(rw, "Not Authorized", http.StatusUnauthorized)
 		}
-	}
+	})
 }
 
 func secureCompare(a, b string) bool {

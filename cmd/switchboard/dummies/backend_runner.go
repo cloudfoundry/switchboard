@@ -18,7 +18,7 @@ type BackendRunner struct {
 func NewBackendRunner(index uint, backend config.Backend) *BackendRunner {
 	return &BackendRunner{
 		index: index,
-		port:  backend.BackendPort,
+		port:  backend.Port,
 	}
 }
 

@@ -146,14 +146,14 @@ var _ = Describe("Switchboard", func() {
 				}
 
 				switch returnedBackends[0]["name"] {
-				case backends[0].BackendName:
-					Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[0].BackendPort))
-					Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[1].BackendPort))
-					Expect(returnedBackends[1]["name"]).To(Equal(backends[1].BackendName))
-				case backends[1].BackendName: // order reversed in response
-					Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[0].BackendPort))
-					Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[1].BackendPort))
-					Expect(returnedBackends[0]["name"]).To(Equal(backends[1].BackendName))
+				case backends[0].Name:
+					Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[0].Port))
+					Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[1].Port))
+					Expect(returnedBackends[1]["name"]).To(Equal(backends[1].Name))
+				case backends[1].Name: // order reversed in response
+					Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[0].Port))
+					Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[1].Port))
+					Expect(returnedBackends[0]["name"]).To(Equal(backends[1].Name))
 				default:
 					Fail(fmt.Sprintf("Invalid backend name: %s", returnedBackends[0]["name"]))
 				}
@@ -342,7 +342,7 @@ var _ = Describe("Switchboard", func() {
 					data, err = sendData(conn, "test")
 					Expect(err).ToNot(HaveOccurred())
 					Expect(data.Message).To(Equal("test"))
-					Expect(data.BackendPort).To(Equal(initialInactiveBackend.BackendPort))
+					Expect(data.BackendPort).To(Equal(initialInactiveBackend.Port))
 				}, 5)
 			})
 

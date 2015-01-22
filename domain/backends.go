@@ -34,9 +34,9 @@ func NewBackends(backendConfigs []config.Backend, logger lager.Logger) Backends 
 
 	for _, bc := range backendConfigs {
 		backend := BackendProvider(
-			bc.BackendName,
-			bc.BackendHost,
-			bc.BackendPort,
+			bc.Name,
+			bc.Host,
+			bc.Port,
 			bc.HealthcheckPort,
 			logger,
 		)

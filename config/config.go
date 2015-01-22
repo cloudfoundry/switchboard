@@ -42,10 +42,10 @@ type API struct {
 }
 
 type Backend struct {
-	BackendHost     string
-	BackendPort     uint
+	Host            string
+	Port            uint
 	HealthcheckPort uint
-	BackendName     string
+	Name            string
 }
 
 func (p Proxy) HealthcheckTimeout() time.Duration {

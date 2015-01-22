@@ -127,7 +127,7 @@ func (b *backends) SetUnhealthy(backend Backend) {
 	}
 }
 
-func (b backends) AsJSON() []BackendJSON {
+func (b *backends) AsJSON() []BackendJSON {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 

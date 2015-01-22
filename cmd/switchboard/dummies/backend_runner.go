@@ -37,7 +37,7 @@ func (fb *BackendRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) er
 		for {
 			conn, err = l.Accept()
 			if err != nil {
-				errChan <- errors.New(fmt.Sprintf("Error accepting: ", err.Error()))
+				errChan <- errors.New(fmt.Sprintf("Error accepting: %v", err.Error()))
 			} else {
 				defer conn.Close()
 				go fb.handleRequest(conn)
@@ -54,9 +54,9 @@ func (fb *BackendRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) er
 			return err
 		case <-signals:
 			l.Close()
+			return nil
 		}
 	}
-	return nil
 }
 
 func (fb *BackendRunner) handleRequest(conn net.Conn) {

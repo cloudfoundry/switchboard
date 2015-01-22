@@ -2,7 +2,7 @@ sudo: false
 language: go
 
 go: 
- - 1.4.1
+  - 1.4.1
 
 install:
   - go get -t -v ./...
@@ -12,4 +12,5 @@ before_script:
   - export PATH=$HOME/gopath/bin:$PATH
 
 script:
- - ginkgo -r -race -failOnPending -randomizeAllSpecs
+  - go tool vet -composites=false $(ls -d */ | grep -v Godeps)
+  - ginkgo -r -race -failOnPending -randomizeAllSpecs

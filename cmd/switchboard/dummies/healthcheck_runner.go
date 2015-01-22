@@ -83,8 +83,6 @@ func (fh *HealthcheckRunner) Run(signals <-chan os.Signal, ready chan<- struct{}
 			}
 		}
 	}
-
-	return nil
 }
 
 func (fh *HealthcheckRunner) health(w http.ResponseWriter, req *http.Request) {

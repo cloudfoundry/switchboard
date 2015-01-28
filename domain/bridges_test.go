@@ -1,7 +1,7 @@
 package domain_test
 
 import (
-	"io"
+	"net"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -92,7 +92,7 @@ var _ = Describe("Bridges", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := bridges.Remove(domain.NewBridge(&fakes.FakeReadWriteCloser{}, &fakes.FakeReadWriteCloser{}, nil))
+				err := bridges.Remove(domain.NewBridge(&fakes.FakeConn{}, &fakes.FakeConn{}, nil))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found"))
 			})
@@ -101,7 +101,7 @@ var _ = Describe("Bridges", func() {
 
 	Describe("RemoveAndCloseAll", func() {
 		BeforeEach(func() {
-			domain.BridgeProvider = func(_, _ io.ReadWriteCloser, logger lager.Logger) domain.Bridge {
+			domain.BridgeProvider = func(_, _ net.Conn, logger lager.Logger) domain.Bridge {
 				return &fakes.FakeBridge{}
 			}
 		})

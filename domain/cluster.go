@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -67,7 +68,7 @@ func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-cha
 				url := backend.HealthcheckUrl()
 				resp, err := client.Get(url)
 				if err != nil {
-					c.logger.Error("Error dialing healthchecker", err, lager.Data{"endpoint": url})
+					c.logger.Debug(fmt.Sprintf("Error dialing healthchecker: %v", err), lager.Data{"endpoint": url})
 					c.backends.SetUnhealthy(backend)
 				} else {
 					resp.Body.Close()

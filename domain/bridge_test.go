@@ -15,13 +15,23 @@ import (
 var _ = Describe("Bridge", func() {
 	Describe("#Connect", func() {
 		var bridge domain.Bridge
-		var client, backend *fakes.FakeReadWriteCloser
+		var client, backend *fakes.FakeConn
 		var logger lager.Logger
 
 		BeforeEach(func() {
 			logger = lagertest.NewTestLogger("Bridge test")
-			backend = &fakes.FakeReadWriteCloser{}
-			client = &fakes.FakeReadWriteCloser{}
+			backend = &fakes.FakeConn{}
+			client = &fakes.FakeConn{}
+
+			clientAddr := &fakes.FakeAddr{}
+			backendAddr := &fakes.FakeAddr{}
+
+			clientAddr.StringReturns("clientIPAsString")
+			backendAddr.StringReturns("backendIPAsString")
+
+			client.RemoteAddrReturns(clientAddr)
+			backend.RemoteAddrReturns(backendAddr)
+
 			bridge = domain.NewBridge(client, backend, logger)
 		})
 

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/pivotal-cf-experimental/switchboard/config"
@@ -108,10 +109,24 @@ func (b *backends) SetHealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
+	previouslyHeathly := b.all[backend]
+	if !previouslyHeathly {
+		b.logger.Info(fmt.Sprintf("Previously unhealthy backend %v became healthy.", backend))
+	}
+
 	b.all[backend] = true
-	b.logger.Info("Backend became healthy again.")
 	if b.active == nil {
-		b.active = backend
+		b.unsafeSetActive(backend)
+	}
+}
+
+func (b *backends) unsafeSetActive(backend Backend) {
+	b.active = backend
+
+	if b.active == nil {
+		b.logger.Info("No active backends.")
+	} else {
+		b.logger.Info(fmt.Sprintf("New active backend: %v", b.active))
 	}
 }
 
@@ -119,11 +134,16 @@ func (b *backends) SetUnhealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
+	previouslyHeathly := b.all[backend]
+	if previouslyHeathly {
+		b.logger.Info(fmt.Sprintf("Previously healthy backend %v became unhealthy.", backend))
+	}
+
 	b.all[backend] = false
 	if b.active == backend {
-		b.logger.Info("Active backend became unhealthy. Switching over to next available...")
 		backend.SeverConnections()
-		b.active = b.unsafeNextHealthy()
+		nextHealthyBackend := b.unsafeNextHealthy()
+		b.unsafeSetActive(nextHealthyBackend)
 	}
 }
 

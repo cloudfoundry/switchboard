@@ -8,6 +8,7 @@ import (
 	"github.com/pivotal-cf-experimental/switchboard/domain"
 	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Backend", func() {
@@ -21,11 +22,21 @@ var _ = Describe("Backend", func() {
 			return bridges
 		}
 
-		backend = domain.NewBackend("backend-0", "1.2.3.4", 3306, 9902, nil)
+		logger := lagertest.NewTestLogger("Backend test")
+		backend = domain.NewBackend("backend-0", "1.2.3.4", 3306, 9902, logger)
 	})
 
 	AfterEach(func() {
 		domain.BridgesProvider = domain.NewBridges
+	})
+
+	Describe("String", func() {
+		It("contains host, port, and name", func() {
+			str := backend.String()
+			Expect(str).To(ContainSubstring("backend-0"))
+			Expect(str).To(ContainSubstring("1.2.3.4"))
+			Expect(str).To(ContainSubstring("3306"))
+		})
 	})
 
 	Describe("HealthcheckUrl", func() {
@@ -43,8 +54,8 @@ var _ = Describe("Backend", func() {
 	})
 
 	Describe("Bridge", func() {
-		var backendConn net.Conn
-		var clientConn net.Conn
+		var backendConn *fakes.FakeConn
+		var clientConn *fakes.FakeConn
 
 		var dialErr error
 		var dialedProtocol, dialedAddress string
@@ -68,6 +79,16 @@ var _ = Describe("Backend", func() {
 
 			clientConn = &fakes.FakeConn{}
 			backendConn = &fakes.FakeConn{}
+
+			clientAddr := &fakes.FakeAddr{}
+			backendAddr := &fakes.FakeAddr{}
+
+			clientAddr.StringReturns("clientIPAsString")
+			backendAddr.StringReturns("backendIPAsString")
+
+			clientConn.RemoteAddrReturns(clientAddr)
+			backendConn.RemoteAddrReturns(backendAddr)
+
 			dialErr = nil
 			dialedAddress = ""
 

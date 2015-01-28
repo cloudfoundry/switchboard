@@ -2,18 +2,18 @@
 package fakes
 
 import (
-	"io"
+	"net"
 	"sync"
 
 	"github.com/pivotal-cf-experimental/switchboard/domain"
 )
 
 type FakeBridges struct {
-	CreateStub        func(clientConn, backendConn io.ReadWriteCloser) domain.Bridge
+	CreateStub        func(clientConn, backendConn net.Conn) domain.Bridge
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		clientConn  io.ReadWriteCloser
-		backendConn io.ReadWriteCloser
+		clientConn  net.Conn
+		backendConn net.Conn
 	}
 	createReturns struct {
 		result1 domain.Bridge
@@ -29,10 +29,10 @@ type FakeBridges struct {
 	RemoveAndCloseAllStub        func()
 	removeAndCloseAllMutex       sync.RWMutex
 	removeAndCloseAllArgsForCall []struct{}
-	SizeStub                     func() uint
-	sizeMutex                    sync.RWMutex
-	sizeArgsForCall              []struct{}
-	sizeReturns                  struct {
+	SizeStub        func() uint
+	sizeMutex       sync.RWMutex
+	sizeArgsForCall []struct{}
+	sizeReturns struct {
 		result1 uint
 	}
 	ContainsStub        func(bridge domain.Bridge) bool
@@ -45,11 +45,11 @@ type FakeBridges struct {
 	}
 }
 
-func (fake *FakeBridges) Create(clientConn io.ReadWriteCloser, backendConn io.ReadWriteCloser) domain.Bridge {
+func (fake *FakeBridges) Create(clientConn net.Conn, backendConn net.Conn) domain.Bridge {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		clientConn  io.ReadWriteCloser
-		backendConn io.ReadWriteCloser
+		clientConn  net.Conn
+		backendConn net.Conn
 	}{clientConn, backendConn})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
@@ -65,7 +65,7 @@ func (fake *FakeBridges) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeBridges) CreateArgsForCall(i int) (io.ReadWriteCloser, io.ReadWriteCloser) {
+func (fake *FakeBridges) CreateArgsForCall(i int) (net.Conn, net.Conn) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return fake.createArgsForCall[i].clientConn, fake.createArgsForCall[i].backendConn

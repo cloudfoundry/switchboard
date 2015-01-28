@@ -2,7 +2,7 @@ package domain
 
 import (
 	"errors"
-	"io"
+	"net"
 	"sync"
 
 	"github.com/pivotal-golang/lager"
@@ -11,7 +11,7 @@ import (
 var BridgeProvider = NewBridge
 
 type Bridges interface {
-	Create(clientConn, backendConn io.ReadWriteCloser) Bridge
+	Create(clientConn, backendConn net.Conn) Bridge
 	Remove(bridge Bridge) error
 	RemoveAndCloseAll()
 	Size() uint
@@ -30,7 +30,7 @@ func NewBridges(logger lager.Logger) Bridges {
 	}
 }
 
-func (b *concurrentBridges) Create(clientConn, backendConn io.ReadWriteCloser) Bridge {
+func (b *concurrentBridges) Create(clientConn, backendConn net.Conn) Bridge {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 

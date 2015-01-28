@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"fmt"
 	"io"
+	"net"
 
 	"github.com/pivotal-golang/lager"
 )
@@ -12,13 +14,12 @@ type Bridge interface {
 }
 
 type bridge struct {
-	done    chan struct{}
-	client  io.ReadWriteCloser
-	backend io.ReadWriteCloser
-	logger  lager.Logger
+	done            chan struct{}
+	client, backend net.Conn
+	logger          lager.Logger
 }
 
-func NewBridge(client, backend io.ReadWriteCloser, logger lager.Logger) Bridge {
+func NewBridge(client, backend net.Conn, logger lager.Logger) Bridge {
 	return &bridge{
 		done:    make(chan struct{}),
 		client:  client,
@@ -36,21 +37,17 @@ func (b bridge) Connect() {
 	case <-b.safeCopy(b.backend, b.client):
 	case <-b.done:
 	}
+	b.logger.Info(fmt.Sprintf("Session closed for client at %s to backend at %s", b.client.RemoteAddr().String(), b.backend.RemoteAddr().String()))
 }
 
 func (b bridge) Close() {
 	close(b.done)
 }
 
-func (b bridge) safeCopy(from, to io.ReadWriteCloser) chan struct{} {
+func (b bridge) safeCopy(from, to net.Conn) chan struct{} {
 	copyDone := make(chan struct{})
 	go func() {
-		_, err := io.Copy(from, to)
-		if err != nil {
-			b.logger.Error("Error copying from 'from' to 'to'", err)
-		} else {
-			b.logger.Info("Copying from 'from' to 'to' completed without an error\n")
-		}
+		io.Copy(from, to)
 		close(copyDone)
 	}()
 	return copyDone

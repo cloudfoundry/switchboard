@@ -16,6 +16,7 @@ type Backend interface {
 	Bridge(clientConn net.Conn) error
 	SeverConnections()
 	AsJSON() BackendJSON
+	String() string
 }
 
 type backend struct {
@@ -63,6 +64,11 @@ func (b backend) Bridge(clientConn net.Conn) error {
 		return errors.New(fmt.Sprintf("Error connection to backend: %v", err))
 	}
 
+	clientIPAsString := clientConn.RemoteAddr().String()
+	backendIPAsString := backendConn.RemoteAddr().String()
+
+	b.logger.Info(fmt.Sprintf("Session established for client at %s to backend at %s.", clientIPAsString, backendIPAsString))
+
 	go func() {
 		bridge := b.bridges.Create(clientConn, backendConn)
 		bridge.Connect()
@@ -83,4 +89,8 @@ func (b backend) AsJSON() BackendJSON {
 		Name:                b.name,
 		CurrentSessionCount: b.bridges.Size(),
 	}
+}
+
+func (b backend) String() string {
+	return fmt.Sprintf("host=%s,port=%d,name=%s", b.host, b.port, b.name)
 }

@@ -125,7 +125,7 @@ func (b *backends) unsafeSetActive(backend Backend) {
 	if b.active == nil {
 		b.logger.Info("No active backends.")
 	} else {
-		b.logger.Info("New active backend", lager.Data{"backend": b.active})
+		b.logger.Info("New active backend", lager.Data{"backend": b.active.AsJSON()})
 	}
 }
 

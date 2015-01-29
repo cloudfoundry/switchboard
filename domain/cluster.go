@@ -62,14 +62,29 @@ func (c cluster) RouteToBackend(clientConn net.Conn) error {
 
 func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
 	go func() {
+		errorCount := uint64(0)
+		logBadFrequency := uint64(5)
 		for {
 			select {
 			case <-time.Tick(c.healthcheckTimeout / 5):
 				url := backend.HealthcheckUrl()
 				resp, err := client.Get(url)
 				if err != nil {
-					c.logger.Debug(fmt.Sprintf("Error dialing healthchecker: %v", err), lager.Data{"endpoint": url})
 					c.backends.SetUnhealthy(backend)
+
+					errorCount++
+					shouldLogError := errorCount%logBadFrequency == 0
+					if shouldLogError {
+						c.logger.Error(
+							fmt.Sprintf("Error dialing healthchecker; total failures: %d", errorCount),
+							err,
+							lager.Data{
+								"backend":       backend.AsJSON(),
+								"endpoint":      url,
+								"totalFailures": errorCount,
+							},
+						)
+					}
 				} else {
 					resp.Body.Close()
 
@@ -77,8 +92,22 @@ func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-cha
 						c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
 						c.backends.SetHealthy(backend)
 					} else {
-						c.logger.Debug("Non-200 exit code from healthcheck", lager.Data{"status_code": resp.StatusCode, "endpoint": url})
 						c.backends.SetUnhealthy(backend)
+
+						errorCount++
+						shouldLogError := errorCount%logBadFrequency == 0
+						if shouldLogError {
+							c.logger.Error(
+								fmt.Sprintf("Healthcheck exit code: %d; total failures: %d", resp.StatusCode, errorCount),
+								fmt.Errorf("Non-200 exit code from healthcheck"),
+								lager.Data{
+									"backend":       backend.AsJSON(),
+									"endpoint":      url,
+									"status_code":   resp.StatusCode,
+									"totalFailures": errorCount,
+								},
+							)
+						}
 					}
 				}
 			case <-stopChan:

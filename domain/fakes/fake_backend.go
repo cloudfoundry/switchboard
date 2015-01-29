@@ -32,12 +32,6 @@ type FakeBackend struct {
 	asJSONReturns struct {
 		result1 domain.BackendJSON
 	}
-	StringStub        func() string
-	stringMutex       sync.RWMutex
-	stringArgsForCall []struct{}
-	stringReturns struct {
-		result1 string
-	}
 }
 
 func (fake *FakeBackend) HealthcheckUrl() string {
@@ -132,30 +126,6 @@ func (fake *FakeBackend) AsJSONReturns(result1 domain.BackendJSON) {
 	fake.AsJSONStub = nil
 	fake.asJSONReturns = struct {
 		result1 domain.BackendJSON
-	}{result1}
-}
-
-func (fake *FakeBackend) String() string {
-	fake.stringMutex.Lock()
-	fake.stringArgsForCall = append(fake.stringArgsForCall, struct{}{})
-	fake.stringMutex.Unlock()
-	if fake.StringStub != nil {
-		return fake.StringStub()
-	} else {
-		return fake.stringReturns.result1
-	}
-}
-
-func (fake *FakeBackend) StringCallCount() int {
-	fake.stringMutex.RLock()
-	defer fake.stringMutex.RUnlock()
-	return len(fake.stringArgsForCall)
-}
-
-func (fake *FakeBackend) StringReturns(result1 string) {
-	fake.StringStub = nil
-	fake.stringReturns = struct {
-		result1 string
 	}{result1}
 }
 

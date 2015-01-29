@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/pivotal-cf-experimental/switchboard/config"
@@ -111,7 +110,7 @@ func (b *backends) SetHealthy(backend Backend) {
 
 	previouslyHeathly := b.all[backend]
 	if !previouslyHeathly {
-		b.logger.Info(fmt.Sprintf("Previously unhealthy backend %v became healthy.", backend))
+		b.logger.Info("Previously unhealthy backend became healthy.", lager.Data{"backend": backend.AsJSON()})
 	}
 
 	b.all[backend] = true
@@ -126,7 +125,7 @@ func (b *backends) unsafeSetActive(backend Backend) {
 	if b.active == nil {
 		b.logger.Info("No active backends.")
 	} else {
-		b.logger.Info(fmt.Sprintf("New active backend: %v", b.active))
+		b.logger.Info("New active backend", lager.Data{"backend": b.active})
 	}
 }
 
@@ -136,7 +135,7 @@ func (b *backends) SetUnhealthy(backend Backend) {
 
 	previouslyHeathly := b.all[backend]
 	if previouslyHeathly {
-		b.logger.Info(fmt.Sprintf("Previously healthy backend %v became unhealthy.", backend))
+		b.logger.Info("Previously healthy backend became unhealthy.", lager.Data{"backend": backend.AsJSON()})
 	}
 
 	b.all[backend] = false

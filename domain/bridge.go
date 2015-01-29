@@ -37,7 +37,7 @@ func (b bridge) Connect() {
 	case <-b.safeCopy(b.backend, b.client):
 	case <-b.done:
 	}
-	b.logger.Info(fmt.Sprintf("Session closed for client at %s to backend at %s", b.client.RemoteAddr().String(), b.backend.RemoteAddr().String()))
+	b.logger.Info(fmt.Sprintf("Session closed for client at %v to backend at %v", b.client.RemoteAddr(), b.backend.RemoteAddr()))
 }
 
 func (b bridge) Close() {
@@ -47,7 +47,16 @@ func (b bridge) Close() {
 func (b bridge) safeCopy(from, to net.Conn) chan struct{} {
 	copyDone := make(chan struct{})
 	go func() {
-		io.Copy(from, to)
+		// We don't want to capture the error because it's not meaningful -
+		// whenever a connection is closed, one half will return without error
+		// but the other half will return an error.
+
+		// A more elegant solution might involve sending the error down a channel
+		// and correlating it to the (expected) closure of the other half of the
+		// channel. If it can't correlate then we have an actual error,
+		// otherwise we can safely ignore it.
+		_, _ = io.Copy(from, to)
+
 		close(copyDone)
 	}()
 	return copyDone

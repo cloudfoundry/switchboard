@@ -30,15 +30,6 @@ var _ = Describe("Backend", func() {
 		domain.BridgesProvider = domain.NewBridges
 	})
 
-	Describe("String", func() {
-		It("contains host, port, and name", func() {
-			str := backend.String()
-			Expect(str).To(ContainSubstring("backend-0"))
-			Expect(str).To(ContainSubstring("1.2.3.4"))
-			Expect(str).To(ContainSubstring("3306"))
-		})
-	})
-
 	Describe("HealthcheckUrl", func() {
 		It("has the correct protocol, backend host and health check port", func() {
 			healthcheckURL := backend.HealthcheckUrl()
@@ -82,9 +73,6 @@ var _ = Describe("Backend", func() {
 
 			clientAddr := &fakes.FakeAddr{}
 			backendAddr := &fakes.FakeAddr{}
-
-			clientAddr.StringReturns("clientIPAsString")
-			backendAddr.StringReturns("backendIPAsString")
 
 			clientConn.RemoteAddrReturns(clientAddr)
 			backendConn.RemoteAddrReturns(backendAddr)

@@ -54,10 +54,10 @@ func main() {
 	})
 	process := ifrit.Invoke(group)
 
-	logger.Info(fmt.Sprintf("Proxy started with configuration: %+v", rootConfig.Proxy))
+	logger.Info("Proxy started", lager.Data{"proxyConfig": rootConfig.Proxy})
 
 	err = <-process.Wait()
 	if err != nil {
-		logger.Fatal("Error starting switchboard", err, lager.Data{"rootConfig": rootConfig})
+		logger.Fatal("Error starting switchboard", err, lager.Data{"proxyConfig": rootConfig.Proxy})
 	}
 }

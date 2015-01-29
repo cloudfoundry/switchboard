@@ -62,57 +62,60 @@ func (c cluster) RouteToBackend(clientConn net.Conn) error {
 
 func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
 	go func() {
-		errorCount := uint64(0)
-		logBadFrequency := uint64(5)
+		dialCount := uint64(0)
+		logFrequency := uint64(5)
 		for {
 			select {
 			case <-time.Tick(c.healthcheckTimeout / 5):
-				url := backend.HealthcheckUrl()
-				resp, err := client.Get(url)
-				if err != nil {
-					c.backends.SetUnhealthy(backend)
-
-					errorCount++
-					shouldLogError := errorCount%logBadFrequency == 0
-					if shouldLogError {
-						c.logger.Error(
-							fmt.Sprintf("Error dialing healthchecker; total failures: %d", errorCount),
-							err,
-							lager.Data{
-								"backend":       backend.AsJSON(),
-								"endpoint":      url,
-								"totalFailures": errorCount,
-							},
-						)
-					}
-				} else {
-					resp.Body.Close()
-
-					if resp.StatusCode == http.StatusOK {
-						c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
-						c.backends.SetHealthy(backend)
-					} else {
-						c.backends.SetUnhealthy(backend)
-
-						errorCount++
-						shouldLogError := errorCount%logBadFrequency == 0
-						if shouldLogError {
-							c.logger.Error(
-								fmt.Sprintf("Healthcheck exit code: %d; total failures: %d", resp.StatusCode, errorCount),
-								fmt.Errorf("Non-200 exit code from healthcheck"),
-								lager.Data{
-									"backend":       backend.AsJSON(),
-									"endpoint":      url,
-									"status_code":   resp.StatusCode,
-									"totalFailures": errorCount,
-								},
-							)
-						}
-					}
-				}
+				dialCount++
+				c.dialHealthcheck(backend, client, dialCount, logFrequency)
 			case <-stopChan:
 				return
 			}
 		}
 	}()
+}
+
+func (c cluster) dialHealthcheck(backend Backend, client UrlGetter, dialCount uint64, logFrequency uint64) {
+	url := backend.HealthcheckUrl()
+	resp, err := client.Get(url)
+	shouldLog := dialCount%logFrequency == 0
+	if err != nil {
+		c.backends.SetUnhealthy(backend)
+
+		if shouldLog {
+			c.logger.Error(
+				"Error dialing healthchecker",
+				err,
+				lager.Data{
+					"backend":  backend.AsJSON(),
+					"endpoint": url,
+				},
+			)
+		}
+	} else {
+		resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			c.backends.SetHealthy(backend)
+
+			if shouldLog {
+				c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
+			}
+		} else {
+			c.backends.SetUnhealthy(backend)
+
+			if shouldLog {
+				c.logger.Error(
+					fmt.Sprintf("Healthcheck status code: %d", resp.StatusCode),
+					fmt.Errorf("Non-200 status code from healthcheck"),
+					lager.Data{
+						"backend":     backend.AsJSON(),
+						"endpoint":    url,
+						"status_code": resp.StatusCode,
+					},
+				)
+			}
+		}
+	}
 }

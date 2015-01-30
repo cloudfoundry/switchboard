@@ -37,19 +37,19 @@ var _ = Describe("Config", func() {
 		})
 
 		It("returns an error if the config file does not contain a proxy", func() {
-			_, err := config.Load("testConfigs/emptyProxy.yml")
+			_, err := config.Load("fixtures/emptyProxy.yml")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Proxy"))
 		})
 
 		It("returns an error if the config file does not contain an api", func() {
-			_, err := config.Load("testConfigs/emptyAPI.yml")
+			_, err := config.Load("fixtures/emptyAPI.yml")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("API"))
 		})
 
 		It("returns an error if one of the proxy fields is empty", func() {
-			_, err := config.Load("testConfigs/invalidProxyFields.yml")
+			_, err := config.Load("fixtures/invalidProxyFields.yml")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Proxy.Port"))
 			Expect(err.Error()).To(ContainSubstring("Proxy.Backends"))
@@ -57,7 +57,7 @@ var _ = Describe("Config", func() {
 		})
 
 		It("returns an error if one of the Backends fields is empty", func() {
-			_, err := config.Load("testConfigs/invalidBackends.yml")
+			_, err := config.Load("fixtures/invalidBackends.yml")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Proxy.Backends[0].Host"))
 			Expect(err.Error()).To(ContainSubstring("Proxy.Backends[0].Port"))
@@ -66,7 +66,7 @@ var _ = Describe("Config", func() {
 		})
 
 		It("returns an error if one of the API fields is empty", func() {
-			_, err := config.Load("testConfigs/invalidAPIFields.yml")
+			_, err := config.Load("fixtures/invalidAPIFields.yml")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("API.Port"))
 			Expect(err.Error()).To(ContainSubstring("API.Username"))

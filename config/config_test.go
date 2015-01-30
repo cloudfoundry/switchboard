@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"io/ioutil"
+	"os"
 
 	"github.com/pivotal-cf-experimental/switchboard/config"
 
@@ -23,6 +24,7 @@ var _ = Describe("Config", func() {
 
 		It("returns an error when a field of incorrect type cannot be decoded", func() {
 			invalidConfig, err := ioutil.TempFile("", "invalidConfig.yml")
+			defer os.Remove(invalidConfig.Name())
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = invalidConfig.WriteString(`"Proxy": {"HealthcheckTimeoutMillis": "NotAnInteger"}`)

@@ -15,6 +15,7 @@ func NewHandler(backends domain.Backends, logger lager.Logger, apiConfig config.
 
 	return middleware.Chain{
 		middleware.NewPanicRecovery(logger),
+		middleware.NewLogger(logger),
 		middleware.NewBasicAuth(apiConfig.Username, apiConfig.Password),
 	}.Wrap(mux)
 }

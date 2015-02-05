@@ -3,9 +3,9 @@ package api
 import (
 	"net/http"
 
-	"github.com/pivotal-cf-experimental/switchboard/api/middleware"
-	"github.com/pivotal-cf-experimental/switchboard/config"
-	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/cloudfoundry-incubator/switchboard/api/middleware"
+	"github.com/cloudfoundry-incubator/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 

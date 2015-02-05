@@ -5,9 +5,9 @@ import (
 	"net"
 	"os"
 
-	"github.com/pivotal-cf-experimental/switchboard/api"
-	"github.com/pivotal-cf-experimental/switchboard/config"
-	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/api"
+	"github.com/cloudfoundry-incubator/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"

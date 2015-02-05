@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pivotal-cf-experimental/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/config"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

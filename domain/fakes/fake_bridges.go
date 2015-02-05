@@ -5,7 +5,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
 type FakeBridges struct {

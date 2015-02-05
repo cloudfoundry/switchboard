@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
 type FakeBridge struct {

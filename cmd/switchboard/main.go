@@ -8,10 +8,10 @@ import (
 	"strconv"
 
 	"github.com/cloudfoundry-incubator/cf-lager"
-	"github.com/pivotal-cf-experimental/switchboard/api"
-	"github.com/pivotal-cf-experimental/switchboard/config"
-	"github.com/pivotal-cf-experimental/switchboard/domain"
-	"github.com/pivotal-cf-experimental/switchboard/proxy"
+	"github.com/cloudfoundry-incubator/switchboard/api"
+	"github.com/cloudfoundry-incubator/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
+	"github.com/cloudfoundry-incubator/switchboard/proxy"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 

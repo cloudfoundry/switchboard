@@ -7,8 +7,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf-experimental/switchboard/domain/fakes"
-	"github.com/pivotal-cf-experimental/switchboard/proxy"
+	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/proxy"
 	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit"
 )

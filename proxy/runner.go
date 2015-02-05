@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/pivotal-cf-experimental/switchboard/domain"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 

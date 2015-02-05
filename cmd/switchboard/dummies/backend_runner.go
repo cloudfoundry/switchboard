@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/onsi/ginkgo"
-	"github.com/pivotal-cf-experimental/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/config"
 )
 
 type BackendRunner struct {

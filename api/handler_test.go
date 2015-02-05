@@ -5,11 +5,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf-experimental/switchboard/api"
-	apifakes "github.com/pivotal-cf-experimental/switchboard/api/fakes"
-	"github.com/pivotal-cf-experimental/switchboard/config"
-	"github.com/pivotal-cf-experimental/switchboard/domain"
-	domainfakes "github.com/pivotal-cf-experimental/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/api"
+	apifakes "github.com/cloudfoundry-incubator/switchboard/api/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
+	domainfakes "github.com/cloudfoundry-incubator/switchboard/domain/fakes"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 

@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/onsi/ginkgo"
-	"github.com/pivotal-cf-experimental/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/config"
 )
 
 type HealthcheckRunner struct {

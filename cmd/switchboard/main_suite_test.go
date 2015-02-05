@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"github.com/pivotal-cf-experimental/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/config"
 )
 
 func TestSwitchboard(t *testing.T) {
@@ -29,7 +29,7 @@ var pidFile string
 
 var _ = BeforeSuite(func() {
 	var err error
-	switchboardBinPath, err = gexec.Build("github.com/pivotal-cf-experimental/switchboard/cmd/switchboard", "-race")
+	switchboardBinPath, err = gexec.Build("github.com/cloudfoundry-incubator/switchboard/cmd/switchboard", "-race")
 	Ω(err).ShouldNot(HaveOccurred())
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())

@@ -11,8 +11,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf-experimental/switchboard/cmd/switchboard/dummies"
-	"github.com/pivotal-cf-experimental/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/cmd/switchboard/dummies"
+	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 	"github.com/tedsuo/ifrit/grouper"

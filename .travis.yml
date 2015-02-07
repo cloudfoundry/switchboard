@@ -13,4 +13,4 @@ before_script:
 
 script:
   - go tool vet -composites=false $(ls -d */ | grep -v Godeps)
-  - ginkgo -r -race -failOnPending -randomizeAllSpecs
+  - ginkgo -p -r -race -failOnPending -randomizeAllSpecs

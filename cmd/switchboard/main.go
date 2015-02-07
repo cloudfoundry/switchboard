@@ -25,7 +25,7 @@ func main() {
 	cf_lager.AddFlags(flags)
 	flags.Parse(os.Args[1:])
 
-	logger := cf_lager.New("Switchboard")
+	logger, _ := cf_lager.New("Switchboard")
 
 	rootConfig, err := config.Load(*configFile)
 	if err != nil {

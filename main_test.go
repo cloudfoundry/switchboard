@@ -1,4 +1,4 @@
-package integration_test
+package main_test
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/switchboard/config"
-	"github.com/cloudfoundry-incubator/switchboard/integration_test/dummies"
+	"github.com/cloudfoundry-incubator/switchboard/dummies"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"

@@ -5,10 +5,10 @@ import (
 	"net"
 	"os"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
 	"github.com/cloudfoundry-incubator/switchboard/proxy"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit"
 )

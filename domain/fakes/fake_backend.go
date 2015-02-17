@@ -12,7 +12,7 @@ type FakeBackend struct {
 	HealthcheckUrlStub        func() string
 	healthcheckUrlMutex       sync.RWMutex
 	healthcheckUrlArgsForCall []struct{}
-	healthcheckUrlReturns struct {
+	healthcheckUrlReturns     struct {
 		result1 string
 	}
 	BridgeStub        func(clientConn net.Conn) error
@@ -26,10 +26,10 @@ type FakeBackend struct {
 	SeverConnectionsStub        func()
 	severConnectionsMutex       sync.RWMutex
 	severConnectionsArgsForCall []struct{}
-	AsJSONStub        func() domain.BackendJSON
-	asJSONMutex       sync.RWMutex
-	asJSONArgsForCall []struct{}
-	asJSONReturns struct {
+	AsJSONStub                  func() domain.BackendJSON
+	asJSONMutex                 sync.RWMutex
+	asJSONArgsForCall           []struct{}
+	asJSONReturns               struct {
 		result1 domain.BackendJSON
 	}
 }

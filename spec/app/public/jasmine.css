@@ -1,0 +1,12 @@
+#root {
+  position: absolute;
+  width: 1000px;
+  height: 1000px;
+  top: 0;
+  left: 0;
+  -webkit-transform: rotateY(90deg);
+  -moz-transform: rotateY(90deg);
+  -ms-transform: rotateY(90deg);
+  -o-transform: rotateY(90deg);
+  transform: rotateY(90deg);
+}

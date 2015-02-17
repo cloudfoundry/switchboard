@@ -11,6 +11,9 @@ import (
 
 func NewHandler(backends domain.Backends, logger lager.Logger, apiConfig config.API) http.Handler {
 	mux := http.NewServeMux()
+
+	mux.Handle("/", http.FileServer(http.Dir("static")))
+
 	mux.Handle("/v0/backends", BackendsIndex(backends))
 
 	return middleware.Chain{

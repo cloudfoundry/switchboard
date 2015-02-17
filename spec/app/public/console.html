@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="jasmine.css">
+    <script src="lib/jasmine-2.1.3/jasmine.js"></script>
+    <script src="lib/jasmine-2.1.3/console.js"></script>
+    <script type="text/javascript">
+      var jasmine;
+      (function() {
+        function extend(destination, source) {
+          for (var property in source) destination[property] = source[property];
+          return destination;
+        }
+        jasmine = jasmineRequire.core(jasmineRequire);
+        jasmineRequire.console(jasmineRequire, jasmine);
+
+        var env = jasmine.getEnv();
+        var jasmineInterface = jasmineRequire.interface(jasmine, env);
+
+        extend(window, jasmineInterface);
+
+        var consoleReporter = new jasmine.ConsoleReporter({
+          showColors: true,
+          timer: new jasmine.Timer(),
+          print: function() {
+            console.log.apply(console, arguments);
+          },
+          onComplete: function() {
+            (window.callPhantom ? window.callPhantom : console.log).apply(console, arguments);
+          }
+        });
+
+        env.addReporter(consoleReporter);
+
+        var currentWindowOnload = window.onload;
+        window.onload = function() {
+          if (currentWindowOnload) {
+            currentWindowOnload();
+          }
+          env.execute();
+        };
+      })();
+    </script>
+    <script src="spec.js"></script>
+  </head>
+</html>

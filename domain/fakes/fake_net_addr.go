@@ -10,13 +10,13 @@ type FakeAddr struct {
 	NetworkStub        func() string
 	networkMutex       sync.RWMutex
 	networkArgsForCall []struct{}
-	networkReturns struct {
+	networkReturns     struct {
 		result1 string
 	}
 	StringStub        func() string
 	stringMutex       sync.RWMutex
 	stringArgsForCall []struct{}
-	stringReturns struct {
+	stringReturns     struct {
 		result1 string
 	}
 }

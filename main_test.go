@@ -3,6 +3,7 @@ package main_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -88,8 +89,49 @@ var _ = Describe("Switchboard", func() {
 		ginkgomon.Kill(process)
 	})
 
+	Describe("UI", func() {
+		Describe("/", func() {
+			var url string
+
+			BeforeEach(func() {
+				url = fmt.Sprintf("http://localhost:%d/", switchboardAPIPort)
+			})
+
+			It("prompts for Basic Auth creds when they aren't provided", func() {
+				resp, err := http.Get(url)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+				Expect(resp.Header.Get("WWW-Authenticate")).To(Equal(`Basic realm="Authorization Required"`))
+			})
+
+			It("does not accept bad Basic Auth creds", func() {
+				req, err := http.NewRequest("GET", url, nil)
+				req.SetBasicAuth("bad_username", "bad_password")
+				client := &http.Client{}
+				resp, err := client.Do(req)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
+			It("responds with 200 and contains non-zero body when authorized", func() {
+				req, err := http.NewRequest("GET", url, nil)
+				req.SetBasicAuth("username", "password")
+				client := &http.Client{}
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				Expect(resp.Body).ToNot(BeNil())
+				defer resp.Body.Close()
+				body, err := ioutil.ReadAll(resp.Body)
+				Expect(len(body)).To(BeNumerically(">", 0))
+			})
+		})
+	})
+
 	Describe("api", func() {
-		Describe("/servers/", func() {
+		Describe("/v0/backends/", func() {
 			var url string
 
 			BeforeEach(func() {

@@ -1,3 +1,4 @@
+var del = require('del');
 var gulp = require('gulp');
 var plugins = require('gulp-load-plugins')();
 var express = require('express');
@@ -6,7 +7,13 @@ var portfinder = require('portfinder');
 var runSequence = require('run-sequence');
 var {spawn} = require('child_process');
 
-gulp.task('assets', ['serve-assets', 'app-assets']);
+gulp.task('clean-assets', function(callback) {
+  del(['static/**/*'], callback);
+});
+
+gulp.task('assets', function(callback) {
+  runSequence('clean-assets', ['serve-assets', 'app-assets'], callback);
+});
 
 gulp.task('serve-assets', function() {
   var serve = require('./serve/serve');

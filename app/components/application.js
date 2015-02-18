@@ -37,14 +37,15 @@ var Application = React.createClass({
   render() {
     var {backends} = this.state;
     var healthyCount = backends && backends.reduce((memo, b) => memo + (b.healthy ? 1 : 0), 0);
-    var health = healthyCount === backends.length ? 'All nodes are healthy!' : `${backends.length - healthyCount} out of ${backends.length} nodes are unhealthy.`;
+    var isHealthy = healthyCount === backends.length;
+    var health = isHealthy ? 'All nodes are healthy!' : `${backends.length - healthyCount} out of ${backends.length} nodes are unhealthy.`;
     return (
       <div>
         <div className="main container-fluid pvm bg-dark-1">
           <div className="container pvn mvn">
             <div className="media">
               <a className="media-left" href="#">
-                <img alt="Switchboard header logo" src="big-logo.png" width={35} height={35}/>
+                <img alt="Switchboard header logo" src="switchboard-header-logo.png" width={40} height={40}/>
               </a>
               <div className="media-body">
                 <h1 className="h3 man pts type-neutral-8">Pivotal Switchboard</h1>
@@ -57,9 +58,9 @@ var Application = React.createClass({
             <h1 className="mbn title">CloudyApp</h1>
             <hr className="divider-alternate-2 mtxl mbn"/>
             <div className="row man">
-              <div className={cx({'alert': true, 'alert-success bg-brand-4': healthyCount === backends.length, 'alert-error': healthyCount !== backends.length})}>
+              <div className={cx({'alert': true, 'alert-success bg-brand-4': isHealthy, 'alert-error': !isHealthy})}>
                 <div className="media">
-                  <div className="media-left">
+                  <div className="media-left media-middle">
                     <i className="fa fa-check-circle"></i>
                   </div>
                   <div className="media-body em-high">

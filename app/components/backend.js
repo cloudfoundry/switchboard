@@ -21,9 +21,10 @@ var Backend = React.createClass({
         <td className="txt-m ptm">
           <h2>
             <span className={cx({'label label-primary mlm plm': true, 'bg-error-2': !healthy})}>
-              <i className="fa fa-check fa-fw"></i>
+              <i className="fa fa-check fa-fw"></i>&nbsp;
             {health}
             </span>
+            &nbsp;
           </h2>
         </td>
         <td className="txt-m">

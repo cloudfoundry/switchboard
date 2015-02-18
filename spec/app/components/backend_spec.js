@@ -28,7 +28,7 @@ describe('Backend', function() {
     var {name, healthy, currentSessionCount, host} = backend;
     const health = healthy ? 'HEALTHY' : 'UNHEALTHY';
     expect($('td').map(function() {
-      return $(this).text()
+      return $(this).text().trim();
     }).toArray()).toEqual([
       name,
       health,

@@ -36,4 +36,19 @@ describe('Backend', function() {
       host
     ]);
   });
+
+  describe('when the backend is not healthy', function() {
+    beforeEach(function() {
+      backend.healthy = false;
+      subject.setProps({backend});
+    });
+
+    it('renders unhealthy', function() {
+      expect('tr').toContainText('UNHEALTHY');
+    });
+
+    it('adds the bg-error-2 class', function() {
+      expect('.bg-error-2').toExist();
+    });
+  });
 });

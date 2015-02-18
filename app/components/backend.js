@@ -1,5 +1,6 @@
 var React = require('react/addons');
 
+var cx = React.addons.classSet;
 var types = React.PropTypes;
 
 var Backend = React.createClass({
@@ -19,7 +20,7 @@ var Backend = React.createClass({
         </td>
         <td className="txt-m ptm">
           <h2>
-            <span className="label label-primary mlm plm">
+            <span className={cx({'label label-primary mlm plm': true, 'bg-error-2': !healthy})}>
               <i className="fa fa-check fa-fw"></i>
             {health}
             </span>

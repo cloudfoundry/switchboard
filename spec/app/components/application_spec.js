@@ -7,6 +7,14 @@ describe('Application', function() {
       {
         "host": "localhost",
         "port": 12345,
+        "healthy": true,
+        "active": false,
+        "name": "backend - 1",
+        "currentSessionCount": 0
+      },
+      {
+        "host": "localhost",
+        "port": 12345,
         "healthy": false,
         "active": false,
         "name": "backend - 1",
@@ -35,6 +43,30 @@ describe('Application', function() {
   it('makes an ajax request', function() {
     expect(request).toBeDefined();
     expect(request.url).toEqual('/v0/backends');
+  });
+
+
+  describe('when some of the backends are unhealthy', function() {
+    beforeEach(function() {
+      subject.setState({backends});
+    });
+
+    it('renders the alert with the expected number of unhealthy nodes', function() {
+      expect('.alert-error').toContainText('2 out of 3 nodes are unhealthy');
+      expect($('.alert', root)).not.toHaveClass('bg-brand-4');
+    });
+  });
+
+  describe('when all the backends are healthy', function() {
+    beforeEach(function() {
+      backends = backends.map(b => Object.assign({}, b, {healthy: true}));
+      subject.setState({backends});
+    });
+
+    it('renders the alert with the all nodes are healthy', function() {
+      expect('.alert-success').toContainText('All nodes are healthy!');
+      expect($('.alert', root)).toHaveClass('bg-brand-4');
+    });
   });
 
   describe('when the ajax request is successful', function() {

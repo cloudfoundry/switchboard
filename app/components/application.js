@@ -5,6 +5,8 @@ var Layout = require('../../serve/components/layout');
 var request = require('superagent');
 var {setCorrectingInterval} = require('correcting-interval');
 
+var cx = React.addons.classSet;
+
 var Application = React.createClass({
   getInitialState() {
     return {backends: []}
@@ -34,6 +36,8 @@ var Application = React.createClass({
 
   render() {
     var {backends} = this.state;
+    var healthyCount = backends && backends.reduce((memo, b) => memo + (b.healthy ? 1 : 0), 0);
+    var health = healthyCount === backends.length ? 'All nodes are healthy!' : `${backends.length - healthyCount} out of ${backends.length} nodes are unhealthy.`;
     return (
       <div>
         <div className="main container-fluid pvm bg-dark-1">
@@ -51,17 +55,15 @@ var Application = React.createClass({
         <div className="container">
           <div className="special">
             <h1 className="mbn title">CloudyApp</h1>
-            <span className="i fa fa-refresh type-neutral-6 h5 man"></span>
-            <span className="h5 mtn mls">Last Update: Just now</span>
             <hr className="divider-alternate-2 mtxl mbn"/>
             <div className="row man">
-              <div className="alert alert-success bg-brand-4">
+              <div className={cx({'alert': true, 'alert-success bg-brand-4': healthyCount === backends.length, 'alert-error': healthyCount !== backends.length})}>
                 <div className="media">
                   <div className="media-left">
                     <i className="fa fa-check-circle"></i>
                   </div>
                   <div className="media-body em-high">
-                    All nodes are healthy!
+                  {health}
                   </div>
                 </div>
               </div>

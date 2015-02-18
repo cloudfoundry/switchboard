@@ -65,7 +65,7 @@
 	  },
 	
 	  statics: {
-	    POLL_INTERVAL: 10 * 1000
+	    POLL_INTERVAL: 1 * 1000
 	  },
 	
 	  componentDidMount: function componentDidMount() {

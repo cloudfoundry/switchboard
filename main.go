@@ -40,6 +40,14 @@ func main() {
 		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": *pidFile})
 	}
 
+	if *staticDir == "" {
+		logger.Fatal("staticDir flag not provided", nil)
+	}
+
+	if _, err := os.Stat(*staticDir); os.IsNotExist(err) {
+		logger.Fatal(fmt.Sprintf("staticDir: %s does not exist", *staticDir), nil)
+	}
+
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
 	cluster := domain.NewCluster(
 		backends,

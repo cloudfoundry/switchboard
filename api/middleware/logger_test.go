@@ -19,8 +19,10 @@ var _ = Describe("Logger", func() {
 	var fakeResponseWriter http.ResponseWriter
 	var fakeHandler *fakes.FakeHandler
 	var fakeLogger *fakes.FakeLogger
+	var routePrefix string
 
 	BeforeEach(func() {
+		routePrefix = "/v0"
 		dummyRequest, err = http.NewRequest("GET", "/v0/backends", nil)
 		Expect(err).NotTo(HaveOccurred())
 		dummyRequest.Header.Add("Authorization", "some auth")
@@ -30,8 +32,8 @@ var _ = Describe("Logger", func() {
 		fakeLogger = &fakes.FakeLogger{}
 	})
 
-	It("should write to logger", func() {
-		loggerMiddleware := middleware.NewLogger(fakeLogger)
+	It("should log requests that are prefixed with routePrefix", func() {
+		loggerMiddleware := middleware.NewLogger(fakeLogger, routePrefix)
 		loggerHandler := loggerMiddleware.Wrap(fakeHandler)
 
 		loggerHandler.ServeHTTP(fakeResponseWriter, dummyRequest)
@@ -43,8 +45,21 @@ var _ = Describe("Logger", func() {
 		Expect(lagerData["response"]).NotTo(BeNil())
 	})
 
+	It("should not log requests that are not prefixed with routePrefix", func() {
+		dummyRequest, err = http.NewRequest("GET", "/", nil)
+		Expect(err).NotTo(HaveOccurred())
+		dummyRequest.Header.Add("Authorization", "some auth")
+
+		loggerMiddleware := middleware.NewLogger(fakeLogger, routePrefix)
+		loggerHandler := loggerMiddleware.Wrap(fakeHandler)
+
+		loggerHandler.ServeHTTP(fakeResponseWriter, dummyRequest)
+
+		Expect(fakeLogger.InfoCallCount()).To(Equal(0))
+	})
+
 	It("should not log credentials", func() {
-		loggerMiddleware := middleware.NewLogger(fakeLogger)
+		loggerMiddleware := middleware.NewLogger(fakeLogger, routePrefix)
 		loggerHandler := loggerMiddleware.Wrap(fakeHandler)
 
 		loggerHandler.ServeHTTP(fakeResponseWriter, dummyRequest)
@@ -56,7 +71,7 @@ var _ = Describe("Logger", func() {
 	})
 
 	It("should call next handler", func() {
-		loggerMiddleware := middleware.NewLogger(fakeLogger)
+		loggerMiddleware := middleware.NewLogger(fakeLogger, routePrefix)
 		loggerHandler := loggerMiddleware.Wrap(fakeHandler)
 
 		loggerHandler.ServeHTTP(fakeResponseWriter, dummyRequest)

@@ -3,17 +3,20 @@ package middleware
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/pivotal-golang/lager"
 )
 
 type Logger struct {
-	logger lager.Logger
+	logger      lager.Logger
+	routePrefix string
 }
 
-func NewLogger(logger lager.Logger) Middleware {
+func NewLogger(logger lager.Logger, routePrefix string) Middleware {
 	return Logger{
-		logger: logger,
+		logger:      logger,
+		routePrefix: routePrefix,
 	}
 }
 
@@ -26,19 +29,21 @@ func (l Logger) Wrap(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(&loggingResponseWriter, req)
 
-		requestCopy := *req
-		requestCopy.Header["Authorization"] = nil
+		if strings.HasPrefix(req.URL.String(), l.routePrefix) {
+			requestCopy := *req
+			requestCopy.Header["Authorization"] = nil
 
-		response := map[string]interface{}{
-			"Header":     loggingResponseWriter.Header(),
-			"Body":       string(loggingResponseWriter.body),
-			"StatusCode": loggingResponseWriter.statusCode,
+			response := map[string]interface{}{
+				"Header":     loggingResponseWriter.Header(),
+				"Body":       string(loggingResponseWriter.body),
+				"StatusCode": loggingResponseWriter.statusCode,
+			}
+
+			l.logger.Info("", lager.Data{
+				"request":  requestCopy,
+				"response": response,
+			})
 		}
-
-		l.logger.Info("", lager.Data{
-			"request":  requestCopy,
-			"response": response,
-		})
 	})
 }
 

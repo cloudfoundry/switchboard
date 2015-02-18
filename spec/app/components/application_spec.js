@@ -1,7 +1,7 @@
 require('../spec_helper');
 
 describe('Application', function() {
-  var Backends, request, backends, subject;
+  var Application, Backends, request, backends, subject;
   beforeEach(function() {
     backends = [
       {
@@ -23,7 +23,7 @@ describe('Application', function() {
     ];
     Backends = require('../../../app/components/backends');
     spyOn(Backends.type.prototype, 'render').and.callThrough();
-    var Application = require('../../../app/components/application');
+    Application = require('../../../app/components/application');
     subject = React.render(<Application/>, root);
     request = jasmine.Ajax.requests.mostRecent();
   });
@@ -47,6 +47,19 @@ describe('Application', function() {
 
     it('renders the backends', function() {
       expect(Backends.type.prototype.render).toHaveBeenCalled();
+    });
+
+    describe('after some time has passed', function() {
+      beforeEach(function() {
+        jasmine.Ajax.requests.reset();
+        jasmine.clock().tick(Application.POLL_INTERVAL);
+        request = jasmine.Ajax.requests.mostRecent();
+      });
+
+      it('makes an ajax request', function() {
+        expect(request).toBeDefined();
+        expect(request.url).toEqual('/v0/backends');
+      });
     });
   });
 });

@@ -3,19 +3,33 @@ var Backends = require('./backends');
 var React = require('react/addons');
 var Layout = require('../../serve/components/layout');
 var request = require('superagent');
+var {setCorrectingInterval} = require('correcting-interval');
 
 var Application = React.createClass({
   getInitialState() {
-    return {backends: null}
+    return {backends: []}
+  },
+
+  statics: {
+    POLL_INTERVAL: 10 * 1000
   },
 
   componentDidMount() {
+    this.pollBackends();
+  },
+
+  updateBackends() {
     request.get('/v0/backends')
       .accept('json')
       .end(function(err, {body: backends}) {
         if (err) return;
         this.setState({backends});
       }.bind(this));
+  },
+
+  pollBackends() {
+    this.updateBackends();
+    setCorrectingInterval(this.updateBackends, Application.POLL_INTERVAL);
   },
 
   render() {

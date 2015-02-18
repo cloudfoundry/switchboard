@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/cloudfoundry-incubator/switchboard/config"
@@ -39,6 +40,20 @@ func sendData(conn net.Conn, data string) (Response, error) {
 		}
 		return response, nil
 	}
+}
+
+func verifyHeaderContains(header http.Header, key, valueSubstring string) {
+	found := false
+	for k, v := range header {
+		if k == key {
+			for _, value := range v {
+				if strings.Contains(value, valueSubstring) {
+					found = true
+				}
+			}
+		}
+	}
+	Expect(found).To(BeTrue(), fmt.Sprintf("%s: %s not found in header", key, valueSubstring))
 }
 
 var _ = Describe("Switchboard", func() {
@@ -156,50 +171,66 @@ var _ = Describe("Switchboard", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
-			It("returns valid JSON with valid Basic Auth", func() {
-				req, err := http.NewRequest("GET", url, nil)
-				req.SetBasicAuth("username", "password")
-				client := &http.Client{}
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Context("When authorized", func() {
+				var req *http.Request
 
-				returnedBackends := []map[string]interface{}{}
+				BeforeEach(func() {
+					var err error
+					req, err = http.NewRequest("GET", url, nil)
+					Expect(err).NotTo(HaveOccurred())
+					req.SetBasicAuth("username", "password")
+				})
 
-				decoder := json.NewDecoder(resp.Body)
-				err = decoder.Decode(&returnedBackends)
-				Expect(err).NotTo(HaveOccurred())
+				It("returns correct headers", func() {
+					client := &http.Client{}
+					resp, err := client.Do(req)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					verifyHeaderContains(resp.Header, "Content-Type", "application/json")
+				})
 
-				Expect(len(returnedBackends)).To(Equal(2))
+				It("returns valid JSON in body", func() {
+					client := &http.Client{}
+					resp, err := client.Do(req)
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(returnedBackends[0]["host"]).To(Equal("localhost"))
-				Expect(returnedBackends[0]["healthy"]).To(BeTrue())
+					returnedBackends := []map[string]interface{}{}
 
-				Expect(returnedBackends[1]["host"]).To(Equal("localhost"))
-				Expect(returnedBackends[1]["healthy"]).To(BeTrue())
+					decoder := json.NewDecoder(resp.Body)
+					err = decoder.Decode(&returnedBackends)
+					Expect(err).NotTo(HaveOccurred())
 
-				if returnedBackends[0]["active"].(bool) {
-					Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 1))
-					Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 0))
-					Expect(returnedBackends[1]["active"]).To(BeFalse())
-				} else {
-					Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 1))
-					Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 0))
-					Expect(returnedBackends[0]["active"]).To(BeFalse())
-				}
+					Expect(len(returnedBackends)).To(Equal(2))
 
-				switch returnedBackends[0]["name"] {
-				case backends[0].Name:
-					Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[0].Port))
-					Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[1].Port))
-					Expect(returnedBackends[1]["name"]).To(Equal(backends[1].Name))
-				case backends[1].Name: // order reversed in response
-					Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[0].Port))
-					Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[1].Port))
-					Expect(returnedBackends[0]["name"]).To(Equal(backends[1].Name))
-				default:
-					Fail(fmt.Sprintf("Invalid backend name: %s", returnedBackends[0]["name"]))
-				}
+					Expect(returnedBackends[0]["host"]).To(Equal("localhost"))
+					Expect(returnedBackends[0]["healthy"]).To(BeTrue())
+
+					Expect(returnedBackends[1]["host"]).To(Equal("localhost"))
+					Expect(returnedBackends[1]["healthy"]).To(BeTrue())
+
+					if returnedBackends[0]["active"].(bool) {
+						Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 1))
+						Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 0))
+						Expect(returnedBackends[1]["active"]).To(BeFalse())
+					} else {
+						Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 1))
+						Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 0))
+						Expect(returnedBackends[0]["active"]).To(BeFalse())
+					}
+
+					switch returnedBackends[0]["name"] {
+					case backends[0].Name:
+						Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[0].Port))
+						Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[1].Port))
+						Expect(returnedBackends[1]["name"]).To(Equal(backends[1].Name))
+					case backends[1].Name: // order reversed in response
+						Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[0].Port))
+						Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[1].Port))
+						Expect(returnedBackends[0]["name"]).To(Equal(backends[1].Name))
+					default:
+						Fail(fmt.Sprintf("Invalid backend name: %s", returnedBackends[0]["name"]))
+					}
+				})
 			})
 		})
 	})

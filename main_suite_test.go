@@ -26,6 +26,7 @@ var configFile string
 var proxyConfig config.Proxy
 var apiConfig config.API
 var pidFile string
+var staticDir string
 
 var _ = BeforeSuite(func() {
 	var err error
@@ -77,6 +78,8 @@ var _ = BeforeSuite(func() {
 	encoder := candiedyaml.NewEncoder(fileToWrite)
 	err = encoder.Encode(rootConfig)
 	Ω(err).ShouldNot(HaveOccurred())
+
+	staticDir = filepath.Join(tempDir, "static")
 })
 
 var _ = AfterSuite(func() {

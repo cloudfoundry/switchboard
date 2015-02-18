@@ -21,7 +21,8 @@ var _ = Describe("APIRunner", func() {
 		backends := &fakes.FakeBackends{}
 		logger := lagertest.NewTestLogger("APIRunner Test")
 		config := config.API{}
-		handler := api.NewHandler(backends, logger, config)
+		staticDir := ""
+		handler := api.NewHandler(backends, logger, config, staticDir)
 		apiRunner := api.NewRunner(uint(apiPort), handler, logger)
 		apiProcess := ifrit.Invoke(apiRunner)
 		apiProcess.Signal(os.Kill)

@@ -9,10 +9,10 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-func NewHandler(backends domain.Backends, logger lager.Logger, apiConfig config.API) http.Handler {
+func NewHandler(backends domain.Backends, logger lager.Logger, apiConfig config.API, staticDir string) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.Handle("/", http.FileServer(http.Dir("static")))
+	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
 
 	mux.Handle("/v0/backends", BackendsIndex(backends))
 

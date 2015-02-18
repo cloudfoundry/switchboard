@@ -22,6 +22,7 @@ func main() {
 	flags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	configFile := flags.String("configFile", "", "Path to config file")
 	pidFile := flags.String("pidFile", "", "Path to pid file")
+	staticDir := flags.String("staticDir", "", "Path to directory containing static UI")
 	cf_lager.AddFlags(flags)
 	flags.Parse(os.Args[1:])
 
@@ -46,7 +47,7 @@ func main() {
 		logger,
 	)
 
-	handler := api.NewHandler(backends, logger, rootConfig.API)
+	handler := api.NewHandler(backends, logger, rootConfig.API, *staticDir)
 
 	group := grouper.NewParallel(os.Kill, grouper.Members{
 		grouper.Member{"proxy", proxy.NewRunner(cluster, rootConfig.Proxy.Port, logger)},

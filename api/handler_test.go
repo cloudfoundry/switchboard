@@ -20,7 +20,8 @@ var _ = Describe("Handler", func() {
 		backends := &domainfakes.FakeBackends{}
 		logger := lagertest.NewTestLogger("Handler Test")
 		config := config.API{}
-		handler = api.NewHandler(backends, logger, config)
+		staticDir := ""
+		handler = api.NewHandler(backends, logger, config, staticDir)
 	})
 
 	Context("when a request panics", func() {

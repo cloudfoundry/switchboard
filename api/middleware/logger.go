@@ -35,7 +35,7 @@ func (l Logger) Wrap(next http.Handler) http.Handler {
 			"StatusCode": loggingResponseWriter.statusCode,
 		}
 
-		l.logger.Info("GET request", lager.Data{
+		l.logger.Info("", lager.Data{
 			"request":  requestCopy,
 			"response": response,
 		})

@@ -37,8 +37,10 @@ var _ = Describe("Logger", func() {
 		loggerHandler.ServeHTTP(fakeResponseWriter, dummyRequest)
 
 		Expect(fakeLogger.InfoCallCount()).To(Equal(1))
-		arg0, _ := fakeLogger.InfoArgsForCall(0)
-		Expect(arg0).To(ContainSubstring("GET"))
+		_, arg1 := fakeLogger.InfoArgsForCall(0)
+		lagerData := arg1[0]
+		Expect(lagerData["request"]).NotTo(BeNil())
+		Expect(lagerData["response"]).NotTo(BeNil())
 	})
 
 	It("should not log credentials", func() {

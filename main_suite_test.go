@@ -13,6 +13,10 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+const (
+	switchboardPackage = "github.com/cloudfoundry-incubator/switchboard/"
+)
+
 func TestSwitchboard(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Switchboard Executable Suite")
@@ -30,7 +34,7 @@ var staticDir string
 
 var _ = BeforeSuite(func() {
 	var err error
-	switchboardBinPath, err = gexec.Build("github.com/cloudfoundry-incubator/switchboard/", "-race")
+	switchboardBinPath, err = gexec.Build(switchboardPackage, "-race")
 	Ω(err).ShouldNot(HaveOccurred())
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())
@@ -79,7 +83,8 @@ var _ = BeforeSuite(func() {
 	err = encoder.Encode(rootConfig)
 	Ω(err).ShouldNot(HaveOccurred())
 
-	staticDir = filepath.Join(tempDir, "static")
+	gopath := os.Getenv("GOPATH")
+	staticDir = filepath.Join(gopath, "src", switchboardPackage, "static")
 })
 
 var _ = AfterSuite(func() {

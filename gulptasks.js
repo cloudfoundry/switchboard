@@ -142,3 +142,5 @@ gulp.task('jasmine-server', function() {
 });
 
 gulp.task('jasmine', ['jasmine-assets', 'jasmine-server']);
+
+gulp.task('default', ['spec']);

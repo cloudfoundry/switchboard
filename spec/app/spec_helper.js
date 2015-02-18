@@ -4,6 +4,7 @@ global.jQuery = jQuery;
 global.$ = jQuery;
 
 require('jasmine-ajax');
+require('jasmine_dom_matchers');
 
 beforeEach(function() {
   var Layout = require('../../serve/components/layout');

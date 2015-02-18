@@ -15,7 +15,7 @@ var BackendsIndex = func(backends domain.Backends) http.Handler {
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/json; charset=utf-8")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_, err = w.Write(backendsJSON)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -1,10 +1,25 @@
 require('babel/polyfill');
-
+var Backends = require('./backends');
 var React = require('react/addons');
 var Layout = require('../../serve/components/layout');
+var request = require('superagent');
 
 var Application = React.createClass({
+  getInitialState() {
+    return {backends: null}
+  },
+
+  componentDidMount() {
+    request.get('/v0/backends')
+      .accept('json')
+      .end(function(err, {body: backends}) {
+        if (err) return;
+        this.setState({backends});
+      }.bind(this));
+  },
+
   render() {
+    var {backends} = this.state;
     return (
       <div>
         <div className="main container-fluid pvm bg-dark-1">
@@ -46,101 +61,7 @@ var Application = React.createClass({
                   </div>
                 </div>
                 <hr className="divider-alternate-1 man"/>
-                <table className="table table-data table-light man">
-                  <thead>
-                    <tr>
-                      <th className="col-sm-6">
-                        <h5 className="em-max mlm">Nodes</h5>
-                      </th>
-                      <th className="col-sm-6">
-                        <h5 className="em-max mlm">Status</h5>
-                      </th>
-                      <th className="col-sm-6">
-                        <h5 className="em-max mlm">Current Sessions</h5>
-                      </th>
-                      <th className="col-sm-6">
-                        <h5 className="em-max mlm">IP Address</h5>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="ptm txt-m">
-                        <h4 className="mlm">
-                          mysql-node-1
-                        </h4>
-                      </td>
-                      <td className="txt-m ptm">
-                        <h2>
-                          <span className="label label-primary mlm plm">
-                            <i className="fa fa-check fa-fw"></i>
-                            HEALTHY
-                          </span>
-                        </h2>
-                      </td>
-                      <td className="txt-m">
-                        <h4 className="mlm">
-                          24
-                        </h4>
-                      </td>
-                      <td className="txt-m">
-                        <h4 className="mlm">
-                          1.0.0.16
-                        </h4>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="ptm txt-m">
-                        <h4 className="mlm">
-                          mysql-node-2
-                        </h4>
-                      </td>
-                      <td className="txt-m ptm">
-                        <h2>
-                          <span className="label label-primary mlm plm">
-                            <i className="fa fa-check fa-fw"></i>
-                            HEALTHY
-                          </span>
-                        </h2>
-                      </td>
-                      <td className="txt-m">
-                        <h4 className="mlm">
-                          0
-                        </h4>
-                      </td>
-                      <td className="txt-m">
-                        <h4 className="mlm">
-                          1.0.16.256
-                        </h4>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="ptm txt-m">
-                        <h4 className="mlm">
-                          mysql-node-3
-                        </h4>
-                      </td>
-                      <td className="txt-m ptm">
-                        <h2>
-                          <span className="label label-primary mlm plm">
-                            <i className="fa fa-check fa-fw"></i>
-                            HEALTHY
-                          </span>
-                        </h2>
-                      </td>
-                      <td className="txt-m">
-                        <h4 className="mlm">
-                          0
-                        </h4>
-                      </td>
-                      <td className="txt-m">
-                        <h4 className="mlm">
-                          16.0.0.1
-                        </h4>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <Backends backends={backends}/>
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 var Backend = require('./backend');
 var React = require('react/addons');
-
+var sortBy = require('lodash.sortby');
 var types = React.PropTypes;
 
 var Backends = React.createClass({
@@ -10,7 +10,7 @@ var Backends = React.createClass({
 
   renderBackends() {
     var {backends} = this.props;
-    return backends && backends.map(function(backend, i) {
+    return backends && sortBy(backends, b => b.name).map(function(backend, i) {
       return (<Backend backend={backend} key={i}/>);
     });
   },

@@ -12,7 +12,7 @@ describe('Backends', function() {
         "port": 12345,
         "healthy": false,
         "active": false,
-        "name": "backend - 1",
+        "name": "backend - 2",
         "currentSessionCount": 0
     },
       {
@@ -38,5 +38,12 @@ describe('Backends', function() {
   it('renders the backends', function() {
     expect(Backend.type.prototype.render).toHaveBeenCalled();
     expect(Backend.type.prototype.render.calls.count()).toEqual(backends.length);
+  });
+
+  it('orders the backends in sorted order by name', function() {
+    expect($('tbody tr').map(function() { return $('td:eq(0)', this).text()}).toArray()).toEqual([
+      'backend - 1',
+      'backend - 2'
+    ]);
   });
 });

@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 
@@ -27,6 +29,11 @@ func main() {
 	flags.Parse(os.Args[1:])
 
 	logger, _ := cf_lager.New("Switchboard")
+
+	go func() {
+		logger.Info("Starting pprof server")
+		http.ListenAndServe("localhost:6060", nil)
+	}()
 
 	rootConfig, err := config.Load(*configFile)
 	if err != nil {

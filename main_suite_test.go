@@ -3,7 +3,9 @@ package main_test
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/cloudfoundry-incubator/switchboard/config"
@@ -83,9 +85,14 @@ var _ = BeforeSuite(func() {
 	err = encoder.Encode(rootConfig)
 	Ω(err).ShouldNot(HaveOccurred())
 
-	gopath := os.Getenv("GOPATH")
-	staticDir = filepath.Join(gopath, "src", switchboardPackage, "static")
+	testDir := getDirOfCurrentFile()
+	staticDir = filepath.Join(testDir, "static")
 })
+
+func getDirOfCurrentFile() string {
+	_, filename, _, _ := runtime.Caller(1)
+	return path.Dir(filename)
+}
 
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()

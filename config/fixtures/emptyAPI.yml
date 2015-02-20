@@ -2,3 +2,4 @@ Proxy:
   Port: 0
   HealthcheckTimeoutMillis: 0
   Backends:
+ProfilerPort: 0

@@ -105,6 +105,15 @@ var _ = Describe("Switchboard", func() {
 		ginkgomon.Kill(process)
 	})
 
+	Describe("Profiler", func() {
+		It("responds with 200 at /debug/pprof", func() {
+			url := fmt.Sprintf("http://localhost:%d/debug/pprof/", switchboardProfilerPort)
+			resp, err := http.Get(url)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+	})
+
 	Describe("UI", func() {
 		Describe("/", func() {
 			var url string

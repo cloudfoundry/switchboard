@@ -65,8 +65,9 @@ func formatErrorString(err error, keyPrefix string) string {
 }
 
 type Root struct {
-	Proxy Proxy `validate:"nonzero"`
-	API   API   `validate:"nonzero"`
+	Proxy        Proxy `validate:"nonzero"`
+	API          API   `validate:"nonzero"`
+	ProfilerPort uint  `validate:"nonzero"`
 }
 
 type Proxy struct {

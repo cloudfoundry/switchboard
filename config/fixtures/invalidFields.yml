@@ -2,7 +2,12 @@ Proxy:
   Port: 0
   HealthcheckTimeoutMillis: 0
   Backends:
+  - Host: ""
+    Port: 0
+    HealthcheckPort: 0
+    Name: ""
 API:
   Port: 0 
   Username: ""
   Password: ""
+ProfilerPort: 0

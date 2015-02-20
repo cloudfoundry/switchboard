@@ -27,6 +27,7 @@ func TestSwitchboard(t *testing.T) {
 var switchboardBinPath string
 var switchboardPort uint
 var switchboardAPIPort uint
+var switchboardProfilerPort uint
 var backends []config.Backend
 var configFile string
 var proxyConfig config.Proxy
@@ -41,6 +42,7 @@ var _ = BeforeSuite(func() {
 
 	switchboardPort = uint(39900 + GinkgoParallelNode())
 	switchboardAPIPort = uint(39000 + GinkgoParallelNode())
+	switchboardProfilerPort = uint(6060 + GinkgoParallelNode())
 
 	backend1 := config.Backend{
 		Host:            "localhost",
@@ -73,8 +75,9 @@ var _ = BeforeSuite(func() {
 		Password: "password",
 	}
 	rootConfig := config.Root{
-		Proxy: proxyConfig,
-		API:   apiConfig,
+		Proxy:        proxyConfig,
+		API:          apiConfig,
+		ProfilerPort: switchboardProfilerPort,
 	}
 
 	configFile = filepath.Join(tempDir, "proxyConfig.yml")

@@ -30,15 +30,18 @@ func main() {
 
 	logger, _ := cf_lager.New("Switchboard")
 
-	go func() {
-		logger.Info("Starting pprof server")
-		http.ListenAndServe("localhost:6060", nil)
-	}()
-
 	rootConfig, err := config.Load(*configFile)
 	if err != nil {
 		logger.Fatal("Error loading config file:", err, lager.Data{"config": *configFile})
 	}
+
+	go func() {
+		logger.Info(fmt.Sprintf("Starting profiling server on port %d", rootConfig.ProfilerPort))
+		err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", rootConfig.ProfilerPort), nil)
+		if err != nil {
+			logger.Error("profiler failed with error", err)
+		}
+	}()
 
 	err = ioutil.WriteFile(*pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
 	if err == nil {

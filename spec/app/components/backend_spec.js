@@ -50,5 +50,10 @@ describe('Backend', function() {
     it('adds the bg-error-2 class', function() {
       expect('.bg-error-2').toExist();
     });
+
+    it('removes the fa-check class and adds the fa-remove class', function() {
+      expect('.fa-remove').toExist();
+      expect('.fa-check').not.toExist();
+    });
   });
 });

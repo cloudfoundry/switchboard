@@ -55,6 +55,11 @@ describe('Application', function() {
       expect('.alert-error').toContainText('2 out of 3 nodes are unhealthy');
       expect($('.alert', root)).not.toHaveClass('bg-brand-4');
     });
+
+    it('shows the fa-exclamation-triangle class', function() {
+      expect('.fa-exclamation-triangle').toExist();
+      expect('.fa-check-circle').not.toExist();
+    });
   });
 
   describe('when all the backends are healthy', function() {
@@ -66,6 +71,11 @@ describe('Application', function() {
     it('renders the alert with the all nodes are healthy', function() {
       expect('.alert-success').toContainText('All nodes are healthy!');
       expect($('.alert', root)).toHaveClass('bg-brand-4');
+    });
+
+    it('shows the fa-check-circle class', function() {
+      expect('.fa-check-circle').toExist();
+      expect('.fa-exclamation-triangle').not.toExist();
     });
   });
 

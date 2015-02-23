@@ -37,8 +37,8 @@ var Application = React.createClass({
   render() {
     var {backends} = this.state;
     var healthyCount = backends && backends.reduce((memo, b) => memo + (b.healthy ? 1 : 0), 0);
-    var isHealthy = healthyCount === backends.length;
-    var health = isHealthy ? 'All nodes are healthy!' : `${backends.length - healthyCount} out of ${backends.length} nodes are unhealthy.`;
+    var healthy = healthyCount === backends.length;
+    var healthText = healthy ? 'All nodes are healthy!' : `${backends.length - healthyCount} out of ${backends.length} nodes are unhealthy.`;
     return (
       <div>
         <div className="main container-fluid pvm bg-dark-1">
@@ -58,13 +58,13 @@ var Application = React.createClass({
             <h1 className="mbn title">CloudyApp</h1>
             <hr className="divider-alternate-2 mtxl mbn"/>
             <div className="row man">
-              <div className={cx({'alert': true, 'alert-success bg-brand-4': isHealthy, 'alert-error': !isHealthy})}>
+              <div className={cx({'alert': true, 'alert-success bg-brand-4': healthy, 'alert-error': !healthy})}>
                 <div className="media">
                   <div className="media-left media-middle">
-                    <i className="fa fa-check-circle"></i>
+                    <i className={cx({'fa': true, 'fa-check-circle': healthy, 'fa-exclamation-triangle': !healthy})}></i>
                   </div>
                   <div className="media-body em-high">
-                  {health}
+                  {healthText}
                   </div>
                 </div>
               </div>

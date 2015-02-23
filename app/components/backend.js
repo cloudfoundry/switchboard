@@ -10,7 +10,7 @@ var Backend = React.createClass({
 
   render() {
     var {name, healthy, currentSessionCount, host} = this.props.backend;
-    const health = healthy ? 'HEALTHY' : 'UNHEALTHY';
+    const healthText = healthy ? 'HEALTHY' : 'UNHEALTHY';
     return (
       <tr>
         <td className="ptm txt-m">
@@ -22,7 +22,7 @@ var Backend = React.createClass({
           <h2>
             <span className={cx({'label label-primary mlm plm': true, 'bg-error-2': !healthy})}>
               <i className={cx({'fa fa-fw': true, 'fa-check': healthy, 'fa-remove': !healthy})}></i>&nbsp;
-            {health}
+            {healthText}
             </span>
             &nbsp;
           </h2>

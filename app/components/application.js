@@ -55,8 +55,6 @@ var Application = React.createClass({
         </div>
         <div className="container">
           <div className="special">
-            <h1 className="mbn title">CloudyApp</h1>
-            <hr className="divider-alternate-2 mtxl mbn"/>
             <div className="row man">
               <div className={cx({'alert': true, 'alert-success bg-brand-4': healthy, 'alert-error': !healthy})}>
                 <div className="media">
@@ -71,13 +69,6 @@ var Application = React.createClass({
             </div>
             <div className="row mtxl">
               <div className="col-sm-24 mtl">
-                <div className="panel panel-alt bg-neutral-11 man">
-                  <div className="panel-body pam">
-                    <h1 className="mlm mts pan mbn type-neutral-3">Proxy0</h1>
-                    <h5 className="mtn mlm mbl pan type-neutral-5">IP Address: 0.0.0.16</h5>
-                  </div>
-                </div>
-                <hr className="divider-alternate-1 man"/>
                 <Backends backends={backends}/>
               </div>
             </div>

@@ -66,7 +66,7 @@ func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-cha
 		logFrequency := uint64(5)
 		for {
 			select {
-			case <-time.Tick(c.healthcheckTimeout / 5):
+			case <-time.After(c.healthcheckTimeout / 5):
 				dialCount++
 				c.dialHealthcheck(backend, client, dialCount, logFrequency)
 			case <-stopChan:

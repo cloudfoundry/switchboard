@@ -58,12 +58,13 @@ func (b backend) HealthcheckUrl() string {
 }
 
 func (b backend) Bridge(clientConn net.Conn) error {
-	backendConn, err := Dialer("tcp", fmt.Sprintf("%s:%d", b.host, b.port))
+	backendAddr := fmt.Sprintf("%s:%d", b.host, b.port)
+	backendConn, err := Dialer("tcp", backendAddr)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error connection to backend: %v", err))
+		return errors.New(fmt.Sprintf("Error establishing connection to backend: %s", err))
 	}
 
-	b.logger.Info(fmt.Sprintf("Session established for client at %v to backend at %v.", clientConn.RemoteAddr(), backendConn.RemoteAddr()))
+	b.logger.Info(fmt.Sprintf("Established new connection to backend %s", backendAddr))
 
 	go func() {
 		bridge := b.bridges.Create(clientConn, backendConn)
@@ -75,6 +76,7 @@ func (b backend) Bridge(clientConn net.Conn) error {
 }
 
 func (b backend) SeverConnections() {
+	b.logger.Info(fmt.Sprintf("Severing all connections to %s at %s:%d", b.name, b.host, b.port))
 	b.bridges.RemoveAndCloseAll()
 }
 

@@ -48,7 +48,7 @@ var Application = React.createClass({
                 <img alt="Switchboard header logo" src="switchboard-header-logo.png" width={40} height={40}/>
               </a>
               <div className="media-body">
-                <h1 className="h3 man pts type-neutral-8">Pivotal Switchboard</h1>
+                <h1 className="h3 man pts type-neutral-8">Switchboard</h1>
               </div>
             </div>
           </div>

@@ -29,9 +29,9 @@ func NewBridge(client, backend net.Conn, logger lager.Logger) Bridge {
 }
 
 func (b bridge) Connect() {
-	b.logger.Info(fmt.Sprintf("Proxying data over bridge %s", b))
+	b.logger.Info(fmt.Sprintf("Session established %s", b))
 
-	defer b.logger.Info(fmt.Sprintf("Closed bridge %s", b)) // defers are LIFO
+	defer b.logger.Info(fmt.Sprintf("Session closed %s", b)) // defers are LIFO
 	defer b.client.Close()
 	defer b.backend.Close()
 
@@ -65,5 +65,5 @@ func (b bridge) safeCopy(from, to net.Conn) chan struct{} {
 }
 
 func (b bridge) String() string {
-	return fmt.Sprintf("from client %v to backend %v", b.client.RemoteAddr(), b.backend.RemoteAddr())
+	return fmt.Sprintf("from client at %v to backend at %v", b.client.RemoteAddr(), b.backend.RemoteAddr())
 }

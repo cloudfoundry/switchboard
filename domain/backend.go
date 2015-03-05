@@ -64,8 +64,6 @@ func (b backend) Bridge(clientConn net.Conn) error {
 		return errors.New(fmt.Sprintf("Error establishing connection to backend: %s", err))
 	}
 
-	b.logger.Info(fmt.Sprintf("Established new connection to backend %s", backendAddr))
-
 	go func() {
 		bridge := b.bridges.Create(clientConn, backendConn)
 		bridge.Connect()

@@ -12,5 +12,4 @@ before_script:
   - export PATH=$HOME/gopath/bin:$PATH
 
 script:
-  - go tool vet -composites=false $(ls -d */ )
-  - ginkgo -p -r -race -failOnPending -randomizeAllSpecs
+  - ./bin/test

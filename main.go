@@ -69,12 +69,21 @@ func main() {
 	handler := api.NewHandler(backends, logger, rootConfig.API, *staticDir)
 
 	members := grouper.Members{
-		grouper.Member{"proxy", proxy.NewRunner(cluster, rootConfig.Proxy.Port, logger)},
-		grouper.Member{"api", api.NewRunner(rootConfig.API.Port, handler, logger)},
+		grouper.Member{
+			Name:   "proxy",
+			Runner: proxy.NewRunner(cluster, rootConfig.Proxy.Port, logger),
+		},
+		grouper.Member{
+			Name:   "api",
+			Runner: api.NewRunner(rootConfig.API.Port, handler, logger),
+		},
 	}
 
 	if rootConfig.HealthPort != rootConfig.API.Port {
-		members = append(members, grouper.Member{"health", health.NewRunner(rootConfig.HealthPort, logger)})
+		members = append(members, grouper.Member{
+			Name:   "health",
+			Runner: health.NewRunner(rootConfig.HealthPort, logger),
+		})
 	}
 
 	group := grouper.NewParallel(os.Kill, members)

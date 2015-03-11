@@ -54,7 +54,7 @@ func initConfig() {
 	switchboardPort = uint(39900 + GinkgoParallelNode())
 	switchboardAPIPort = uint(39000 + GinkgoParallelNode())
 	switchboardProfilerPort = uint(6060 + GinkgoParallelNode())
-	switchboardHealthPort = uint(6061 + GinkgoParallelNode())
+	switchboardHealthPort = uint(6160 + GinkgoParallelNode())
 
 	backend1 := config.Backend{
 		Host:            "localhost",

@@ -85,11 +85,11 @@ var _ = Describe("Switchboard", func() {
 		})
 
 		group := grouper.NewParallel(os.Kill, grouper.Members{
-			grouper.Member{"backend-0", dummies.NewBackendRunner(0, backends[0])},
-			grouper.Member{"backend-1", dummies.NewBackendRunner(1, backends[1])},
-			grouper.Member{"healthcheck-0", healthcheckRunners[0]},
-			grouper.Member{"healthcheck-1", healthcheckRunners[1]},
-			grouper.Member{"switchboard", switchboardRunner},
+			grouper.Member{Name: "backend-0", Runner: dummies.NewBackendRunner(0, backends[0])},
+			grouper.Member{Name: "backend-1", Runner: dummies.NewBackendRunner(1, backends[1])},
+			grouper.Member{Name: "healthcheck-0", Runner: healthcheckRunners[0]},
+			grouper.Member{Name: "healthcheck-1", Runner: healthcheckRunners[1]},
+			grouper.Member{Name: "switchboard", Runner: switchboardRunner},
 		})
 		process = ifrit.Invoke(group)
 

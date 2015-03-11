@@ -28,8 +28,10 @@ var switchboardBinPath string
 var switchboardPort uint
 var switchboardAPIPort uint
 var switchboardProfilerPort uint
+var switchboardHealthPort uint
 var backends []config.Backend
 var configFile string
+var rootConfig config.Root
 var proxyConfig config.Proxy
 var apiConfig config.API
 var pidFile string
@@ -40,9 +42,19 @@ var _ = BeforeSuite(func() {
 	switchboardBinPath, err = gexec.Build(switchboardPackage, "-race")
 	Ω(err).ShouldNot(HaveOccurred())
 
+	tempDir, err := ioutil.TempDir(os.TempDir(), "switchboard")
+	Expect(err).NotTo(HaveOccurred())
+
+	pidFile = filepath.Join(tempDir, "switchboard.pid")
+
+	configFile = filepath.Join(tempDir, "proxyConfig.yml")
+})
+
+func initConfig() {
 	switchboardPort = uint(39900 + GinkgoParallelNode())
 	switchboardAPIPort = uint(39000 + GinkgoParallelNode())
 	switchboardProfilerPort = uint(6060 + GinkgoParallelNode())
+	switchboardHealthPort = uint(6061 + GinkgoParallelNode())
 
 	backend1 := config.Backend{
 		Host:            "localhost",
@@ -60,10 +72,6 @@ var _ = BeforeSuite(func() {
 
 	backends = []config.Backend{backend1, backend2}
 
-	tempDir, err := ioutil.TempDir(os.TempDir(), "switchboard")
-	Expect(err).NotTo(HaveOccurred())
-
-	pidFile = filepath.Join(tempDir, "switchboard.pid")
 	proxyConfig = config.Proxy{
 		Backends:                 backends,
 		HealthcheckTimeoutMillis: 500,
@@ -74,13 +82,15 @@ var _ = BeforeSuite(func() {
 		Username: "username",
 		Password: "password",
 	}
-	rootConfig := config.Root{
+	rootConfig = config.Root{
 		Proxy:        proxyConfig,
 		API:          apiConfig,
 		ProfilerPort: switchboardProfilerPort,
+		HealthPort:   switchboardHealthPort,
 	}
+}
 
-	configFile = filepath.Join(tempDir, "proxyConfig.yml")
+func writeConfig() {
 	fileToWrite, err := os.Create(configFile)
 	Ω(err).ShouldNot(HaveOccurred())
 
@@ -90,7 +100,7 @@ var _ = BeforeSuite(func() {
 
 	testDir := getDirOfCurrentFile()
 	staticDir = filepath.Join(testDir, "static")
-})
+}
 
 func getDirOfCurrentFile() string {
 	_, filename, _, _ := runtime.Caller(1)

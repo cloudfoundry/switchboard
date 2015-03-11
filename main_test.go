@@ -62,6 +62,12 @@ var _ = Describe("Switchboard", func() {
 	var healthcheckRunners []*dummies.HealthcheckRunner
 
 	BeforeEach(func() {
+		initConfig()
+	})
+
+	JustBeforeEach(func() {
+		writeConfig()
+
 		healthcheckRunners = []*dummies.HealthcheckRunner{
 			dummies.NewHealthcheckRunner(backends[0]),
 			dummies.NewHealthcheckRunner(backends[1]),
@@ -111,6 +117,30 @@ var _ = Describe("Switchboard", func() {
 			resp, err := http.Get(url)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+	})
+
+	Describe("Health", func() {
+		var acceptsAndClosesTCPConnections = func() {
+			conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", rootConfig.HealthPort))
+			Expect(err).NotTo(HaveOccurred())
+
+			err = conn.Close()
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		It("accepts and immediately closes TCP connections on HealthPort", func() {
+			acceptsAndClosesTCPConnections()
+		})
+
+		Context("when HealthPort == API.Port", func() {
+			BeforeEach(func() {
+				rootConfig.HealthPort = rootConfig.API.Port
+			})
+
+			It("operates normally", func() {
+				acceptsAndClosesTCPConnections()
+			})
 		})
 	})
 
@@ -385,7 +415,7 @@ var _ = Describe("Switchboard", func() {
 				var conn net.Conn
 				var data Response
 
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					Eventually(func() (err error) {
 						conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 						return err
@@ -430,7 +460,7 @@ var _ = Describe("Switchboard", func() {
 			})
 
 			Context("when all backends are down", func() {
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					for _, hr := range healthcheckRunners {
 						hr.SetHang(true)
 					}

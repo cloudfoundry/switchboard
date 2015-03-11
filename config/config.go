@@ -68,6 +68,7 @@ type Root struct {
 	Proxy        Proxy `validate:"nonzero"`
 	API          API   `validate:"nonzero"`
 	ProfilerPort uint  `validate:"nonzero"`
+	HealthPort   uint  `validate:"nonzero"`
 }
 
 type Proxy struct {

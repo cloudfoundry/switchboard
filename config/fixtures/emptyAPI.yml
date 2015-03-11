@@ -3,3 +3,4 @@ Proxy:
   HealthcheckTimeoutMillis: 0
   Backends:
 ProfilerPort: 0
+HealthPort: 0

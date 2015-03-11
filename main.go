@@ -13,6 +13,7 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
+	"github.com/cloudfoundry-incubator/switchboard/health"
 	"github.com/cloudfoundry-incubator/switchboard/proxy"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
@@ -67,10 +68,16 @@ func main() {
 
 	handler := api.NewHandler(backends, logger, rootConfig.API, *staticDir)
 
-	group := grouper.NewParallel(os.Kill, grouper.Members{
+	members := grouper.Members{
 		grouper.Member{"proxy", proxy.NewRunner(cluster, rootConfig.Proxy.Port, logger)},
 		grouper.Member{"api", api.NewRunner(rootConfig.API.Port, handler, logger)},
-	})
+	}
+
+	if rootConfig.HealthPort != rootConfig.API.Port {
+		members = append(members, grouper.Member{"health", health.NewRunner(rootConfig.HealthPort, logger)})
+	}
+
+	group := grouper.NewParallel(os.Kill, members)
 	process := ifrit.Invoke(group)
 
 	logger.Info("Proxy started", lager.Data{"proxyConfig": rootConfig.Proxy})

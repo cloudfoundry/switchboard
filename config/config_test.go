@@ -80,5 +80,11 @@ var _ = Describe("Config", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("ProfilerPort"))
 		})
+
+		It("returns an error if the config file does not contain a health port", func() {
+			_, err := config.Load("fixtures/emptyHealthPort.yml")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("HealthPort"))
+		})
 	})
 })

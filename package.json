@@ -2,6 +2,7 @@
   "name": "switchboard",
   "version": "1.0.0",
   "description": "switchboard ===========",
+  "repository":"git://github.com/cloudfoundry-incubator/switchboard",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

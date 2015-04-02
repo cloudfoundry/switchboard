@@ -2,14 +2,14 @@
 
 result=0
 
-bin=$(dirname $0)
+MY_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo -e "\nVetting packages for potential issues..."
-$bin/govet
+$MY_DIR/govet
 let "result+=$?"
 
 echo -e "\nTesting packages..."
-ginkgo -p -r -race -failOnPending -randomizeAllSpecs $bin/..
+ginkgo -p -r -race -failOnPending -randomizeAllSpecs "$@" $MY_DIR/..
 let "result+=$?"
 
 echo -e "\nExit Code: $result"

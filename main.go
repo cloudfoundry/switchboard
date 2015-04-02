@@ -69,11 +69,11 @@ func main() {
 	handler := api.NewHandler(backends, logger, rootConfig.API, *staticDir)
 
 	members := grouper.Members{
-		grouper.Member{
+		{
 			Name:   "proxy",
 			Runner: proxy.NewRunner(cluster, rootConfig.Proxy.Port, logger),
 		},
-		grouper.Member{
+		{
 			Name:   "api",
 			Runner: api.NewRunner(rootConfig.API.Port, handler, logger),
 		},

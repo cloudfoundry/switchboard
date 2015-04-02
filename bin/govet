@@ -2,4 +2,6 @@
 
 set -e
 
-go vet github.com/cloudfoundry-incubator/switchboard/...
+SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd .. && pwd )"
+
+go tool vet -composites=false $SRC_DIR

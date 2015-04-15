@@ -3,43 +3,19 @@ package config
 import (
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/fraenkel/candiedyaml"
 	"gopkg.in/validator.v2"
 )
 
-func Load(configFilePath string) (*Root, error) {
-	file, err := os.Open(configFilePath)
-	if err != nil {
-		return nil, err
-	}
-
-	rootConfig := new(Root)
-
-	decoder := candiedyaml.NewDecoder(file)
-	err = decoder.Decode(rootConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	err = validateConfig(*rootConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return rootConfig, nil
-}
-
-func validateConfig(rootConfig Root) error {
-	rootConfigErr := validator.Validate(rootConfig)
+func (c Config) Validate() error {
+	rootConfigErr := validator.Validate(c)
 	var errString string
 	if rootConfigErr != nil {
 		errString = formatErrorString(rootConfigErr, "")
 	}
 
-	for i, backend := range rootConfig.Proxy.Backends {
+	for i, backend := range c.Proxy.Backends {
 		backendsErr := validator.Validate(backend)
 		if backendsErr != nil {
 			errString += formatErrorString(
@@ -64,7 +40,7 @@ func formatErrorString(err error, keyPrefix string) string {
 	return errsString
 }
 
-type Root struct {
+type Config struct {
 	Proxy        Proxy `validate:"nonzero"`
 	API          API   `validate:"nonzero"`
 	ProfilerPort uint  `validate:"nonzero"`

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/cloudfoundry-incubator/switchboard/config"
-	"github.com/fraenkel/candiedyaml"
+	"github.com/cloudfoundry-incubator/candiedyaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -30,8 +30,8 @@ var switchboardAPIPort uint
 var switchboardProfilerPort uint
 var switchboardHealthPort uint
 var backends []config.Backend
-var configFile string
-var rootConfig config.Root
+var configPath string
+var rootConfig config.Config
 var proxyConfig config.Proxy
 var apiConfig config.API
 var pidFile string
@@ -47,7 +47,7 @@ var _ = BeforeSuite(func() {
 
 	pidFile = filepath.Join(tempDir, "switchboard.pid")
 
-	configFile = filepath.Join(tempDir, "proxyConfig.yml")
+	configPath = filepath.Join(tempDir, "proxyConfig.yml")
 })
 
 func initConfig() {
@@ -82,7 +82,7 @@ func initConfig() {
 		Username: "username",
 		Password: "password",
 	}
-	rootConfig = config.Root{
+	rootConfig = config.Config{
 		Proxy:        proxyConfig,
 		API:          apiConfig,
 		ProfilerPort: switchboardProfilerPort,
@@ -91,7 +91,7 @@ func initConfig() {
 }
 
 func writeConfig() {
-	fileToWrite, err := os.Create(configFile)
+	fileToWrite, err := os.Create(configPath)
 	Ω(err).ShouldNot(HaveOccurred())
 
 	encoder := candiedyaml.NewEncoder(fileToWrite)

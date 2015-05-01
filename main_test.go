@@ -186,7 +186,7 @@ var _ = Describe("Switchboard", func() {
 				Expect(resp.Body).ToNot(BeNil())
 				defer resp.Body.Close()
 				body, err := ioutil.ReadAll(resp.Body)
-				Expect(len(body)).To(BeNumerically(">", 0))
+				Expect(len(body)).To(BeNumerically(">", 0), "Expected body to not be empty")
 			})
 		})
 	})
@@ -253,15 +253,18 @@ var _ = Describe("Switchboard", func() {
 					Expect(returnedBackends[1]["host"]).To(Equal("localhost"))
 					Expect(returnedBackends[1]["healthy"]).To(BeTrue(), "Expected backends[1] to be healthy")
 
+					var activeBackend, inactiveBackend map[string]interface{}
 					if returnedBackends[0]["active"].(bool) {
-						Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 1), "Expected backends[0] to have SessionCount == 1")
-						Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 0), "Expected backends[1] to have SessionCount == 0")
-						Expect(returnedBackends[1]["active"]).To(BeFalse(), "Expected backends[0] to not be active")
+						activeBackend = returnedBackends[0]
+						inactiveBackend = returnedBackends[1]
 					} else {
-						Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 1), "Expected backends[1] to have SessionCount == 1")
-						Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 0), "Expected backends[0] to have SessionCount == 0")
-						Expect(returnedBackends[0]["active"]).To(BeFalse(), "Expected backends[0] to not be active")
+						activeBackend = returnedBackends[1]
+						inactiveBackend = returnedBackends[0]
 					}
+
+					Expect(activeBackend["currentSessionCount"]).To(BeNumerically("==", 1), "Expected active backend to have SessionCount == 1")
+					Expect(inactiveBackend["currentSessionCount"]).To(BeNumerically("==", 0), "Expected inactive backend to have SessionCount == 0")
+					Expect(inactiveBackend["active"]).To(BeFalse(), "Expected inactive backend to not be active")
 
 					switch returnedBackends[0]["name"] {
 					case backends[0].Name:
@@ -282,62 +285,39 @@ var _ = Describe("Switchboard", func() {
 
 	Describe("proxy", func() {
 		Context("when there are multiple concurrent clients", func() {
-			var conn1, conn2, conn3 net.Conn
-			var data1, data2, data3 Response
 
 			It("proxies all the connections to the backend", func() {
-				done1 := make(chan interface{})
-				go func() {
-					defer GinkgoRecover()
-					defer close(done1)
 
-					var err error
-					Eventually(func() error {
-						conn1, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-						return err
-					}).ShouldNot(HaveOccurred())
+				var doneArray = make([]chan interface{}, 3)
+				var dataMessages = make([]string, 3)
 
-					data1, err = sendData(conn1, "test1")
-					Expect(err).ToNot(HaveOccurred())
-				}()
+				for i := 0; i < 3; i++ {
+					doneArray[i] = make(chan interface{})
+					go func(index int) {
+						defer GinkgoRecover()
+						defer close(doneArray[index])
 
-				done2 := make(chan interface{})
-				go func() {
-					defer GinkgoRecover()
-					defer close(done2)
+						var err error
+						var conn net.Conn
 
-					var err error
-					Eventually(func() error {
-						conn2, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-						return err
-					}).ShouldNot(HaveOccurred())
+						Eventually(func() error {
+							conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							return err
+						}).ShouldNot(HaveOccurred())
 
-					data2, err = sendData(conn2, "test2")
-					Expect(err).ToNot(HaveOccurred())
-				}()
+						data, err := sendData(conn, fmt.Sprintf("test%d", index))
+						Expect(err).ToNot(HaveOccurred())
+						dataMessages[index] = data.Message
+					}(i)
+				}
 
-				done3 := make(chan interface{})
-				go func() {
-					defer GinkgoRecover()
-					defer close(done3)
+				for _, done := range doneArray {
+					<-done
+				}
 
-					var err error
-					Eventually(func() error {
-						conn3, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-						return err
-					}).ShouldNot(HaveOccurred())
-
-					data3, err = sendData(conn3, "test3")
-					Expect(err).ToNot(HaveOccurred())
-				}()
-
-				<-done1
-				<-done2
-				<-done3
-
-				Expect(data1.Message).Should(Equal("test1"))
-				Expect(data2.Message).Should(Equal("test2"))
-				Expect(data3.Message).Should(Equal("test3"))
+				for i, message := range dataMessages {
+					Expect(message).Should(Equal(fmt.Sprintf("test%d", i)))
+				}
 			})
 		})
 
@@ -350,13 +330,13 @@ var _ = Describe("Switchboard", func() {
 					var err error
 					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
-				}).ShouldNot(HaveOccurred())
+				}).Should(Succeed())
 
 				Eventually(func() error {
 					var err error
 					connToDisconnect, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
-				}).ShouldNot(HaveOccurred())
+				}).Should(Succeed())
 
 				dataBeforeDisconnect, err := sendData(conn, "data before disconnect")
 				Expect(err).ToNot(HaveOccurred())
@@ -377,7 +357,7 @@ var _ = Describe("Switchboard", func() {
 					var err error
 					client, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
-				}).ShouldNot(HaveOccurred())
+				}).Should(Succeed())
 
 				data, err := sendData(client, "data around first healthcheck")
 				Expect(err).NotTo(HaveOccurred())
@@ -386,7 +366,7 @@ var _ = Describe("Switchboard", func() {
 				Consistently(func() error {
 					_, err = sendData(client, "data around subsequent healthcheck")
 					return err
-				}, 3*time.Second).ShouldNot(HaveOccurred())
+				}, 3*time.Second).Should(Succeed())
 			})
 		})
 
@@ -469,18 +449,15 @@ var _ = Describe("Switchboard", func() {
 				})
 
 				It("rejects any new connections that are attempted", func() {
-					time.Sleep(3 * proxyConfig.HealthcheckTimeout()) // wait for failover
-
-					var conn net.Conn
-					Eventually(func() (err error) {
-						conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-						return err
-					}, 1*time.Second).Should(Succeed())
 
 					Eventually(func() error {
-						_, err := sendData(conn, "write that should fail")
+						conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+						if err != nil {
+							return err
+						}
+						_, err = sendData(conn, "write that should fail")
 						return err
-					}, proxyConfig.HealthcheckTimeout()*4, 200*time.Millisecond).Should(HaveOccurred())
+					}, healthcheckWaitDuration, 200*time.Millisecond).Should(MatchError(connectionDisconnectError))
 
 				})
 			})

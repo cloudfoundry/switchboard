@@ -22,7 +22,7 @@
     "gulp-copy": "0.0.2",
     "gulp-file": "^0.2.0",
     "gulp-filter": "^2.0.2",
-    "gulp-jasmine-browser": "0.0.3",
+    "gulp-jasmine-browser": "0.0.4",
     "gulp-jshint": "^1.9.2",
     "gulp-load-plugins": "^0.8.0",
     "gulp-stylus": "^2.0.0",

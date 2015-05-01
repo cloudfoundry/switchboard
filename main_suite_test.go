@@ -40,7 +40,7 @@ var staticDir string
 var _ = BeforeSuite(func() {
 	var err error
 	switchboardBinPath, err = gexec.Build(switchboardPackage, "-race")
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	tempDir, err := ioutil.TempDir(os.TempDir(), "switchboard")
 	Expect(err).NotTo(HaveOccurred())

@@ -18,29 +18,29 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 
+	"github.com/pivotal-cf-experimental/service-config"
 	"github.com/pivotal-golang/lager"
-    "github.com/pivotal-cf-experimental/service-config"
 )
 
 func main() {
-    serviceConfig := service_config.New()
+	serviceConfig := service_config.New()
 
 	flags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	pidFile := flags.String("pidFile", "", "Path to pid file")
 	staticDir := flags.String("staticDir", "", "Path to directory containing static UI")
-    serviceConfig.AddFlags(flags)
+	serviceConfig.AddFlags(flags)
 	cf_lager.AddFlags(flags)
 	flags.Parse(os.Args[1:])
 
 	logger, _ := cf_lager.New("Switchboard")
 
-    var rootConfig config.Config
-    err := serviceConfig.Read(&rootConfig)
-    if err != nil {
-        logger.Fatal("Error reading config:", err)
-    }
+	var rootConfig config.Config
+	err := serviceConfig.Read(&rootConfig)
+	if err != nil {
+		logger.Fatal("Error reading config:", err)
+	}
 
-    err = rootConfig.Validate()
+	err = rootConfig.Validate()
 	if err != nil {
 		logger.Fatal("Error validating config:", err, lager.Data{"config": rootConfig})
 	}

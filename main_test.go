@@ -60,9 +60,14 @@ var _ = Describe("Switchboard", func() {
 	var process ifrit.Process
 	var initialActiveBackend, initialInactiveBackend config.Backend
 	var healthcheckRunners []*dummies.HealthcheckRunner
+	var healthcheckWaitDuration time.Duration
+
+	const startupTimeout = 10 * time.Second
+	const connectionDisconnectError = "EOF"
 
 	BeforeEach(func() {
 		initConfig()
+		healthcheckWaitDuration = 3 * proxyConfig.HealthcheckTimeout()
 	})
 
 	JustBeforeEach(func() {
@@ -80,8 +85,9 @@ var _ = Describe("Switchboard", func() {
 				fmt.Sprintf("-pidFile=%s", pidFile),
 				fmt.Sprintf("-staticDir=%s", staticDir),
 			),
-			Name:       fmt.Sprintf("switchboard"),
-			StartCheck: "started",
+			Name:              fmt.Sprintf("switchboard"),
+			StartCheck:        "started",
+			StartCheckTimeout: startupTimeout,
 		})
 
 		group := grouper.NewParallel(os.Kill, grouper.Members{
@@ -98,7 +104,7 @@ var _ = Describe("Switchboard", func() {
 		Eventually(func() error {
 			conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 			return err
-		}).ShouldNot(HaveOccurred())
+		}, startupTimeout).Should(Succeed())
 
 		response, err := sendData(conn, "detect active")
 		Expect(err).NotTo(HaveOccurred())
@@ -242,19 +248,19 @@ var _ = Describe("Switchboard", func() {
 					Expect(len(returnedBackends)).To(Equal(2))
 
 					Expect(returnedBackends[0]["host"]).To(Equal("localhost"))
-					Expect(returnedBackends[0]["healthy"]).To(BeTrue())
+					Expect(returnedBackends[0]["healthy"]).To(BeTrue(), "Expected backends[0] to be healthy")
 
 					Expect(returnedBackends[1]["host"]).To(Equal("localhost"))
-					Expect(returnedBackends[1]["healthy"]).To(BeTrue())
+					Expect(returnedBackends[1]["healthy"]).To(BeTrue(), "Expected backends[1] to be healthy")
 
 					if returnedBackends[0]["active"].(bool) {
-						Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 1))
-						Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 0))
-						Expect(returnedBackends[1]["active"]).To(BeFalse())
+						Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 1), "Expected backends[0] to have SessionCount == 1")
+						Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 0), "Expected backends[1] to have SessionCount == 0")
+						Expect(returnedBackends[1]["active"]).To(BeFalse(), "Expected backends[0] to not be active")
 					} else {
-						Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 1))
-						Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 0))
-						Expect(returnedBackends[0]["active"]).To(BeFalse())
+						Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 1), "Expected backends[1] to have SessionCount == 1")
+						Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 0), "Expected backends[0] to have SessionCount == 0")
+						Expect(returnedBackends[0]["active"]).To(BeFalse(), "Expected backends[0] to not be active")
 					}
 
 					switch returnedBackends[0]["name"] {
@@ -392,7 +398,7 @@ var _ = Describe("Switchboard", func() {
 						var err error
 						conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 						return err
-					}).ShouldNot(HaveOccurred())
+					}).Should(Succeed())
 
 					dataWhileHealthy, err := sendData(conn, "data while healthy")
 					Expect(err).ToNot(HaveOccurred())
@@ -407,7 +413,7 @@ var _ = Describe("Switchboard", func() {
 					Eventually(func() error {
 						_, err := sendData(conn, "data when unhealthy")
 						return err
-					}, 2*time.Second).Should(HaveOccurred())
+					}, healthcheckWaitDuration).Should(MatchError(connectionDisconnectError))
 				})
 			})
 
@@ -419,11 +425,11 @@ var _ = Describe("Switchboard", func() {
 					Eventually(func() (err error) {
 						conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 						return err
-					}).ShouldNot(HaveOccurred())
+					}).Should(Succeed())
 
 					data, err := sendData(conn, "data before hang")
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(data.Message).Should(Equal("data before hang"))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(data.Message).To(Equal("data before hang"))
 
 					if initialActiveBackend == backends[0] {
 						healthcheckRunners[0].SetHang(true)
@@ -432,31 +438,27 @@ var _ = Describe("Switchboard", func() {
 					}
 				})
 
-				It("disconnects existing client connections", func(done Done) {
-					defer close(done)
-
+				It("disconnects existing client connections", func() {
 					Eventually(func() error {
 						_, err := sendData(conn, "data after hang")
 						return err
-					}, proxyConfig.HealthcheckTimeout()*10).Should(HaveOccurred())
-				}, 5)
+					}, healthcheckWaitDuration).Should(MatchError(connectionDisconnectError))
+				})
 
-				It("proxies new connections to another backend", func(done Done) {
-					defer close(done)
-
-					time.Sleep(3 * proxyConfig.HealthcheckTimeout()) // wait for failover
-
+				It("proxies new connections to another backend", func() {
 					var err error
-					Eventually(func() error {
+					Eventually(func() (uint, error) {
 						conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-						return err
-					}).ShouldNot(HaveOccurred())
+						if err != nil {
+							return 0, err
+						}
 
-					data, err = sendData(conn, "test")
-					Expect(err).ToNot(HaveOccurred())
+						data, err = sendData(conn, "test")
+						return data.BackendPort, err
+					}, healthcheckWaitDuration).Should(Equal(initialInactiveBackend.Port))
+
 					Expect(data.Message).To(Equal("test"))
-					Expect(data.BackendPort).To(Equal(initialInactiveBackend.Port))
-				}, 5)
+				})
 			})
 
 			Context("when all backends are down", func() {
@@ -466,23 +468,21 @@ var _ = Describe("Switchboard", func() {
 					}
 				})
 
-				It("rejects any new connections that are attempted", func(done Done) {
-					defer close(done)
-
+				It("rejects any new connections that are attempted", func() {
 					time.Sleep(3 * proxyConfig.HealthcheckTimeout()) // wait for failover
 
 					var conn net.Conn
 					Eventually(func() (err error) {
 						conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 						return err
-					}, 1*time.Second).ShouldNot(HaveOccurred())
+					}, 1*time.Second).Should(Succeed())
 
 					Eventually(func() error {
 						_, err := sendData(conn, "write that should fail")
 						return err
 					}, proxyConfig.HealthcheckTimeout()*4, 200*time.Millisecond).Should(HaveOccurred())
 
-				}, 20)
+				})
 			})
 		})
 	})

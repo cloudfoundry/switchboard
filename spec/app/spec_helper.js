@@ -18,4 +18,5 @@ beforeEach(function() {
 
 afterEach(function() {
   jasmine.Ajax.requests.reset();
+  jasmine.clock().uninstall();
 });

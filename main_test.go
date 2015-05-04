@@ -15,6 +15,7 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/dummies"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 	"github.com/tedsuo/ifrit/grouper"
@@ -69,14 +70,23 @@ func getBackendsFromApi(req *http.Request) []map[string]interface{} {
 	return returnedBackends
 }
 
+func matchConnectionDisconnect() types.GomegaMatcher {
+	// exact error depends on environment
+	return MatchError(
+		MatchRegexp(
+			"%s|%s",
+			"EOF",
+			"Connection reset by peer",
+		),
+	)
+}
+
 var _ = Describe("Switchboard", func() {
 	var process ifrit.Process
 	var initialActiveBackend, initialInactiveBackend config.Backend
 	var healthcheckRunners []*dummies.HealthcheckRunner
 	var healthcheckWaitDuration time.Duration
-
 	const startupTimeout = 10 * time.Second
-	const connectionDisconnectError = "EOF"
 
 	BeforeEach(func() {
 		initConfig()
@@ -410,7 +420,7 @@ var _ = Describe("Switchboard", func() {
 					Eventually(func() error {
 						_, err := sendData(conn, "data when unhealthy")
 						return err
-					}, healthcheckWaitDuration).Should(MatchError(connectionDisconnectError))
+					}, healthcheckWaitDuration).Should(matchConnectionDisconnect())
 				})
 			})
 
@@ -439,7 +449,7 @@ var _ = Describe("Switchboard", func() {
 					Eventually(func() error {
 						_, err := sendData(conn, "data after hang")
 						return err
-					}, healthcheckWaitDuration).Should(MatchError(connectionDisconnectError))
+					}, healthcheckWaitDuration).Should(matchConnectionDisconnect())
 				})
 
 				It("proxies new connections to another backend", func() {
@@ -474,8 +484,7 @@ var _ = Describe("Switchboard", func() {
 						}
 						_, err = sendData(conn, "write that should fail")
 						return err
-					}, healthcheckWaitDuration, 200*time.Millisecond).Should(MatchError(connectionDisconnectError))
-
+					}, healthcheckWaitDuration, 200*time.Millisecond).Should(matchConnectionDisconnect())
 				})
 			})
 		})

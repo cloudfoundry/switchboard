@@ -3,12 +3,14 @@ package main_test
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/cloudfoundry-incubator/switchboard/config"
@@ -32,12 +34,12 @@ func sendData(conn net.Conn, data string) (Response, error) {
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
 	if err != nil {
-		return Response{}, err
+		return Response{}, err.(error)
 	} else {
 		response := Response{}
 		err := json.Unmarshal(buffer[:n], &response)
 		if err != nil {
-			return Response{}, err
+			return Response{}, err.(error)
 		}
 		return response, nil
 	}
@@ -71,12 +73,12 @@ func getBackendsFromApi(req *http.Request) []map[string]interface{} {
 }
 
 func matchConnectionDisconnect() types.GomegaMatcher {
-	// exact error depends on environment
+	//exact error depends on environment
 	return MatchError(
 		MatchRegexp(
 			"%s|%s",
-			"EOF",
-			"Connection reset by peer",
+			io.EOF.Error(),
+			syscall.ECONNRESET.Error(),
 		),
 	)
 }

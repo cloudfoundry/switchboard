@@ -1,0 +1,27 @@
+#!/bin/bash
+
+result=0
+
+MY_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+RUN_COUNT="$1"
+if [[ -z "$RUN_COUNT" ]]
+then
+  echo -e "\nRun Count not specified, exiting..."
+  exit 1
+fi
+shift
+echo -e "\nRunning tests $RUN_COUNT times"
+
+echo -e "\nTesting packages..."
+
+for ((i = 1; i <= $RUN_COUNT; i++))
+do
+  echo -e "\nTest Run: $i"
+  ginkgo -p -r -race -failOnPending -randomizeAllSpecs "$@" $MY_DIR/..
+  TEST_RESULT="$?"
+  if [[ $TEST_RESULT -ne 0 ]]; then
+    echo -e "\nGinkgo Exit Code: $TEST_RESULT"
+    exit $TEST_RESULT
+  fi
+done

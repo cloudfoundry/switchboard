@@ -395,7 +395,7 @@ var _ = Describe("Switchboard", func() {
 				Consistently(func() error {
 					_, err = sendData(client, "data around subsequent healthcheck")
 					return err
-				}, 3*time.Second).Should(Succeed())
+				}, 3*time.Second, 500*time.Millisecond).Should(Succeed())
 			})
 		})
 

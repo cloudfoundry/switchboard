@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"github.com/cloudfoundry-incubator/switchboard/health"
 	"github.com/pivotal-golang/lager/lagertest"
@@ -16,21 +17,28 @@ import (
 var _ = Describe("HealthRunner", func() {
 
 	var (
-		healthPort    = 10000 + GinkgoParallelNode()
-		logger        *lagertest.TestLogger
-		healthRunner  health.Runner
-		healthProcess ifrit.Process
+		healthPort     int
+		logger         *lagertest.TestLogger
+		healthRunner   health.Runner
+		healthProcess  ifrit.Process
+		startupTimeout = 5 * time.Second
 	)
 
 	BeforeEach(func() {
+
+		healthPort = 10000 + GinkgoParallelNode()
+
 		logger = lagertest.NewTestLogger("HealthRunner Test")
 		healthRunner = health.NewRunner(uint(healthPort), logger)
 		healthProcess = ifrit.Invoke(healthRunner)
+		isReady := healthProcess.Ready()
+		Eventually(isReady, startupTimeout).Should(BeClosed(), "Error starting Health Runner")
 	})
 
 	AfterEach(func() {
 		healthProcess.Signal(os.Kill)
-		<-healthProcess.Wait()
+		err := <-healthProcess.Wait()
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	Context("when the runner is running", func() {

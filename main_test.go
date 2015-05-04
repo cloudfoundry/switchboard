@@ -56,6 +56,19 @@ func verifyHeaderContains(header http.Header, key, valueSubstring string) {
 	Expect(found).To(BeTrue(), fmt.Sprintf("%s: %s not found in header", key, valueSubstring))
 }
 
+func getBackendsFromApi(req *http.Request) []map[string]interface{} {
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+
+	returnedBackends := []map[string]interface{}{}
+
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&returnedBackends)
+	Expect(err).NotTo(HaveOccurred())
+	return returnedBackends
+}
+
 var _ = Describe("Switchboard", func() {
 	var process ifrit.Process
 	var initialActiveBackend, initialInactiveBackend config.Backend
@@ -237,20 +250,7 @@ var _ = Describe("Switchboard", func() {
 
 				It("returns valid JSON in body", func() {
 
-					// open connection to check for currentSessionCount
-					conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-					Expect(err).ToNot(HaveOccurred())
-					defer conn.Close()
-
-					client := &http.Client{}
-					resp, err := client.Do(req)
-					Expect(err).NotTo(HaveOccurred())
-
-					returnedBackends := []map[string]interface{}{}
-
-					decoder := json.NewDecoder(resp.Body)
-					err = decoder.Decode(&returnedBackends)
-					Expect(err).NotTo(HaveOccurred())
+					returnedBackends := getBackendsFromApi(req)
 
 					Expect(len(returnedBackends)).To(Equal(2))
 
@@ -259,6 +259,29 @@ var _ = Describe("Switchboard", func() {
 
 					Expect(returnedBackends[1]["host"]).To(Equal("localhost"))
 					Expect(returnedBackends[1]["healthy"]).To(BeTrue(), "Expected backends[1] to be healthy")
+
+					switch returnedBackends[0]["name"] {
+
+					case backends[0].Name:
+						Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[0].Port))
+						Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[1].Port))
+						Expect(returnedBackends[1]["name"]).To(Equal(backends[1].Name))
+
+					case backends[1].Name: // order reversed in response
+						Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[0].Port))
+						Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[1].Port))
+						Expect(returnedBackends[0]["name"]).To(Equal(backends[1].Name))
+					default:
+						Fail(fmt.Sprintf("Invalid backend name: %s", returnedBackends[0]["name"]))
+					}
+				})
+
+				It("returns session count for active and inactive backends", func() {
+
+					conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					Expect(err).ToNot(HaveOccurred())
+					defer conn.Close()
+					returnedBackends := getBackendsFromApi(req)
 
 					var activeBackend, inactiveBackend map[string]interface{}
 					if returnedBackends[0]["active"].(bool) {
@@ -272,19 +295,6 @@ var _ = Describe("Switchboard", func() {
 					Expect(activeBackend["currentSessionCount"]).To(BeNumerically("==", 1), "Expected active backend to have SessionCount == 1")
 					Expect(inactiveBackend["currentSessionCount"]).To(BeNumerically("==", 0), "Expected inactive backend to have SessionCount == 0")
 					Expect(inactiveBackend["active"]).To(BeFalse(), "Expected inactive backend to not be active")
-
-					switch returnedBackends[0]["name"] {
-					case backends[0].Name:
-						Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[0].Port))
-						Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[1].Port))
-						Expect(returnedBackends[1]["name"]).To(Equal(backends[1].Name))
-					case backends[1].Name: // order reversed in response
-						Expect(returnedBackends[1]["port"]).To(BeNumerically("==", backends[0].Port))
-						Expect(returnedBackends[0]["port"]).To(BeNumerically("==", backends[1].Port))
-						Expect(returnedBackends[0]["name"]).To(Equal(backends[1].Name))
-					default:
-						Fail(fmt.Sprintf("Invalid backend name: %s", returnedBackends[0]["name"]))
-					}
 				})
 			})
 		})

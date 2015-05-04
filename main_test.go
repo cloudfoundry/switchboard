@@ -105,6 +105,7 @@ var _ = Describe("Switchboard", func() {
 			conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 			return err
 		}, startupTimeout).Should(Succeed())
+		defer conn.Close()
 
 		response, err := sendData(conn, "detect active")
 		Expect(err).NotTo(HaveOccurred())
@@ -235,6 +236,12 @@ var _ = Describe("Switchboard", func() {
 				})
 
 				It("returns valid JSON in body", func() {
+
+					// open connection to check for currentSessionCount
+					conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					Expect(err).ToNot(HaveOccurred())
+					defer conn.Close()
+
 					client := &http.Client{}
 					resp, err := client.Do(req)
 					Expect(err).NotTo(HaveOccurred())

@@ -21,8 +21,10 @@ func NewRunner(port uint, logger lager.Logger) Runner {
 }
 
 func (a Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", a.port))
 	if err != nil {
+		a.logger.Error("Error on Listen", err)
 		return err
 	} else {
 		a.logger.Info(fmt.Sprintf("Proxy health listening on port %d", a.port))
@@ -49,8 +51,14 @@ func (a Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 	close(ready)
 
-	<-signals
+	signal := <-signals
+	a.logger.Info("Received signal", lager.Data{"signal": signal})
+
 	// gracefully exit the goroutine - listener.Close causes Accept to error
+	err = listener.Close()
+	if err != nil {
+		a.logger.Error("Closed Health Runner", err)
+	}
 	close(exitChan)
-	return listener.Close()
+	return err
 }

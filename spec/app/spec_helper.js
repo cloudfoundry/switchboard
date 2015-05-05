@@ -17,6 +17,6 @@ beforeEach(function() {
 });
 
 afterEach(function() {
-  jasmine.Ajax.requests.reset();
+  jasmine.Ajax.uninstall();
   jasmine.clock().uninstall();
 });

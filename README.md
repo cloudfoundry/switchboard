@@ -36,8 +36,14 @@ To do this on OSX using [homebrew](http://brew.sh/):
 brew install phantomjs
 ```
 
-Run the tests using the following command:
+Run the UI tests using the following command:
+
+```sh
+./bin/test-ui
+```
+
+Build UI assets:
 
 ```
-./bin/test-ui
+./bin/build-ui
 ```

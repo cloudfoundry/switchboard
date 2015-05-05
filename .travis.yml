@@ -15,5 +15,5 @@ before_script:
   - export PATH=$HOME/gopath/bin:$PATH
 
 script:
-  - ./bin/test-n-times 30 -nodes=2 # travis would occasionally kill tests running on too many threads
+  - ./bin/test -nodes=2 # travis would occasionally kill tests running on too many threads
   - ./bin/test-ui

@@ -293,6 +293,11 @@ var _ = Describe("Switchboard", func() {
 					conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					Expect(err).ToNot(HaveOccurred())
 					defer conn.Close()
+
+					connData, err := sendData(conn, "success")
+					Expect(err).ToNot(HaveOccurred())
+					Expect(connData.Message).To(Equal("success"))
+
 					returnedBackends := getBackendsFromApi(req)
 
 					var activeBackend, inactiveBackend map[string]interface{}

@@ -54,9 +54,10 @@ type Proxy struct {
 }
 
 type API struct {
-	Port     uint   `validate:"nonzero"`
-	Username string `validate:"nonzero"`
-	Password string `validate:"nonzero"`
+	Port       uint   `validate:"nonzero"`
+	Username   string `validate:"nonzero"`
+	Password   string `validate:"nonzero"`
+	ForceHttps bool
 }
 
 type Backend struct {

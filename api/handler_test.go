@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"net/http"
+	"net/http/httptest"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	apifakes "github.com/cloudfoundry-incubator/switchboard/api/fakes"
@@ -14,12 +15,17 @@ import (
 )
 
 var _ = Describe("Handler", func() {
-	var handler http.Handler
+	var (
+		handler          http.Handler
+		responseRecorder *httptest.ResponseRecorder
+	)
 
 	JustBeforeEach(func() {
 		backends := &domainfakes.FakeBackends{}
 		logger := lagertest.NewTestLogger("Handler Test")
-		config := config.API{}
+		config := config.API{
+			ForceHttps: true,
+		}
 		staticDir := ""
 		handler = api.NewHandler(backends, logger, config, staticDir)
 	})
@@ -54,6 +60,24 @@ var _ = Describe("Handler", func() {
 
 			Expect(responseWriter.WriteHeaderCallCount()).To(Equal(1))
 			Expect(responseWriter.WriteHeaderArgsForCall(0)).To(Equal(http.StatusInternalServerError))
+		})
+	})
+
+	Context("when request does not contain https header", func() {
+
+		var request *http.Request
+
+		BeforeEach(func() {
+			responseRecorder = httptest.NewRecorder()
+			request, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
+			request.Header.Set("X-Forwarded-Proto", "http")
+		})
+
+		It("redirects to https", func() {
+			handler.ServeHTTP(responseRecorder, request)
+
+			Expect(responseRecorder.Code).To(Equal(http.StatusFound))
+			Expect(responseRecorder.HeaderMap.Get("Location")).To(Equal("https://localhost/foo/bar"))
 		})
 	})
 })

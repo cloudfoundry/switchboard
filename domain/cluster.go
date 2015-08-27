@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/pivotal-golang/lager"
@@ -32,14 +33,16 @@ type cluster struct {
 	currentBackendIndex int
 	logger              lager.Logger
 	healthcheckTimeout  time.Duration
+	arpManager          ArpManager
 }
 
-func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger) Cluster {
+func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) Cluster {
 	return cluster{
 		backends:            backends,
 		currentBackendIndex: 0,
 		logger:              logger,
 		healthcheckTimeout:  healthcheckTimeout,
+		arpManager:          arpManager,
 	}
 }
 
@@ -62,13 +65,11 @@ func (c cluster) RouteToBackend(clientConn net.Conn) error {
 
 func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
 	go func() {
-		dialCount := uint64(0)
-		logFrequency := uint64(5)
+		counters := c.setupCounters()
 		for {
 			select {
 			case <-time.After(c.healthcheckTimeout / 5):
-				dialCount++
-				c.dialHealthcheck(backend, client, dialCount, logFrequency)
+				c.dialHealthcheck(backend, client, counters)
 			case <-stopChan:
 				return
 			}
@@ -76,45 +77,70 @@ func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-cha
 	}()
 }
 
-func (c cluster) dialHealthcheck(backend Backend, client UrlGetter, dialCount uint64, logFrequency uint64) {
+func (c cluster) setupCounters() *DecisionCounters {
+	counters := NewDecisionCounters()
+	logFreq := uint64(5)
+	clearArpFreq := uint64(5)
+
+	//used to make logs less noisy
+	counters.AddCondition("log", func() bool {
+		return (counters.GetCount("dial") % logFreq) == 0
+	})
+
+	//only clear ARP cache after X consecutive unhealthy dials
+	counters.AddCondition("clearArp", func() bool {
+		// golang makes it difficult to tell whether the value of an interface is nil
+		if reflect.ValueOf(c.arpManager).IsNil() {
+			return false
+		} else {
+			checks := counters.GetCount("consecutiveUnhealthyChecks")
+			return (checks > 0) && (checks%clearArpFreq) == 0
+		}
+	})
+
+	return counters
+}
+
+func (c cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *DecisionCounters) {
+
+	counters.IncrementCount("dial")
+	shouldLog := counters.Should("log")
+
 	url := backend.HealthcheckUrl()
 	resp, err := client.Get(url)
-	shouldLog := dialCount%logFrequency == 0
-	if err != nil {
+
+	if err == nil && resp.StatusCode == http.StatusOK {
+		c.backends.SetHealthy(backend)
+		counters.ResetCount("consecutiveUnhealthyChecks")
+
+		if shouldLog {
+			c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
+		}
+	} else {
 		c.backends.SetUnhealthy(backend)
+		counters.IncrementCount("consecutiveUnhealthyChecks")
 
 		if shouldLog {
 			c.logger.Error(
-				"Error dialing healthchecker",
-				err,
+				"Healthcheck failed on backend",
+				fmt.Errorf("Non-200 status code from healthcheck"),
 				lager.Data{
 					"backend":  backend.AsJSON(),
 					"endpoint": url,
+					"resp":     fmt.Sprintf("%#v", resp),
+					"err":      err,
 				},
 			)
 		}
-	} else {
-		resp.Body.Close()
+	}
 
-		if resp.StatusCode == http.StatusOK {
-			c.backends.SetHealthy(backend)
+	if counters.Should("clearArp") {
+		backendHost := backend.AsJSON().Host
 
-			if shouldLog {
-				c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
-			}
-		} else {
-			c.backends.SetUnhealthy(backend)
-
-			if shouldLog {
-				c.logger.Error(
-					fmt.Sprintf("Healthcheck status code: %d", resp.StatusCode),
-					fmt.Errorf("Non-200 status code from healthcheck"),
-					lager.Data{
-						"backend":     backend.AsJSON(),
-						"endpoint":    url,
-						"status_code": resp.StatusCode,
-					},
-				)
+		if c.arpManager.IsCached(backendHost) {
+			err = c.arpManager.ClearCache(backendHost)
+			if err != nil {
+				c.logger.Error("Failed to clear arp cache", err)
 			}
 		}
 	}

@@ -69,10 +69,12 @@ func main() {
 	}
 
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
+	arpManager := domain.NewArmManager(logger)
 	cluster := domain.NewCluster(
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
+		arpManager,
 	)
 
 	handler := api.NewHandler(backends, logger, rootConfig.API, *staticDir)

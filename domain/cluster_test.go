@@ -19,11 +19,17 @@ var _ = Describe("Cluster", func() {
 	var backends *fakes.FakeBackends
 	var logger lager.Logger
 	var cluster domain.Cluster
+	var fakeArpManager *fakes.FakeArpManager
+	healthcheckTimeout := time.Second
 
 	BeforeEach(func() {
+		fakeArpManager = nil
 		backends = &fakes.FakeBackends{}
+	})
+
+	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("Cluster test")
-		cluster = domain.NewCluster(backends, time.Second, logger)
+		cluster = domain.NewCluster(backends, healthcheckTimeout, logger, fakeArpManager)
 	})
 
 	Describe("Monitor", func() {
@@ -36,12 +42,15 @@ var _ = Describe("Cluster", func() {
 
 		BeforeEach(func() {
 			backend1 = &fakes.FakeBackend{}
+			backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
 			backend1.HealthcheckUrlReturns("backend1")
 
 			backend2 = &fakes.FakeBackend{}
+			backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
 			backend2.HealthcheckUrlReturns("backend2")
 
 			backend3 = &fakes.FakeBackend{}
+			backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
 			backend3.HealthcheckUrlReturns("backend3")
 
 			backends.AllStub = func() <-chan domain.Backend {
@@ -125,7 +134,9 @@ var _ = Describe("Cluster", func() {
 			Expect(backends.SetHealthyArgsForCall(0)).Should(Equal(backend1))
 			Expect(backends.SetHealthyArgsForCall(1)).Should(Equal(backend3))
 
-			Expect(backends.SetUnhealthyCallCount()).Should(BeNumerically(">=", 1))
+			Consistently(func() int {
+				return backends.SetUnhealthyCallCount()
+			}, 2*time.Second).Should(BeNumerically(">=", 1))
 			Expect(backends.SetUnhealthyArgsForCall(0)).Should(Equal(backend2))
 		}, 5)
 
@@ -156,8 +167,78 @@ var _ = Describe("Cluster", func() {
 			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", initialHealthyBackendCount+finalHealthyBackendCount))
 			Expect(backends.SetUnhealthyCallCount()).To(Equal(initialUnhealthyBackendCount))
 		}, 5)
-	})
 
+		Context("when a backend is healthy", func() {
+
+			BeforeEach(func() {
+				fakeArpManager = &fakes.FakeArpManager{}
+			})
+
+			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
+				stopMonitoring := cluster.Monitor()
+				defer close(stopMonitoring)
+
+				Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
+			})
+		})
+
+		Context("when a backend is unhealthy", func() {
+
+			BeforeEach(func() {
+				fakeArpManager = &fakes.FakeArpManager{}
+				unhealthyResponse := &http.Response{
+					Body:       &fakes.FakeReadWriteCloser{},
+					StatusCode: http.StatusInternalServerError,
+				}
+
+				urlGetter.GetStub = func(url string) (*http.Response, error) {
+					if url == "backend2" {
+						return unhealthyResponse, nil
+					} else {
+						return healthyResponse, nil
+					}
+				}
+			})
+
+			Context("and the IP is in the ARP cache", func() {
+
+				BeforeEach(func() {
+					fakeArpManager.IsCachedStub = func(ip string) bool {
+						if ip == backend2.AsJSON().Host {
+							return true
+						} else {
+							return false
+						}
+					}
+				})
+
+				It("clears the arp cache after ArpFlushInterval has elapsed", func() {
+
+					stopMonitoring := cluster.Monitor()
+					defer close(stopMonitoring)
+
+					Expect(fakeArpManager.ClearCacheCallCount()).To(BeZero())
+					Eventually(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*3).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
+					Expect(fakeArpManager.ClearCacheArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
+				})
+			})
+
+			Context("and the IP is not in the ARP cache", func() {
+
+				BeforeEach(func() {
+					fakeArpManager.IsCachedReturns(false)
+				})
+
+				It("does not clear arp cache", func() {
+
+					stopMonitoring := cluster.Monitor()
+					defer close(stopMonitoring)
+
+					Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
+				})
+			})
+		})
+	})
 	Describe("RouteToBackend", func() {
 		var clientConn net.Conn
 

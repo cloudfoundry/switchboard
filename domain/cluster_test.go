@@ -84,9 +84,19 @@ var _ = Describe("Cluster", func() {
 			defer close(stopMonitoring)
 
 			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", 3))
-			Expect(backends.SetHealthyArgsForCall(0)).To(Equal(backend1))
-			Expect(backends.SetHealthyArgsForCall(1)).To(Equal(backend2))
-			Expect(backends.SetHealthyArgsForCall(2)).To(Equal(backend3))
+
+			Expect(backends.SetHealthyCallCount()).To(Equal(3))
+
+			healthyBackends := []domain.Backend{}
+			for i := 0; i < 3; i++ {
+				healthyBackends = append(healthyBackends, backends.SetHealthyArgsForCall(i))
+			}
+
+			Expect(healthyBackends).To(ConsistOf([]domain.Backend{
+				backend1,
+				backend2,
+				backend3,
+			}))
 		}, 5)
 
 		It("notices when a healthy backend becomes unhealthy", func(done Done) {
@@ -108,9 +118,16 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", 2))
-			Expect(backends.SetHealthyArgsForCall(0)).To(Equal(backend1))
-			Expect(backends.SetHealthyArgsForCall(1)).To(Equal(backend3))
+			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(Equal(2))
+			healthyBackends := []domain.Backend{}
+			for i := 0; i < 2; i++ {
+				healthyBackends = append(healthyBackends, backends.SetHealthyArgsForCall(i))
+			}
+
+			Expect(healthyBackends).To(ConsistOf([]domain.Backend{
+				backend1,
+				backend3,
+			}))
 
 			Expect(backends.SetUnhealthyCallCount()).To(BeNumerically(">=", 1))
 			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
@@ -130,9 +147,16 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", 2))
-			Expect(backends.SetHealthyArgsForCall(0)).Should(Equal(backend1))
-			Expect(backends.SetHealthyArgsForCall(1)).Should(Equal(backend3))
+			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(Equal(2))
+			healthyBackends := []domain.Backend{}
+			for i := 0; i < 2; i++ {
+				healthyBackends = append(healthyBackends, backends.SetHealthyArgsForCall(i))
+			}
+
+			Expect(healthyBackends).To(ConsistOf([]domain.Backend{
+				backend1,
+				backend3,
+			}))
 
 			Consistently(func() int {
 				return backends.SetUnhealthyCallCount()

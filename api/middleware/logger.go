@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -30,18 +31,38 @@ func (l Logger) Wrap(next http.Handler) http.Handler {
 		next.ServeHTTP(&loggingResponseWriter, req)
 
 		if strings.HasPrefix(req.URL.String(), l.routePrefix) {
-			requestCopy := *req
-			requestCopy.Header["Authorization"] = nil
 
-			response := map[string]interface{}{
+			reqCopy := *req
+			reqCopy.Header["Authorization"] = nil
+
+			var reqBody string
+			if reqCopy.Body != nil {
+				bodyBytes, err := ioutil.ReadAll(reqCopy.Body)
+				if err != nil {
+					l.logger.Error("Could not read response body", err)
+					reqBody = ""
+				} else {
+					reqBody = string(bodyBytes)
+				}
+			}
+
+			requestData := map[string]interface{}{
+				"Header":     reqCopy.Header,
+				"Body":       reqBody,
+				"URL":        reqCopy.URL,
+				"Host":       reqCopy.Host,
+				"RemoteAddr": reqCopy.RemoteAddr,
+			}
+
+			responseData := map[string]interface{}{
 				"Header":     loggingResponseWriter.Header(),
 				"Body":       string(loggingResponseWriter.body),
 				"StatusCode": loggingResponseWriter.statusCode,
 			}
 
 			l.logger.Info("", lager.Data{
-				"request":  requestCopy,
-				"response": response,
+				"request":  requestData,
+				"response": responseData,
 			})
 		}
 	})

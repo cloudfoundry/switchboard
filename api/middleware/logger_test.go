@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	apifakes "github.com/cloudfoundry-incubator/switchboard/api/fakes"
+	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 
 	"github.com/cloudfoundry-incubator/switchboard/api/middleware"
 	"github.com/cloudfoundry-incubator/switchboard/api/middleware/fakes"
@@ -18,60 +20,47 @@ var _ = Describe("Logger", func() {
 
 	var fakeResponseWriter http.ResponseWriter
 	var fakeHandler *fakes.FakeHandler
-	var fakeLogger *fakes.FakeLogger
+	var logger *lagertest.TestLogger
 	var routePrefix string
+
+	const fakePassword = "fakePassword"
 
 	BeforeEach(func() {
 		routePrefix = "/v0"
 		dummyRequest, err = http.NewRequest("GET", "/v0/backends", nil)
 		Expect(err).NotTo(HaveOccurred())
-		dummyRequest.Header.Add("Authorization", "some auth")
+		dummyRequest.Header.Add("Authorization", fakePassword)
 
 		fakeResponseWriter = &apifakes.FakeResponseWriter{}
 		fakeHandler = &fakes.FakeHandler{}
-		fakeLogger = &fakes.FakeLogger{}
+
+		logger = lagertest.NewTestLogger("backup-download-test")
+		logger.RegisterSink(lager.NewWriterSink(GinkgoWriter, lager.INFO))
 	})
 
 	It("should log requests that are prefixed with routePrefix", func() {
-		loggerMiddleware := middleware.NewLogger(fakeLogger, routePrefix)
+		loggerMiddleware := middleware.NewLogger(logger, routePrefix)
 		loggerHandler := loggerMiddleware.Wrap(fakeHandler)
 
 		loggerHandler.ServeHTTP(fakeResponseWriter, dummyRequest)
 
-		Expect(fakeLogger.InfoCallCount()).To(Equal(1))
-		_, arg1 := fakeLogger.InfoArgsForCall(0)
-		lagerData := arg1[0]
-		Expect(lagerData["request"]).NotTo(BeNil())
-		Expect(lagerData["response"]).NotTo(BeNil())
-	})
-
-	It("should not log requests that are not prefixed with routePrefix", func() {
-		dummyRequest, err = http.NewRequest("GET", "/", nil)
-		Expect(err).NotTo(HaveOccurred())
-		dummyRequest.Header.Add("Authorization", "some auth")
-
-		loggerMiddleware := middleware.NewLogger(fakeLogger, routePrefix)
-		loggerHandler := loggerMiddleware.Wrap(fakeHandler)
-
-		loggerHandler.ServeHTTP(fakeResponseWriter, dummyRequest)
-
-		Expect(fakeLogger.InfoCallCount()).To(Equal(0))
+		logContents := logger.Buffer().Contents()
+		Expect(logContents).To(ContainSubstring("request"))
+		Expect(logContents).To(ContainSubstring("response"))
 	})
 
 	It("should not log credentials", func() {
-		loggerMiddleware := middleware.NewLogger(fakeLogger, routePrefix)
+		loggerMiddleware := middleware.NewLogger(logger, routePrefix)
 		loggerHandler := loggerMiddleware.Wrap(fakeHandler)
 
 		loggerHandler.ServeHTTP(fakeResponseWriter, dummyRequest)
 
-		Expect(fakeLogger.InfoCallCount()).To(Equal(1))
-		_, arg1 := fakeLogger.InfoArgsForCall(0)
-		loggedRequest := arg1[0]["request"].(http.Request)
-		Expect(loggedRequest.BasicAuth()).To(Equal(""))
+		logContents := logger.Buffer().Contents()
+		Expect(logContents).ToNot(ContainSubstring(fakePassword))
 	})
 
 	It("should call next handler", func() {
-		loggerMiddleware := middleware.NewLogger(fakeLogger, routePrefix)
+		loggerMiddleware := middleware.NewLogger(logger, routePrefix)
 		loggerHandler := loggerMiddleware.Wrap(fakeHandler)
 
 		loggerHandler.ServeHTTP(fakeResponseWriter, dummyRequest)

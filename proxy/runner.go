@@ -31,9 +31,18 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 		return err
 	}
 
+	shutdown := make(chan interface{})
 	go func() {
 		for {
+
 			clientConn, err := listener.Accept()
+
+			select {
+			case <-shutdown:
+				return
+			default:
+				//continue
+			}
 
 			if err != nil {
 				pr.logger.Error("Error accepting client connection", err)
@@ -49,6 +58,12 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	}()
 
 	close(ready)
-	<-signals
-	return listener.Close()
+
+	signal := <-signals
+	pr.logger.Info("Received signal", lager.Data{"signal": signal})
+	close(shutdown)
+	listener.Close()
+
+	pr.logger.Info("Proxy runner has exited")
+	return nil
 }

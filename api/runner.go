@@ -26,6 +26,7 @@ func NewRunner(port uint, handler http.Handler, logger lager.Logger) Runner {
 func (a Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", a.port))
 	if err != nil {
+		a.logger.Error("API runner failed with error", err)
 		return err
 	} else {
 		a.logger.Info(fmt.Sprintf("Proxy api listening on port %d", a.port))
@@ -43,8 +44,10 @@ func (a Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 	select {
 	case <-signals:
+		a.logger.Info("API runner has exited")
 		return listener.Close()
 	case err := <-errChan:
+		a.logger.Error("API runner failed with error", err)
 		return err
 	}
 }

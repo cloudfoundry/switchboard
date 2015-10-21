@@ -30,21 +30,25 @@ func (a Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 		a.logger.Info(fmt.Sprintf("Proxy health listening on port %d", a.port))
 	}
 
-	exitChan := make(chan struct{})
+	shutdown := make(chan struct{})
 	go func() {
 		for {
 			conn, err := listener.Accept()
-			if err != nil {
-				select {
-				case <-exitChan:
-					return
-				default:
-					a.logger.Error(fmt.Sprintf("Accepting TCP connection on health port %d", a.port), err)
-				}
+
+			select {
+			case <-shutdown:
+				return
+			default:
+				//continue
 			}
-			err = conn.Close()
+
 			if err != nil {
-				a.logger.Error(fmt.Sprintf("Closing TCP connection from %s on health port %d", conn.RemoteAddr(), a.port), err)
+				a.logger.Error("Error accepting health check connection", err)
+			} else {
+				err = conn.Close()
+				if err != nil {
+					a.logger.Error("Error closing health check connection", err)
+				}
 			}
 		}
 	}()
@@ -53,12 +57,9 @@ func (a Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 	signal := <-signals
 	a.logger.Info("Received signal", lager.Data{"signal": signal})
+	close(shutdown)
+	listener.Close()
 
-	// gracefully exit the goroutine - listener.Close causes Accept to error
-	err = listener.Close()
-	if err != nil {
-		a.logger.Error("Closed Health Runner", err)
-	}
-	close(exitChan)
-	return err
+	a.logger.Info("Health runner has exited")
+	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/pivotal-cf-experimental/service-config"
 	"github.com/pivotal-golang/lager"
+	"time"
 )
 
 func main() {
@@ -52,13 +54,6 @@ func main() {
 			logger.Error("profiler failed with error", err)
 		}
 	}()
-
-	err = ioutil.WriteFile(*pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
-	if err == nil {
-		logger.Info(fmt.Sprintf("Wrote pidFile to %s", *pidFile))
-	} else {
-		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": *pidFile})
-	}
 
 	if *staticDir == "" {
 		logger.Fatal("staticDir flag not provided", nil)
@@ -97,13 +92,48 @@ func main() {
 		})
 	}
 
-	group := grouper.NewParallel(os.Kill, members)
+	group := grouper.NewDynamic(os.Kill, len(members), len(members))
 	process := ifrit.Invoke(group)
+	inserter := group.Client().Inserter()
+	for _, member := range members {
+		inserter <- member
+	}
+	group.Client().Close()
+
+	err = waitUntilReady(process, logger)
+	if err != nil {
+		logger.Fatal("Error starting switchboard", err, lager.Data{"proxyConfig": rootConfig.Proxy})
+	}
 
 	logger.Info("Proxy started", lager.Data{"proxyConfig": rootConfig.Proxy})
 
+	err = ioutil.WriteFile(*pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
+	if err == nil {
+		logger.Info(fmt.Sprintf("Wrote pidFile to %s", *pidFile))
+	} else {
+		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": *pidFile})
+	}
+
 	err = <-process.Wait()
 	if err != nil {
-		logger.Fatal("Error starting switchboard", err, lager.Data{"proxyConfig": rootConfig.Proxy})
+		logger.Fatal("Switchboard exited unexpectedly", err, lager.Data{"proxyConfig": rootConfig.Proxy})
+	}
+}
+
+func waitUntilReady(process ifrit.Process, logger lager.Logger) error {
+	//we could not find a reliable way for ifrit to report that all processes
+	//were ready without error, so we opted to simply report as ready if no errors
+	//were thrown within a timeout
+	ready := time.After(5 * time.Second)
+	select {
+	case <-ready:
+		logger.Info("All child processes are ready")
+		return nil
+	case err := <-process.Wait():
+		if err == nil {
+			//sometimes process will exit early, but will return a nil error
+			err = errors.New("Child process exited before becoming ready")
+		}
+		return err
 	}
 }

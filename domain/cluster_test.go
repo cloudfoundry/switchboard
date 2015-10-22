@@ -20,7 +20,7 @@ var _ = Describe("Cluster", func() {
 	var logger lager.Logger
 	var cluster domain.Cluster
 	var fakeArpManager *fakes.FakeArpManager
-	healthcheckTimeout := time.Second
+	const healthcheckTimeout = time.Second
 
 	BeforeEach(func() {
 		fakeArpManager = nil
@@ -77,30 +77,24 @@ var _ = Describe("Cluster", func() {
 			domain.UrlGetterProvider = domain.HttpUrlGetterProvider
 		})
 
-		It("notices when each backend stays healthy", func(done Done) {
-			defer close(done)
+		It("notices when each backend stays healthy", func() {
 
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", 3))
-
-			Expect(backends.SetHealthyCallCount()).To(Equal(3))
-
-			healthyBackends := []domain.Backend{}
-			for i := 0; i < 3; i++ {
-				healthyBackends = append(healthyBackends, backends.SetHealthyArgsForCall(i))
-			}
-
-			Expect(healthyBackends).To(ConsistOf([]domain.Backend{
+			EventuallyWithTimeout(func() []interface{} {
+				return getUniqueBackendArgs(
+					backends.SetHealthyArgsForCall,
+					backends.SetHealthyCallCount)
+			}).Should(ConsistOf([]domain.Backend{
 				backend1,
 				backend2,
 				backend3,
 			}))
-		}, 5)
+			Expect(backends.SetUnhealthyCallCount()).To(BeZero())
+		})
 
-		It("notices when a healthy backend becomes unhealthy", func(done Done) {
-			defer close(done)
+		It("notices when a healthy backend becomes unhealthy", func() {
 
 			unhealthyResponse := &http.Response{
 				Body:       &fakes.FakeReadWriteCloser{},
@@ -118,23 +112,20 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(Equal(2))
-			healthyBackends := []domain.Backend{}
-			for i := 0; i < 2; i++ {
-				healthyBackends = append(healthyBackends, backends.SetHealthyArgsForCall(i))
-			}
-
-			Expect(healthyBackends).To(ConsistOf([]domain.Backend{
+			EventuallyWithTimeout(func() []interface{} {
+				return getUniqueBackendArgs(
+					backends.SetHealthyArgsForCall,
+					backends.SetHealthyCallCount)
+			}).Should(ConsistOf([]domain.Backend{
 				backend1,
 				backend3,
 			}))
 
-			Expect(backends.SetUnhealthyCallCount()).To(BeNumerically(">=", 1))
+			EventuallyWithTimeout(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
 			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
-		}, 5)
+		})
 
-		It("notices when a healthy backend becomes unresponsive", func(done Done) {
-			defer close(done)
+		It("notices when a healthy backend becomes unresponsive", func() {
 
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				if url == "backend2" {
@@ -147,26 +138,20 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(Equal(2))
-			healthyBackends := []domain.Backend{}
-			for i := 0; i < 2; i++ {
-				healthyBackends = append(healthyBackends, backends.SetHealthyArgsForCall(i))
-			}
-
-			Expect(healthyBackends).To(ConsistOf([]domain.Backend{
+			EventuallyWithTimeout(func() []interface{} {
+				return getUniqueBackendArgs(
+					backends.SetHealthyArgsForCall,
+					backends.SetHealthyCallCount)
+			}).Should(ConsistOf([]domain.Backend{
 				backend1,
 				backend3,
 			}))
 
-			Consistently(func() int {
-				return backends.SetUnhealthyCallCount()
-			}, 2*time.Second).Should(BeNumerically(">=", 1))
-			Expect(backends.SetUnhealthyArgsForCall(0)).Should(Equal(backend2))
-		}, 5)
+			EventuallyWithTimeout(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
+			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
+		})
 
-		It("notices when an unhealthy backend becomes healthy", func(done Done) {
-			defer close(done)
-
+		It("notices when an unhealthy backend becomes healthy", func() {
 			unhealthyResponse := &http.Response{
 				Body:       &fakes.FakeReadWriteCloser{},
 				StatusCode: http.StatusInternalServerError,
@@ -185,12 +170,19 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			initialHealthyBackendCount := 2
-			initialUnhealthyBackendCount := 1
-			finalHealthyBackendCount := 3
-			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(BeNumerically(">=", initialHealthyBackendCount+finalHealthyBackendCount))
-			Expect(backends.SetUnhealthyCallCount()).To(Equal(initialUnhealthyBackendCount))
-		}, 5)
+			EventuallyWithTimeout(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
+			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
+
+			EventuallyWithTimeout(func() []interface{} {
+				return getUniqueBackendArgs(
+					backends.SetHealthyArgsForCall,
+					backends.SetHealthyCallCount)
+			}).Should(ConsistOf([]domain.Backend{
+				backend1,
+				backend2,
+				backend3,
+			}))
+		})
 
 		Context("when a backend is healthy", func() {
 
@@ -241,8 +233,7 @@ var _ = Describe("Cluster", func() {
 					stopMonitoring := cluster.Monitor()
 					defer close(stopMonitoring)
 
-					Expect(fakeArpManager.ClearCacheCallCount()).To(BeZero())
-					Eventually(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*3).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
+					Eventually(fakeArpManager.ClearCacheCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
 					Expect(fakeArpManager.ClearCacheArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
 				})
 			})
@@ -263,6 +254,7 @@ var _ = Describe("Cluster", func() {
 			})
 		})
 	})
+
 	Describe("RouteToBackend", func() {
 		var clientConn net.Conn
 
@@ -290,3 +282,24 @@ var _ = Describe("Cluster", func() {
 		})
 	})
 })
+
+func getUniqueBackendArgs(getArgsForCall func(int) domain.Backend, getCallCount func() int) []interface{} {
+
+	args := []interface{}{}
+	backendMap := make(map[string]bool)
+	callCount := getCallCount()
+	for i := 0; i < callCount; i++ {
+		arg := getArgsForCall(i)
+		host := arg.AsJSON().Host
+		if _, keyExists := backendMap[host]; keyExists == false {
+			args = append(args, arg)
+			backendMap[host] = true
+		}
+	}
+
+	return args
+}
+
+func EventuallyWithTimeout(arg interface{}) GomegaAsyncAssertion {
+	return Eventually(arg, 5*time.Second, 500*time.Millisecond)
+}

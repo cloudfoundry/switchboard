@@ -100,7 +100,7 @@ var _ = Describe("Backend", func() {
 
 			Expect(dialedProtocol).To(Equal("tcp"))
 			Expect(dialedAddress).To(Equal("1.2.3.4:3306"))
-		})
+		}, 5)
 
 		It("asynchronously creates and connects to a bridge", func(done Done) {
 			defer close(done)
@@ -117,7 +117,7 @@ var _ = Describe("Backend", func() {
 			Expect(actualBackendConn).To(Equal(backendConn))
 
 			Expect(bridge.ConnectCallCount()).To(Equal(1))
-		})
+		}, 5)
 
 		Context("when the bridge is disconnected", func() {
 			It("removes the bridge", func(done Done) {
@@ -134,7 +134,7 @@ var _ = Describe("Backend", func() {
 
 				Eventually(bridges.RemoveCallCount).Should(Equal(1))
 				Expect(bridges.RemoveArgsForCall(0)).To(Equal(bridge))
-			}, 2)
+			}, 5)
 		})
 	})
 })

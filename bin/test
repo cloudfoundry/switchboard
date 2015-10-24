@@ -9,7 +9,15 @@ $MY_DIR/govet
 let "result+=$?"
 
 echo -e "\nTesting packages..."
-ginkgo -p -r -failOnPending -randomizeAllSpecs -slowSpecThreshold=10 "$@" $MY_DIR/..
+
+# due to the high amount of concurrency in these tests, tests will often fail
+# with timeouts if run in parallel on systems with fewer than 4 cores
+GINKGO_FLAGS="-r -failOnPending -randomizeAllSpecs -slowSpecThreshold=10"
+if [ "$(nproc)" -ge "4" ]; then
+  GINKGO_FLAGS="${GINKGO_FLAGS} -p"
+fi
+
+ginkgo ${GINKGO_FLAGS} "$@" $MY_DIR/..
 let "result+=$?"
 
 echo -e "\nExit Code: $result"

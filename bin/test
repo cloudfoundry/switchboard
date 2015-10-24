@@ -9,7 +9,7 @@ $MY_DIR/govet
 let "result+=$?"
 
 echo -e "\nTesting packages..."
-ginkgo -p -r -race -failOnPending -randomizeAllSpecs -slowSpecThreshold=10 "$@" $MY_DIR/..
+ginkgo -p -r -failOnPending -randomizeAllSpecs -slowSpecThreshold=10 "$@" $MY_DIR/..
 let "result+=$?"
 
 echo -e "\nExit Code: $result"

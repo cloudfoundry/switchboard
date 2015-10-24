@@ -82,7 +82,7 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			EventuallyWithTimeout(func() []interface{} {
+			Eventually(func() []interface{} {
 				return getUniqueBackendArgs(
 					backends.SetHealthyArgsForCall,
 					backends.SetHealthyCallCount)
@@ -112,7 +112,7 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			EventuallyWithTimeout(func() []interface{} {
+			Eventually(func() []interface{} {
 				return getUniqueBackendArgs(
 					backends.SetHealthyArgsForCall,
 					backends.SetHealthyCallCount)
@@ -121,7 +121,7 @@ var _ = Describe("Cluster", func() {
 				backend3,
 			}))
 
-			EventuallyWithTimeout(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
+			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
 			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
 		})
 
@@ -138,7 +138,7 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			EventuallyWithTimeout(func() []interface{} {
+			Eventually(func() []interface{} {
 				return getUniqueBackendArgs(
 					backends.SetHealthyArgsForCall,
 					backends.SetHealthyCallCount)
@@ -147,7 +147,7 @@ var _ = Describe("Cluster", func() {
 				backend3,
 			}))
 
-			EventuallyWithTimeout(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
+			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
 			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
 		})
 
@@ -170,10 +170,10 @@ var _ = Describe("Cluster", func() {
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
 
-			EventuallyWithTimeout(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
+			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
 			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
 
-			EventuallyWithTimeout(func() []interface{} {
+			Eventually(func() []interface{} {
 				return getUniqueBackendArgs(
 					backends.SetHealthyArgsForCall,
 					backends.SetHealthyCallCount)
@@ -298,8 +298,4 @@ func getUniqueBackendArgs(getArgsForCall func(int) domain.Backend, getCallCount 
 	}
 
 	return args
-}
-
-func EventuallyWithTimeout(arg interface{}) GomegaAsyncAssertion {
-	return Eventually(arg, 5*time.Second, 500*time.Millisecond)
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,7 +9,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
@@ -19,28 +17,16 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 
-	"github.com/pivotal-cf-experimental/service-config"
-	"github.com/pivotal-golang/lager"
 	"time"
+
+	"github.com/pivotal-golang/lager"
 )
 
 func main() {
-	serviceConfig := service_config.New()
 
-	flags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	pidFile := flags.String("pidFile", "", "Path to pid file")
-	staticDir := flags.String("staticDir", "", "Path to directory containing static UI")
-	serviceConfig.AddFlags(flags)
-	cf_lager.AddFlags(flags)
-	flags.Parse(os.Args[1:])
+	rootConfig, err := config.NewConfig(os.Args)
 
-	logger, _ := cf_lager.New("Switchboard")
-
-	var rootConfig config.Config
-	err := serviceConfig.Read(&rootConfig)
-	if err != nil {
-		logger.Fatal("Error reading config:", err)
-	}
+	logger := rootConfig.Logger
 
 	err = rootConfig.Validate()
 	if err != nil {
@@ -55,12 +41,8 @@ func main() {
 		}
 	}()
 
-	if *staticDir == "" {
-		logger.Fatal("staticDir flag not provided", nil)
-	}
-
-	if _, err := os.Stat(*staticDir); os.IsNotExist(err) {
-		logger.Fatal(fmt.Sprintf("staticDir: %s does not exist", *staticDir), nil)
+	if _, err := os.Stat(rootConfig.StaticDir); os.IsNotExist(err) {
+		logger.Fatal(fmt.Sprintf("staticDir: %s does not exist", rootConfig.StaticDir), nil)
 	}
 
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
@@ -72,7 +54,7 @@ func main() {
 		arpManager,
 	)
 
-	handler := api.NewHandler(backends, logger, rootConfig.API, *staticDir)
+	handler := api.NewHandler(backends, logger, rootConfig.API, rootConfig.StaticDir)
 
 	members := grouper.Members{
 		{
@@ -107,11 +89,11 @@ func main() {
 
 	logger.Info("Proxy started", lager.Data{"proxyConfig": rootConfig.Proxy})
 
-	err = ioutil.WriteFile(*pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
+	err = ioutil.WriteFile(rootConfig.PidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
 	if err == nil {
-		logger.Info(fmt.Sprintf("Wrote pidFile to %s", *pidFile))
+		logger.Info(fmt.Sprintf("Wrote pidFile to %s", rootConfig.PidFile))
 	} else {
-		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": *pidFile})
+		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": rootConfig.PidFile})
 	}
 
 	err = <-process.Wait()

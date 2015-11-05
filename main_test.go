@@ -107,8 +107,6 @@ var _ = Describe("Switchboard", func() {
 			Command: exec.Command(
 				switchboardBinPath,
 				fmt.Sprintf("-configPath=%s", configPath),
-				fmt.Sprintf("-pidFile=%s", pidFile),
-				fmt.Sprintf("-staticDir=%s", staticDir),
 			),
 			Name:              fmt.Sprintf("switchboard"),
 			StartCheck:        "started",

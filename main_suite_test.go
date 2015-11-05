@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/candiedyaml"
+	"github.com/cloudfoundry-incubator/switchboard/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -48,6 +48,9 @@ var _ = BeforeSuite(func() {
 	pidFile = filepath.Join(tempDir, "switchboard.pid")
 
 	configPath = filepath.Join(tempDir, "proxyConfig.yml")
+
+	testDir := getDirOfCurrentFile()
+	staticDir = filepath.Join(testDir, "static")
 })
 
 func initConfig() {
@@ -87,6 +90,8 @@ func initConfig() {
 		API:          apiConfig,
 		ProfilerPort: switchboardProfilerPort,
 		HealthPort:   switchboardHealthPort,
+		PidFile:      pidFile,
+		StaticDir:    staticDir,
 	}
 }
 
@@ -97,9 +102,6 @@ func writeConfig() {
 	encoder := candiedyaml.NewEncoder(fileToWrite)
 	err = encoder.Encode(rootConfig)
 	Ω(err).ShouldNot(HaveOccurred())
-
-	testDir := getDirOfCurrentFile()
-	staticDir = filepath.Join(testDir, "static")
 }
 
 func getDirOfCurrentFile() string {

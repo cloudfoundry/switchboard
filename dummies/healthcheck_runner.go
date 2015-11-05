@@ -15,6 +15,7 @@ import (
 type HealthcheckRunner struct {
 	sync.Mutex
 	port       uint
+	endpoint   string
 	stopped    chan interface{}
 	statusCode int
 	hang       bool
@@ -22,7 +23,8 @@ type HealthcheckRunner struct {
 
 func NewHealthcheckRunner(backend config.Backend) *HealthcheckRunner {
 	return &HealthcheckRunner{
-		port:       backend.HealthcheckPort,
+		port:       backend.StatusPort,
+		endpoint:   backend.StatusEndpoint,
 		stopped:    make(chan interface{}),
 		statusCode: http.StatusOK,
 		hang:       false,
@@ -47,7 +49,7 @@ func (fh *HealthcheckRunner) Run(signals <-chan os.Signal, ready chan<- struct{}
 	errChan := make(chan error, 1)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", fh.health)
+	mux.HandleFunc(fmt.Sprintf("/%s", fh.endpoint), fh.health)
 
 	server := http.Server{
 		Handler: mux,

@@ -36,10 +36,11 @@ type API struct {
 }
 
 type Backend struct {
-	Host            string `validate:"nonzero"`
-	Port            uint   `validate:"nonzero"`
-	HealthcheckPort uint   `validate:"nonzero"`
-	Name            string `validate:"nonzero"`
+	Host           string `validate:"nonzero"`
+	Port           uint   `validate:"nonzero"`
+	StatusPort     uint   `validate:"nonzero"`
+	StatusEndpoint string `validate:"nonzero"`
+	Name           string `validate:"nonzero"`
 }
 
 func (p Proxy) HealthcheckTimeout() time.Duration {

@@ -23,7 +23,7 @@ var _ = Describe("Backend", func() {
 		}
 
 		logger := lagertest.NewTestLogger("Backend test")
-		backend = domain.NewBackend("backend-0", "1.2.3.4", 3306, 9902, logger)
+		backend = domain.NewBackend("backend-0", "1.2.3.4", 3306, 9902, "status", logger)
 	})
 
 	AfterEach(func() {
@@ -33,7 +33,7 @@ var _ = Describe("Backend", func() {
 	Describe("HealthcheckUrl", func() {
 		It("has the correct protocol, backend host and health check port", func() {
 			healthcheckURL := backend.HealthcheckUrl()
-			Expect(healthcheckURL).To(Equal("http://1.2.3.4:9902"))
+			Expect(healthcheckURL).To(Equal("http://1.2.3.4:9902/status"))
 		})
 	})
 

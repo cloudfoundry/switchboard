@@ -27,9 +27,9 @@ var _ = Describe("Backends", func() {
 		logger := lagertest.NewTestLogger("Backends test")
 
 		backendConfigs := []config.Backend{
-			{"localhost", 50000, 60000, "backend-0"},
-			{"localhost", 50001, 60001, "backend-1"},
-			{"localhost", 50002, 60002, "backend-2"},
+			{"localhost", 50000, 60000, "status", "backend-0"},
+			{"localhost", 50001, 60001, "status", "backend-1"},
+			{"localhost", 50002, 60002, "status", "backend-2"},
 		}
 
 		backends = domain.NewBackends(backendConfigs, logger)
@@ -95,9 +95,9 @@ var _ = Describe("Backends", func() {
 				backendsSeen = append(backendsSeen, backend.HealthcheckUrl())
 			}
 
-			Expect(backendsSeen).To(ContainElement("http://localhost:60000"))
-			Expect(backendsSeen).To(ContainElement("http://localhost:60001"))
-			Expect(backendsSeen).To(ContainElement("http://localhost:60002"))
+			Expect(backendsSeen).To(ContainElement("http://localhost:60000/status"))
+			Expect(backendsSeen).To(ContainElement("http://localhost:60001/status"))
+			Expect(backendsSeen).To(ContainElement("http://localhost:60002/status"))
 		})
 	})
 
@@ -156,7 +156,7 @@ var _ = Describe("Backends", func() {
 
 		Context("when this is active", func() {
 			BeforeEach(func() {
-				domain.BackendProvider = func(string, string, uint, uint, lager.Logger) domain.Backend {
+				domain.BackendProvider = func(string, string, uint, uint, string, lager.Logger) domain.Backend {
 					return &fakes.FakeBackend{}
 				}
 			})

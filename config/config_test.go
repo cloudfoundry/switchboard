@@ -45,7 +45,8 @@ var _ = Describe("Config", func() {
 						{
 							"Host": "10.10.10.10",
 							"Port": 3306,
-							"HealthcheckPort": 9200,
+							"StatusPort": 9200,
+							"StatusEndpoint": "galera_healthcheck",
 							"Name": "backend-0"
 						}
 					]
@@ -107,8 +108,13 @@ var _ = Describe("Config", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("returns an error if Proxy.Backends.HealthcheckPort is blank", func() {
-			err := test_helpers.IsRequiredField(rootConfig, "Proxy.Backends.HealthcheckPort")
+		It("returns an error if Proxy.Backends.StatusPort is blank", func() {
+			err := test_helpers.IsRequiredField(rootConfig, "Proxy.Backends.StatusPort")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("returns an error if Proxy.Backends.StatusEndpoint is blank", func() {
+			err := test_helpers.IsRequiredField(rootConfig, "Proxy.Backends.StatusEndpoint")
 			Expect(err).ToNot(HaveOccurred())
 		})
 

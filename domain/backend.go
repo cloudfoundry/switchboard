@@ -19,12 +19,13 @@ type Backend interface {
 }
 
 type backend struct {
-	host            string
-	port            uint
-	healthcheckPort uint
-	logger          lager.Logger
-	bridges         Bridges
-	name            string
+	host           string
+	port           uint
+	statusPort     uint
+	statusEndpoint string
+	logger         lager.Logger
+	bridges        Bridges
+	name           string
 }
 
 type BackendJSON struct {
@@ -40,21 +41,23 @@ func NewBackend(
 	name string,
 	host string,
 	port uint,
-	healthcheckPort uint,
+	statusPort uint,
+	statusEndpoint string,
 	logger lager.Logger) Backend {
 
 	return &backend{
-		name:            name,
-		host:            host,
-		port:            port,
-		healthcheckPort: healthcheckPort,
-		logger:          logger,
-		bridges:         BridgesProvider(logger),
+		name:           name,
+		host:           host,
+		port:           port,
+		statusPort:     statusPort,
+		statusEndpoint: statusEndpoint,
+		logger:         logger,
+		bridges:        BridgesProvider(logger),
 	}
 }
 
 func (b backend) HealthcheckUrl() string {
-	return fmt.Sprintf("http://%s:%d", b.host, b.healthcheckPort)
+	return fmt.Sprintf("http://%s:%d/%s", b.host, b.statusPort, b.statusEndpoint)
 }
 
 func (b backend) Bridge(clientConn net.Conn) error {

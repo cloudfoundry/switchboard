@@ -60,17 +60,19 @@ func initConfig() {
 	switchboardHealthPort = uint(6160 + GinkgoParallelNode())
 
 	backend1 := config.Backend{
-		Host:            "localhost",
-		Port:            uint(45000 + GinkgoParallelNode()),
-		HealthcheckPort: uint(45500 + GinkgoParallelNode()),
-		Name:            "backend-0",
+		Host:           "localhost",
+		Port:           uint(45000 + GinkgoParallelNode()),
+		StatusPort:     uint(45500 + GinkgoParallelNode()),
+		StatusEndpoint: "galera_healthcheck",
+		Name:           "backend-0",
 	}
 
 	backend2 := config.Backend{
-		Host:            "localhost",
-		Port:            uint(46000 + GinkgoParallelNode()),
-		HealthcheckPort: uint(46500 + GinkgoParallelNode()),
-		Name:            "backend-1",
+		Host:           "localhost",
+		Port:           uint(46000 + GinkgoParallelNode()),
+		StatusPort:     uint(46500 + GinkgoParallelNode()),
+		StatusEndpoint: "galera_healthcheck",
+		Name:           "backend-1",
 	}
 
 	backends = []config.Backend{backend1, backend2}

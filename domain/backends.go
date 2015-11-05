@@ -37,7 +37,8 @@ func NewBackends(backendConfigs []config.Backend, logger lager.Logger) Backends 
 			bc.Name,
 			bc.Host,
 			bc.Port,
-			bc.HealthcheckPort,
+			bc.StatusPort,
+			bc.StatusEndpoint,
 			logger,
 		)
 

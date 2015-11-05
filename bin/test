@@ -4,6 +4,14 @@ result=0
 
 MY_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+function get_cpu_count() {
+  if [[ "$(uname)" = "Darwin" ]]; then
+    sysctl -n hw.ncpu
+  else
+    nproc
+  fi
+}
+
 echo -e "\nVetting packages for potential issues..."
 $MY_DIR/govet
 let "result+=$?"
@@ -13,7 +21,7 @@ echo -e "\nTesting packages..."
 # due to the high amount of concurrency in these tests, tests will often fail
 # with timeouts if run in parallel on systems with fewer than 4 cores
 GINKGO_FLAGS="-r -failOnPending -randomizeAllSpecs -slowSpecThreshold=10"
-if [ "$(nproc)" -ge "4" ]; then
+if [ "$(get_cpu_count)" -ge "4" ]; then
   GINKGO_FLAGS="${GINKGO_FLAGS} -p"
 fi
 

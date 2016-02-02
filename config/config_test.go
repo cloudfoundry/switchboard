@@ -15,14 +15,15 @@ var _ = Describe("Config", func() {
 	Describe("Validate", func() {
 
 		var (
-			rootConfig *Config
-			rawConfig  string
+			rootConfig    *Config
+			rawConfig     string
+			rawConfigFile string
 		)
 
 		JustBeforeEach(func() {
 			osArgs := []string{
 				"switchboard",
-				fmt.Sprintf("-config=%s", rawConfig),
+				fmt.Sprintf("-configPath=%s", rawConfigFile),
 			}
 
 			var err error
@@ -33,7 +34,7 @@ var _ = Describe("Config", func() {
 		BeforeEach(func() {
 			rawConfig = `{
 				"API": {
-					"Port": 80,
+					"Port": "80",
 					"Username": "fake-username",
 					"Password": "fake-password",
 					"ForceHttps": true
@@ -56,11 +57,12 @@ var _ = Describe("Config", func() {
 				"StaticDir": "fake-path",
 				"PidFile": "fake-pid-path"
 			}`
+			rawConfigFile = "fixtures/validConfig.yml"
 		})
 
 		It("does not return error on valid config", func() {
 			err := rootConfig.Validate()
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("returns an error if API.Port is blank", func() {

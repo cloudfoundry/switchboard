@@ -76,20 +76,4 @@ var _ = Describe("HttpsEnforcer", func() {
 			})
 		})
 	})
-
-	Context("when the URL is invalid", func() {
-		BeforeEach(func() {
-			request, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
-			request.Header.Set("X-Forwarded-Proto", "http")
-		})
-
-		It("should respond with a 401", func() {
-			request.URL.Host = "%%%"
-
-			wrappedMiddleware.ServeHTTP(writer, request)
-
-			Expect(writer.Code).To(Equal(http.StatusBadRequest))
-			Expect(writer.Body.String()).To(Equal("Bad Request"))
-		})
-	})
 })

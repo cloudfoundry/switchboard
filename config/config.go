@@ -41,30 +41,30 @@ func formatErrorString(err error, keyPrefix string) string {
 }
 
 type Config struct {
-	Proxy        Proxy `validate:"nonzero"`
-	API          API   `validate:"nonzero"`
-	ProfilerPort uint  `validate:"nonzero"`
-	HealthPort   uint  `validate:"nonzero"`
+	Proxy        Proxy  `yaml:"Proxy" validate:"nonzero"`
+	API          API    `yaml:"API" validate:"nonzero"`
+	ProfilerPort uint   `yaml:"ProfilerPort" validate:"nonzero"`
+	HealthPort   uint   `yaml:"HealthPort" validate:"nonzero"`
 }
 
 type Proxy struct {
-	Port                     uint      `validate:"nonzero"`
-	Backends                 []Backend `validate:"min=1"`
-	HealthcheckTimeoutMillis uint      `validate:"nonzero"`
+	Port                     uint      `yaml:"Port" validate:"nonzero"`
+	Backends                 []Backend `yaml:"Backends" validate:"min=1"`
+	HealthcheckTimeoutMillis uint      `yaml:"HealthcheckTimeoutMillis" validate:"nonzero"`
 }
 
 type API struct {
-	Port       uint   `validate:"nonzero"`
-	Username   string `validate:"nonzero"`
-	Password   string `validate:"nonzero"`
-	ForceHttps bool
+	Port       uint   `yaml:"Port" validate:"nonzero"`
+	Username   string `yaml:"Username" validate:"nonzero"`
+	Password   string `yaml:"Password" validate:"nonzero"`
+	ForceHttps bool   `yaml:"ForceHttps"`
 }
 
 type Backend struct {
-	Host            string `validate:"nonzero"`
-	Port            uint   `validate:"nonzero"`
-	HealthcheckPort uint   `validate:"nonzero"`
-	Name            string `validate:"nonzero"`
+	Host           	string `yaml:"Host" validate:"nonzero"`
+	Port           	uint   `yaml:"Port" validate:"nonzero"`
+	HealthcheckPort uint   `yaml:"HealthcheckPort" validate:"nonzero"`
+	Name           	string `yaml:"Name" validate:"nonzero"`
 }
 
 func (p Proxy) HealthcheckTimeout() time.Duration {

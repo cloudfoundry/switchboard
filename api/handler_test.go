@@ -18,16 +18,15 @@ var _ = Describe("Handler", func() {
 	var (
 		handler          http.Handler
 		responseRecorder *httptest.ResponseRecorder
+		cfg              config.API
 	)
 
 	JustBeforeEach(func() {
 		backends := &domainfakes.FakeBackends{}
 		logger := lagertest.NewTestLogger("Handler Test")
-		config := config.API{
-			ForceHttps: true,
-		}
+
 		staticDir := ""
-		handler = api.NewHandler(backends, logger, config, staticDir)
+		handler = api.NewHandler(backends, logger, cfg, staticDir)
 	})
 
 	Context("when a request panics", func() {
@@ -38,6 +37,11 @@ var _ = Describe("Handler", func() {
 		)
 
 		BeforeEach(func() {
+			cfg = config.API{
+				ForceHttps: false,
+				Username:   "foo",
+				Password:   "bar",
+			}
 			realBackendsIndex = api.BackendsIndex
 			api.BackendsIndex = func(domain.Backends) http.Handler {
 				return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
@@ -49,6 +53,7 @@ var _ = Describe("Handler", func() {
 			var err error
 			request, err = http.NewRequest("GET", "/v0/backends", nil)
 			Expect(err).NotTo(HaveOccurred())
+			request.SetBasicAuth("foo", "bar")
 		})
 
 		AfterEach(func() {
@@ -68,6 +73,9 @@ var _ = Describe("Handler", func() {
 		var request *http.Request
 
 		BeforeEach(func() {
+			cfg = config.API{
+				ForceHttps: true,
+			}
 			responseRecorder = httptest.NewRecorder()
 			request, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
 			request.Header.Set("X-Forwarded-Proto", "http")

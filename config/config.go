@@ -13,13 +13,15 @@ import (
 )
 
 type Config struct {
-	Proxy        Proxy  `yaml:"Proxy" validate:"nonzero"`
-	API          API    `yaml:"API" validate:"nonzero"`
-	StaticDir    string `yaml:"StaticDir" validate:"nonzero"`
-	PidFile      string `yaml:"PidFile" validate:"nonzero"`
-	ProfilerPort uint   `yaml:"ProfilerPort" validate:"nonzero"`
-	HealthPort   uint   `yaml:"HealthPort" validate:"nonzero"`
-	Logger       lager.Logger
+	Proxy             Proxy  `yaml:"Proxy" validate:"nonzero"`
+	API               API    `yaml:"API" validate:"nonzero"`
+	StaticDir         string `yaml:"StaticDir" validate:"nonzero"`
+	PidFile           string `yaml:"PidFile" validate:"nonzero"`
+	ProfilerPort      uint   `yaml:"ProfilerPort" validate:"nonzero"`
+	HealthPort        uint   `yaml:"HealthPort" validate:"nonzero"`
+	ConsulCluster     string `yaml:"ConsulCluster"`
+	ConsulServiceName string `yaml:"ConsulServiceName"`
+	Logger            lager.Logger
 }
 
 type Proxy struct {

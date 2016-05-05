@@ -9,16 +9,20 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/cloudfoundry-incubator/consuladapter"
+	"github.com/cloudfoundry-incubator/locket"
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/cloudfoundry-incubator/switchboard/health"
 	"github.com/cloudfoundry-incubator/switchboard/proxy"
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 
 	"time"
 
+	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -74,13 +78,44 @@ func main() {
 		})
 	}
 
-	group := grouper.NewDynamic(os.Kill, len(members), len(members))
-	process := ifrit.Invoke(group)
-	inserter := group.Client().Inserter()
-	for _, member := range members {
-		inserter <- member
+	if rootConfig.ConsulCluster != "" {
+		writePid(logger, rootConfig.PidFile)
+
+		if rootConfig.ConsulServiceName == "" {
+			rootConfig.ConsulServiceName = "mysql"
+		}
+
+		clock := clock.NewClock()
+		consulClient, err := consuladapter.NewClientFromUrl(rootConfig.ConsulCluster)
+		if err != nil {
+			logger.Fatal("new-consul-client-failed", err)
+		}
+
+		lock := locket.NewLock(
+			logger,
+			consulClient,
+			locket.LockSchemaPath(rootConfig.ConsulServiceName+"_lock"),
+			[]byte{},
+			clock,
+			locket.RetryInterval,
+			locket.LockTTL,
+		)
+
+		registrationRunner := locket.NewRegistrationRunner(logger,
+			&consulapi.AgentServiceRegistration{
+				Name:  rootConfig.ConsulServiceName,
+				Port:  int(rootConfig.Proxy.Port),
+				Check: &consulapi.AgentServiceCheck{TTL: "3s"},
+			},
+			consulClient, locket.RetryInterval, clock)
+
+		members = append([]grouper.Member{{"lock", lock}}, members...)
+		members = append(members, grouper.Member{"registration", registrationRunner})
 	}
-	group.Client().Close()
+
+	group := grouper.NewOrdered(os.Kill, members)
+
+	process := ifrit.Invoke(group)
 
 	err = waitUntilReady(process, logger)
 	if err != nil {
@@ -89,11 +124,8 @@ func main() {
 
 	logger.Info("Proxy started", lager.Data{"proxyConfig": rootConfig.Proxy})
 
-	err = ioutil.WriteFile(rootConfig.PidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
-	if err == nil {
-		logger.Info(fmt.Sprintf("Wrote pidFile to %s", rootConfig.PidFile))
-	} else {
-		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": rootConfig.PidFile})
+	if rootConfig.ConsulCluster == "" {
+		writePid(logger, rootConfig.PidFile)
 	}
 
 	err = <-process.Wait()
@@ -117,5 +149,14 @@ func waitUntilReady(process ifrit.Process, logger lager.Logger) error {
 			err = errors.New("Child process exited before becoming ready")
 		}
 		return err
+	}
+}
+
+func writePid(logger lager.Logger, pidFile string) {
+	err := ioutil.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
+	if err == nil {
+		logger.Info(fmt.Sprintf("Wrote pidFile to %s", pidFile))
+	} else {
+		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": pidFile})
 	}
 }

@@ -35,6 +35,7 @@ var rootConfig config.Config
 var proxyConfig config.Proxy
 var apiConfig config.API
 var pidFile string
+var tempDir string
 var staticDir string
 
 var _ = BeforeSuite(func() {
@@ -45,8 +46,6 @@ var _ = BeforeSuite(func() {
 	tempDir, err := ioutil.TempDir(os.TempDir(), "switchboard")
 	Expect(err).NotTo(HaveOccurred())
 
-	pidFile = filepath.Join(tempDir, "switchboard.pid")
-
 	configPath = filepath.Join(tempDir, "proxyConfig.yml")
 
 	testDir := getDirOfCurrentFile()
@@ -54,6 +53,11 @@ var _ = BeforeSuite(func() {
 })
 
 func initConfig() {
+	pidFileFile, _ := ioutil.TempFile(tempDir, "switchboard.pid")
+	pidFileFile.Close()
+	pidFile = pidFileFile.Name()
+	os.Remove(pidFile)
+
 	switchboardPort = uint(39900 + GinkgoParallelNode())
 	switchboardAPIPort = uint(39000 + GinkgoParallelNode())
 	switchboardProfilerPort = uint(6060 + GinkgoParallelNode())

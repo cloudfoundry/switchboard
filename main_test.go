@@ -570,10 +570,10 @@ var _ = Describe("Switchboard", func() {
 			})
 
 			It("registers itself with consul", func() {
-				services, err := consulClient.Agent().Services()
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(services).To(HaveKeyWithValue("test_mysql",
+				Eventually(func() map[string]*api.AgentService {
+					services, _ := consulClient.Agent().Services()
+					return services
+				}).Should(HaveKeyWithValue("test_mysql",
 					&api.AgentService{
 						Service: "test_mysql",
 						ID:      "test_mysql",
@@ -583,12 +583,12 @@ var _ = Describe("Switchboard", func() {
 
 			Context("but then loses the lock", func() {
 				It("exits with an error", func() {
-					var processErr error
-					go func() { processErr = <-process.Wait() }()
+					processErr := make(chan error)
+					go func() { err := <-process.Wait(); processErr <- err }()
 
 					consulRunner.Reset()
-
-					Eventually(func() error { return processErr }).Should(HaveOccurred())
+					err := <-processErr
+					Expect(err).To(HaveOccurred())
 				})
 			})
 		})

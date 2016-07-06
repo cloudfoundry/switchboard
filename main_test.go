@@ -131,12 +131,14 @@ var _ = Describe("Switchboard", func() {
 			dummies.NewHealthcheckRunner(backends[1]),
 		}
 
+		logLevel := "debug"
 		switchboardRunner := ginkgomon.New(ginkgomon.Config{
 			Command: exec.Command(
 				switchboardBinPath,
 				fmt.Sprintf("-configPath=%s", configPath),
 				fmt.Sprintf("-pidFile=%s", pidFile),
 				fmt.Sprintf("-staticDir=%s", staticDir),
+				fmt.Sprintf("-logLevel=%s", logLevel),
 			),
 			Name:              fmt.Sprintf("switchboard"),
 			StartCheck:        "started",

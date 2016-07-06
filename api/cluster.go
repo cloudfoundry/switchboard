@@ -73,7 +73,8 @@ func handleUpdate(
 	}
 
 	if enabled {
-		cluster.EnableTraffic()
+		message := req.Form.Get("message")
+		cluster.EnableTraffic(message)
 	} else {
 		message := req.Form.Get("message")
 		if message == "" {

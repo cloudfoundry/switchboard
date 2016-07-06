@@ -29,7 +29,7 @@ type Cluster interface {
 	Monitor() chan<- interface{}
 	RouteToBackend(clientConn net.Conn) error
 	AsJSON() ClusterJSON
-	EnableTraffic()
+	EnableTraffic(message string)
 	DisableTraffic(message string)
 }
 
@@ -175,13 +175,13 @@ func (c cluster) AsJSON() ClusterJSON {
 	}
 }
 
-func (c *cluster) EnableTraffic() {
+func (c *cluster) EnableTraffic(message string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.logger.Info("Enabling traffic for cluster")
+	c.logger.Info("Enabling traffic for cluster", lager.Data{"message": message})
 
-	c.message = ""
+	c.message = message
 
 	for backend := range c.backends.All() {
 		backend.EnableTraffic()

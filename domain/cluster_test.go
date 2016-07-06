@@ -119,7 +119,7 @@ var _ = Describe("Cluster", func() {
 			defer close(stopMonitoring)
 
 			Eventually(backends.SetHealthyCallCount, 2*time.Second).Should(Equal(2))
-			healthyBackends := []domain.Backend{}
+			var healthyBackends []domain.Backend
 			for i := 0; i < 2; i++ {
 				healthyBackends = append(healthyBackends, backends.SetHealthyArgsForCall(i))
 			}
@@ -129,7 +129,7 @@ var _ = Describe("Cluster", func() {
 				backend3,
 			}))
 
-			Expect(backends.SetUnhealthyCallCount()).To(BeNumerically(">=", 1))
+			Eventually(backends.SetUnhealthyCallCount()).Should(BeNumerically(">=", 1))
 			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
 		}, 5)
 

@@ -130,6 +130,31 @@ var _ = Describe("Cluster", func() {
 
 				Expect(fakeCluster.EnableTrafficCallCount()).To(Equal(1))
 			})
+
+			It("records a message when provided", func() {
+				patchURL = server.URL() + "?trafficEnabled=true&message=some%20message"
+				req, err := http.NewRequest("PATCH", patchURL, nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				client := &http.Client{}
+				_, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeCluster.EnableTrafficCallCount()).To(Equal(1))
+				Expect(fakeCluster.EnableTrafficArgsForCall(0)).To(Equal("some message"))
+			})
+
+			It("does not require a message", func() {
+				req, err := http.NewRequest("PATCH", patchURL, nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				client := &http.Client{}
+				_, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeCluster.EnableTrafficCallCount()).To(Equal(1))
+				Expect(fakeCluster.EnableTrafficArgsForCall(0)).To(BeEmpty())
+			})
 		})
 
 		Context("when traffic is disabled", func() {
@@ -149,6 +174,18 @@ var _ = Describe("Cluster", func() {
 
 				Expect(fakeCluster.DisableTrafficCallCount()).To(Equal(1))
 				Expect(fakeCluster.DisableTrafficArgsForCall(0)).To(Equal("some message"))
+			})
+
+			It("requires a message", func() {
+				patchURL = server.URL()
+				req, err := http.NewRequest("PATCH", patchURL, nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				client := &http.Client{}
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
 

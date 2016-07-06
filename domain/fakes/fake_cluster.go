@@ -29,9 +29,11 @@ type FakeCluster struct {
 	asJSONReturns     struct {
 		result1 domain.ClusterJSON
 	}
-	EnableTrafficStub         func()
-	enableTrafficMutex        sync.RWMutex
-	enableTrafficArgsForCall  []struct{}
+	EnableTrafficStub        func(message string)
+	enableTrafficMutex       sync.RWMutex
+	enableTrafficArgsForCall []struct {
+		message string
+	}
 	DisableTrafficStub        func(message string)
 	disableTrafficMutex       sync.RWMutex
 	disableTrafficArgsForCall []struct {
@@ -119,12 +121,14 @@ func (fake *FakeCluster) AsJSONReturns(result1 domain.ClusterJSON) {
 	}{result1}
 }
 
-func (fake *FakeCluster) EnableTraffic() {
+func (fake *FakeCluster) EnableTraffic(message string) {
 	fake.enableTrafficMutex.Lock()
-	fake.enableTrafficArgsForCall = append(fake.enableTrafficArgsForCall, struct{}{})
+	fake.enableTrafficArgsForCall = append(fake.enableTrafficArgsForCall, struct {
+		message string
+	}{message})
 	fake.enableTrafficMutex.Unlock()
 	if fake.EnableTrafficStub != nil {
-		fake.EnableTrafficStub()
+		fake.EnableTrafficStub(message)
 	}
 }
 
@@ -132,6 +136,12 @@ func (fake *FakeCluster) EnableTrafficCallCount() int {
 	fake.enableTrafficMutex.RLock()
 	defer fake.enableTrafficMutex.RUnlock()
 	return len(fake.enableTrafficArgsForCall)
+}
+
+func (fake *FakeCluster) EnableTrafficArgsForCall(i int) string {
+	fake.enableTrafficMutex.RLock()
+	defer fake.enableTrafficMutex.RUnlock()
+	return fake.enableTrafficArgsForCall[i].message
 }
 
 func (fake *FakeCluster) DisableTraffic(message string) {

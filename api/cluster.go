@@ -41,14 +41,14 @@ func writeClusterResponse(cluster domain.Cluster, w http.ResponseWriter) {
 }
 
 func setAllowTraffic(req *http.Request, cluster domain.Cluster, logger lager.Logger) {
-	logger.Info("Received set allow traffic state")
+	logger.Info("API Received enable traffic invocation")
 
 	err := req.ParseForm()
 	if err != nil {
 		panic(err)
 	}
 
-	enabledStr := req.FormValue("allow_traffic")
+	enabledStr := req.FormValue("trafficEnabled")
 	enabled, err := strconv.ParseBool(enabledStr)
 	if err != nil {
 		panic(err)

@@ -29,6 +29,19 @@ type Response struct {
 	Message      string
 }
 
+func allowTraffic(allow bool) {
+	url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=%t", switchboardAPIPort, allow)
+
+	req, err := http.NewRequest("PATCH", url, nil)
+	Expect(err).NotTo(HaveOccurred())
+	req.SetBasicAuth("username", "password")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+}
+
 func sendData(conn net.Conn, data string) (Response, error) {
 	conn.Write([]byte(data))
 	buffer := make([]byte, 1024)
@@ -332,24 +345,52 @@ var _ = Describe("Switchboard", func() {
 		})
 
 		Describe("/v0/cluster", func() {
-			var (
-				url string
-				req *http.Request
-			)
+			Describe("GET", func() {
+				It("returns valid JSON in body", func() {
+					url := fmt.Sprintf("http://localhost:%d/v0/cluster", switchboardAPIPort)
+					req, err := http.NewRequest("GET", url, nil)
+					Expect(err).NotTo(HaveOccurred())
+					req.SetBasicAuth("username", "password")
 
-			BeforeEach(func() {
-				url = fmt.Sprintf("http://localhost:%d/v0/cluster", switchboardAPIPort)
+					returnedCluster := getClusterFromAPI(req)
 
-				var err error
-				req, err = http.NewRequest("GET", url, nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.SetBasicAuth("username", "password")
+					Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
+					Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
+				})
 			})
 
-			It("returns valid JSON in body", func() {
-				returnedCluster := getClusterFromAPI(req)
+			Describe("PATCH", func() {
+				It("returns valid JSON in body", func() {
+					url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=true", switchboardAPIPort)
+					req, err := http.NewRequest("PATCH", url, nil)
+					Expect(err).NotTo(HaveOccurred())
+					req.SetBasicAuth("username", "password")
 
-				Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
+					returnedCluster := getClusterFromAPI(req)
+
+					Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
+					Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
+				})
+
+				It("persists the provided value of enableTraffic", func() {
+					url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=false", switchboardAPIPort)
+					req, err := http.NewRequest("PATCH", url, nil)
+					Expect(err).NotTo(HaveOccurred())
+					req.SetBasicAuth("username", "password")
+
+					returnedCluster := getClusterFromAPI(req)
+
+					Expect(returnedCluster["trafficEnabled"]).To(BeFalse())
+
+					url = fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=true", switchboardAPIPort)
+					req, err = http.NewRequest("PATCH", url, nil)
+					Expect(err).NotTo(HaveOccurred())
+					req.SetBasicAuth("username", "password")
+
+					returnedCluster = getClusterFromAPI(req)
+
+					Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
+				})
 			})
 		})
 	})
@@ -440,19 +481,6 @@ var _ = Describe("Switchboard", func() {
 				}, 3*time.Second, 500*time.Millisecond).Should(Succeed())
 			})
 		})
-
-		var allowTraffic = func(allow bool) {
-			url := fmt.Sprintf("http://localhost:%d/v0/cluster?allow_traffic=%t", switchboardAPIPort, allow)
-
-			req, err := http.NewRequest("PATCH", url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.SetBasicAuth("username", "password")
-
-			client := &http.Client{}
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-		}
 
 		Context("when traffic is disabled", func() {
 			It("disconnects client connections", func() {

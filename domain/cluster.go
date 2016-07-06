@@ -152,17 +152,22 @@ func (c cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *De
 
 type ClusterJSON struct {
 	CurrentBackendIndex uint `json:"currentBackendIndex"`
+	TrafficEnabled      bool `json:"trafficEnabled"`
 }
 
 func (c cluster) AsJSON() ClusterJSON {
 	return ClusterJSON{
 		CurrentBackendIndex: uint(c.currentBackendIndex),
+
+		// Traffic is enabled and disabled on all backends collectively
+		// so we only need to read the state of one to get the state of
+		// the system as a whole
+		TrafficEnabled: c.backends.Any().TrafficEnabled(),
 	}
 }
 
 func (c *cluster) EnableTraffic() {
-	// c.mutex.Lock()
-	// defer c.mutex.Unlock()
+	c.logger.Info("Enabling traffic for cluster")
 
 	for backend := range c.backends.All() {
 		backend.EnableTraffic()
@@ -170,8 +175,7 @@ func (c *cluster) EnableTraffic() {
 }
 
 func (c *cluster) DisableTraffic() {
-	// c.mutex.Lock()
-	// defer c.mutex.Unlock()
+	c.logger.Info("Disabling traffic for cluster")
 
 	for backend := range c.backends.All() {
 		backend.DisableTraffic()

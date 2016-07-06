@@ -20,6 +20,7 @@ type Backend interface {
 	AsJSON() BackendJSON
 	EnableTraffic()
 	DisableTraffic()
+	TrafficEnabled() bool
 }
 
 type backend struct {
@@ -63,6 +64,13 @@ func NewBackend(
 
 func (b backend) HealthcheckUrl() string {
 	return fmt.Sprintf("http://%s:%d", b.host, b.healthcheckPort)
+}
+
+func (b backend) TrafficEnabled() bool {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	return b.trafficEnabled
 }
 
 func (b backend) Bridge(clientConn net.Conn) error {

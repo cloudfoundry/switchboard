@@ -38,6 +38,12 @@ type FakeBackend struct {
 	DisableTrafficStub        func()
 	disableTrafficMutex       sync.RWMutex
 	disableTrafficArgsForCall []struct{}
+	TrafficEnabledStub        func() bool
+	trafficEnabledMutex       sync.RWMutex
+	trafficEnabledArgsForCall []struct{}
+	trafficEnabledReturns struct {
+		result1 bool
+	}
 }
 
 func (fake *FakeBackend) HealthcheckUrl() string {
@@ -163,6 +169,30 @@ func (fake *FakeBackend) DisableTrafficCallCount() int {
 	fake.disableTrafficMutex.RLock()
 	defer fake.disableTrafficMutex.RUnlock()
 	return len(fake.disableTrafficArgsForCall)
+}
+
+func (fake *FakeBackend) TrafficEnabled() bool {
+	fake.trafficEnabledMutex.Lock()
+	fake.trafficEnabledArgsForCall = append(fake.trafficEnabledArgsForCall, struct{}{})
+	fake.trafficEnabledMutex.Unlock()
+	if fake.TrafficEnabledStub != nil {
+		return fake.TrafficEnabledStub()
+	} else {
+		return fake.trafficEnabledReturns.result1
+	}
+}
+
+func (fake *FakeBackend) TrafficEnabledCallCount() int {
+	fake.trafficEnabledMutex.RLock()
+	defer fake.trafficEnabledMutex.RUnlock()
+	return len(fake.trafficEnabledArgsForCall)
+}
+
+func (fake *FakeBackend) TrafficEnabledReturns(result1 bool) {
+	fake.TrafficEnabledStub = nil
+	fake.trafficEnabledReturns = struct {
+		result1 bool
+	}{result1}
 }
 
 var _ domain.Backend = new(FakeBackend)

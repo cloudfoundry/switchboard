@@ -16,7 +16,7 @@ var Cluster = func(cluster domain.Cluster, logger lager.Logger) http.Handler {
 			writeClusterResponse(cluster, w)
 			return
 		case "PATCH":
-			setAllowTraffic(req, cluster, logger)
+			handleUpdate(req, cluster, logger)
 			writeClusterResponse(cluster, w)
 			return
 		default:
@@ -44,8 +44,8 @@ func writeClusterResponse(cluster domain.Cluster, w http.ResponseWriter) {
 	}
 }
 
-func setAllowTraffic(req *http.Request, cluster domain.Cluster, logger lager.Logger) {
-	logger.Info("API received enable traffic invocation")
+func handleUpdate(req *http.Request, cluster domain.Cluster, logger lager.Logger) {
+	logger.Debug("API /cluster update")
 
 	err := req.ParseForm()
 	if err != nil {

@@ -53,7 +53,7 @@ func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lage
 	}
 }
 
-func (c cluster) Monitor() chan<- interface{} {
+func (c *cluster) Monitor() chan<- interface{} {
 	client := UrlGetterProvider(c.healthcheckTimeout)
 	stopChan := make(chan interface{})
 	for backend := range c.backends.All() {
@@ -62,7 +62,7 @@ func (c cluster) Monitor() chan<- interface{} {
 	return stopChan
 }
 
-func (c cluster) RouteToBackend(clientConn net.Conn) error {
+func (c *cluster) RouteToBackend(clientConn net.Conn) error {
 	activeBackend := c.backends.Active()
 	if activeBackend == nil {
 		return errors.New("No active Backend")
@@ -70,7 +70,7 @@ func (c cluster) RouteToBackend(clientConn net.Conn) error {
 	return activeBackend.Bridge(clientConn)
 }
 
-func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
+func (c *cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
 	go func() {
 		counters := c.setupCounters()
 		for {
@@ -84,7 +84,7 @@ func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-cha
 	}()
 }
 
-func (c cluster) setupCounters() *DecisionCounters {
+func (c *cluster) setupCounters() *DecisionCounters {
 	counters := NewDecisionCounters()
 	logFreq := uint64(5)
 	clearArpFreq := uint64(5)
@@ -108,7 +108,7 @@ func (c cluster) setupCounters() *DecisionCounters {
 	return counters
 }
 
-func (c cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *DecisionCounters) {
+func (c *cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *DecisionCounters) {
 
 	counters.IncrementCount("dial")
 	shouldLog := counters.Should("log")
@@ -159,7 +159,7 @@ type ClusterJSON struct {
 	Message             string `json:"message"`
 }
 
-func (c cluster) AsJSON() ClusterJSON {
+func (c *cluster) AsJSON() ClusterJSON {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 

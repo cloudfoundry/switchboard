@@ -62,18 +62,18 @@ func NewBackend(
 	}
 }
 
-func (b backend) HealthcheckUrl() string {
+func (b *backend) HealthcheckUrl() string {
 	return fmt.Sprintf("http://%s:%d", b.host, b.healthcheckPort)
 }
 
-func (b backend) TrafficEnabled() bool {
+func (b *backend) TrafficEnabled() bool {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 
 	return b.trafficEnabled
 }
 
-func (b backend) Bridge(clientConn net.Conn) error {
+func (b *backend) Bridge(clientConn net.Conn) error {
 	backendAddr := fmt.Sprintf("%s:%d", b.host, b.port)
 
 	b.mutex.RLock()
@@ -100,12 +100,12 @@ func (b backend) Bridge(clientConn net.Conn) error {
 	return nil
 }
 
-func (b backend) SeverConnections() {
+func (b *backend) SeverConnections() {
 	b.logger.Info(fmt.Sprintf("Severing all connections to %s at %s:%d", b.name, b.host, b.port))
 	b.bridges.RemoveAndCloseAll()
 }
 
-func (b backend) AsJSON() BackendJSON {
+func (b *backend) AsJSON() BackendJSON {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 

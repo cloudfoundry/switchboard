@@ -92,9 +92,9 @@ var _ = Describe("Cluster", func() {
 
 		It("contains expected fields", func() {
 			expectedClusterJSON := domain.ClusterJSON{
-				TrafficEnabled:         true,
-				CurrentBackendIndex:    2,
-				TrafficDisabledMessage: "some reason",
+				TrafficEnabled:      true,
+				CurrentBackendIndex: 2,
+				Message:             "some reason",
 			}
 			fakeCluster.AsJSONReturns(expectedClusterJSON)
 
@@ -112,7 +112,7 @@ var _ = Describe("Cluster", func() {
 
 			Expect(returnedCluster.TrafficEnabled).To(BeTrue())
 			Expect(returnedCluster.CurrentBackendIndex).To(BeNumerically("==", 2))
-			Expect(returnedCluster.TrafficDisabledMessage).To(Equal("some reason"))
+			Expect(returnedCluster.Message).To(Equal("some reason"))
 		})
 
 		Context("when traffic is enabled", func() {
@@ -134,7 +134,7 @@ var _ = Describe("Cluster", func() {
 
 		Context("when traffic is disabled", func() {
 			BeforeEach(func() {
-				patchURL = server.URL() + "?trafficEnabled=false&trafficDisabledMessage=some%20message"
+				patchURL = server.URL() + "?trafficEnabled=false&message=some%20message"
 			})
 
 			It("invokes cluster.DisableTraffic", func() {

@@ -39,7 +39,7 @@ func allowTraffic(allow bool) {
 		)
 	} else {
 		url = fmt.Sprintf(
-			"http://localhost:%d/v0/cluster?trafficEnabled=%t&trafficDisabledMessage=%s",
+			"http://localhost:%d/v0/cluster?trafficEnabled=%t&message=%s",
 			switchboardAPIPort,
 			allow,
 			"main%20test%20is%20disabling%20traffic",
@@ -391,7 +391,7 @@ var _ = Describe("Switchboard", func() {
 				})
 
 				It("persists the provided value of enableTraffic", func() {
-					url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=false&trafficDisabledMessage=some-reason", switchboardAPIPort)
+					url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=false&message=some-reason", switchboardAPIPort)
 					req, err := http.NewRequest("PATCH", url, nil)
 					Expect(err).NotTo(HaveOccurred())
 					req.SetBasicAuth("username", "password")
@@ -538,10 +538,9 @@ var _ = Describe("Switchboard", func() {
 				allowTraffic(false)
 				allowTraffic(true)
 
-				var conn net.Conn
 				Eventually(func() error {
 					var err error
-					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					_, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
 				}).Should(Succeed())
 			})

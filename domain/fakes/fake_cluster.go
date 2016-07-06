@@ -12,7 +12,7 @@ type FakeCluster struct {
 	MonitorStub        func() chan<- interface{}
 	monitorMutex       sync.RWMutex
 	monitorArgsForCall []struct{}
-	monitorReturns     struct {
+	monitorReturns struct {
 		result1 chan<- interface{}
 	}
 	RouteToBackendStub        func(clientConn net.Conn) error
@@ -23,6 +23,18 @@ type FakeCluster struct {
 	routeToBackendReturns struct {
 		result1 error
 	}
+	AsJSONStub        func() domain.ClusterJSON
+	asJSONMutex       sync.RWMutex
+	asJSONArgsForCall []struct{}
+	asJSONReturns struct {
+		result1 domain.ClusterJSON
+	}
+	EnableTrafficStub        func()
+	enableTrafficMutex       sync.RWMutex
+	enableTrafficArgsForCall []struct{}
+	DisableTrafficStub        func()
+	disableTrafficMutex       sync.RWMutex
+	disableTrafficArgsForCall []struct{}
 }
 
 func (fake *FakeCluster) Monitor() chan<- interface{} {
@@ -79,6 +91,60 @@ func (fake *FakeCluster) RouteToBackendReturns(result1 error) {
 	fake.routeToBackendReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeCluster) AsJSON() domain.ClusterJSON {
+	fake.asJSONMutex.Lock()
+	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
+	fake.asJSONMutex.Unlock()
+	if fake.AsJSONStub != nil {
+		return fake.AsJSONStub()
+	} else {
+		return fake.asJSONReturns.result1
+	}
+}
+
+func (fake *FakeCluster) AsJSONCallCount() int {
+	fake.asJSONMutex.RLock()
+	defer fake.asJSONMutex.RUnlock()
+	return len(fake.asJSONArgsForCall)
+}
+
+func (fake *FakeCluster) AsJSONReturns(result1 domain.ClusterJSON) {
+	fake.AsJSONStub = nil
+	fake.asJSONReturns = struct {
+		result1 domain.ClusterJSON
+	}{result1}
+}
+
+func (fake *FakeCluster) EnableTraffic() {
+	fake.enableTrafficMutex.Lock()
+	fake.enableTrafficArgsForCall = append(fake.enableTrafficArgsForCall, struct{}{})
+	fake.enableTrafficMutex.Unlock()
+	if fake.EnableTrafficStub != nil {
+		fake.EnableTrafficStub()
+	}
+}
+
+func (fake *FakeCluster) EnableTrafficCallCount() int {
+	fake.enableTrafficMutex.RLock()
+	defer fake.enableTrafficMutex.RUnlock()
+	return len(fake.enableTrafficArgsForCall)
+}
+
+func (fake *FakeCluster) DisableTraffic() {
+	fake.disableTrafficMutex.Lock()
+	fake.disableTrafficArgsForCall = append(fake.disableTrafficArgsForCall, struct{}{})
+	fake.disableTrafficMutex.Unlock()
+	if fake.DisableTrafficStub != nil {
+		fake.DisableTrafficStub()
+	}
+}
+
+func (fake *FakeCluster) DisableTrafficCallCount() int {
+	fake.disableTrafficMutex.RLock()
+	defer fake.disableTrafficMutex.RUnlock()
+	return len(fake.disableTrafficArgsForCall)
 }
 
 var _ domain.Cluster = new(FakeCluster)

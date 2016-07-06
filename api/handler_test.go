@@ -22,12 +22,20 @@ var _ = Describe("Handler", func() {
 
 	JustBeforeEach(func() {
 		backends := &domainfakes.FakeBackends{}
+		cluster := &domainfakes.FakeCluster{}
 		logger := lagertest.NewTestLogger("Handler Test")
 		config := config.API{
 			ForceHttps: true,
 		}
 		staticDir := ""
-		handler = api.NewHandler(backends, logger, config, staticDir)
+
+		handler = api.NewHandler(
+			cluster,
+			backends,
+			logger,
+			config,
+			staticDir,
+		)
 	})
 
 	Context("when a request panics", func() {

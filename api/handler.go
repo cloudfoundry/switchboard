@@ -9,12 +9,19 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-func NewHandler(backends domain.Backends, logger lager.Logger, apiConfig config.API, staticDir string) http.Handler {
+func NewHandler(
+	cluster domain.Cluster,
+	backends domain.Backends,
+	logger lager.Logger,
+	apiConfig config.API,
+	staticDir string,
+) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
 
 	mux.Handle("/v0/backends", BackendsIndex(backends))
+	mux.Handle("/v0/cluster", Cluster(cluster, logger))
 
 	return middleware.Chain{
 		middleware.NewPanicRecovery(logger),

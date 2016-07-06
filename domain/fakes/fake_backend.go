@@ -12,7 +12,7 @@ type FakeBackend struct {
 	HealthcheckUrlStub        func() string
 	healthcheckUrlMutex       sync.RWMutex
 	healthcheckUrlArgsForCall []struct{}
-	healthcheckUrlReturns     struct {
+	healthcheckUrlReturns struct {
 		result1 string
 	}
 	BridgeStub        func(clientConn net.Conn) error
@@ -26,12 +26,18 @@ type FakeBackend struct {
 	SeverConnectionsStub        func()
 	severConnectionsMutex       sync.RWMutex
 	severConnectionsArgsForCall []struct{}
-	AsJSONStub                  func() domain.BackendJSON
-	asJSONMutex                 sync.RWMutex
-	asJSONArgsForCall           []struct{}
-	asJSONReturns               struct {
+	AsJSONStub        func() domain.BackendJSON
+	asJSONMutex       sync.RWMutex
+	asJSONArgsForCall []struct{}
+	asJSONReturns struct {
 		result1 domain.BackendJSON
 	}
+	EnableTrafficStub        func()
+	enableTrafficMutex       sync.RWMutex
+	enableTrafficArgsForCall []struct{}
+	DisableTrafficStub        func()
+	disableTrafficMutex       sync.RWMutex
+	disableTrafficArgsForCall []struct{}
 }
 
 func (fake *FakeBackend) HealthcheckUrl() string {
@@ -127,6 +133,36 @@ func (fake *FakeBackend) AsJSONReturns(result1 domain.BackendJSON) {
 	fake.asJSONReturns = struct {
 		result1 domain.BackendJSON
 	}{result1}
+}
+
+func (fake *FakeBackend) EnableTraffic() {
+	fake.enableTrafficMutex.Lock()
+	fake.enableTrafficArgsForCall = append(fake.enableTrafficArgsForCall, struct{}{})
+	fake.enableTrafficMutex.Unlock()
+	if fake.EnableTrafficStub != nil {
+		fake.EnableTrafficStub()
+	}
+}
+
+func (fake *FakeBackend) EnableTrafficCallCount() int {
+	fake.enableTrafficMutex.RLock()
+	defer fake.enableTrafficMutex.RUnlock()
+	return len(fake.enableTrafficArgsForCall)
+}
+
+func (fake *FakeBackend) DisableTraffic() {
+	fake.disableTrafficMutex.Lock()
+	fake.disableTrafficArgsForCall = append(fake.disableTrafficArgsForCall, struct{}{})
+	fake.disableTrafficMutex.Unlock()
+	if fake.DisableTrafficStub != nil {
+		fake.DisableTrafficStub()
+	}
+}
+
+func (fake *FakeBackend) DisableTrafficCallCount() int {
+	fake.disableTrafficMutex.RLock()
+	defer fake.disableTrafficMutex.RUnlock()
+	return len(fake.disableTrafficArgsForCall)
 }
 
 var _ domain.Backend = new(FakeBackend)

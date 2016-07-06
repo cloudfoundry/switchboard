@@ -23,9 +23,13 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 
 var UrlGetterProvider = HttpUrlGetterProvider
 
+//go:generate counterfeiter . Cluster
 type Cluster interface {
 	Monitor() chan<- interface{}
 	RouteToBackend(clientConn net.Conn) error
+	AsJSON() ClusterJSON
+	EnableTraffic()
+	DisableTraffic()
 }
 
 type cluster struct {
@@ -37,7 +41,7 @@ type cluster struct {
 }
 
 func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) Cluster {
-	return cluster{
+	return &cluster{
 		backends:            backends,
 		currentBackendIndex: 0,
 		logger:              logger,
@@ -143,5 +147,33 @@ func (c cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *De
 				c.logger.Error("Failed to clear arp cache", err)
 			}
 		}
+	}
+}
+
+type ClusterJSON struct {
+	CurrentBackendIndex uint `json:"currentBackendIndex"`
+}
+
+func (c cluster) AsJSON() ClusterJSON {
+	return ClusterJSON{
+		CurrentBackendIndex: uint(c.currentBackendIndex),
+	}
+}
+
+func (c *cluster) EnableTraffic() {
+	// c.mutex.Lock()
+	// defer c.mutex.Unlock()
+
+	for backend := range c.backends.All() {
+		backend.EnableTraffic()
+	}
+}
+
+func (c *cluster) DisableTraffic() {
+	// c.mutex.Lock()
+	// defer c.mutex.Unlock()
+
+	for backend := range c.backends.All() {
+		backend.DisableTraffic()
 	}
 }

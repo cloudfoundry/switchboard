@@ -18,11 +18,21 @@ import (
 var _ = Describe("APIRunner", func() {
 	It("shuts down gracefully when signalled", func() {
 		apiPort := 10000 + GinkgoParallelNode()
+
 		backends := &fakes.FakeBackends{}
+		cluster := &fakes.FakeCluster{}
 		logger := lagertest.NewTestLogger("APIRunner Test")
 		config := config.API{}
 		staticDir := ""
-		handler := api.NewHandler(backends, logger, config, staticDir)
+
+		handler := api.NewHandler(
+			cluster,
+			backends,
+			logger,
+			config,
+			staticDir,
+		)
+
 		apiRunner := api.NewRunner(uint(apiPort), handler, logger)
 		apiProcess := ifrit.Invoke(apiRunner)
 		apiProcess.Signal(os.Kill)

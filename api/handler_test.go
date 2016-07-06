@@ -72,7 +72,6 @@ var _ = Describe("Handler", func() {
 	})
 
 	Context("when request does not contain https header", func() {
-
 		var request *http.Request
 
 		BeforeEach(func() {

@@ -394,48 +394,6 @@ var _ = Describe("Switchboard", func() {
 					Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
 				})
 			})
-
-			Describe("POST", func() {
-				It("returns http 405 - Method not allowed", func() {
-					url := fmt.Sprintf("http://localhost:%d/v0/cluster", switchboardAPIPort)
-					req, err := http.NewRequest("POST", url, nil)
-					Expect(err).NotTo(HaveOccurred())
-					req.SetBasicAuth("username", "password")
-
-					client := &http.Client{}
-					resp, err := client.Do(req)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(resp.StatusCode).To(Equal(http.StatusMethodNotAllowed))
-				})
-			})
-
-			Describe("PUT", func() {
-				It("returns http 405 - Method not allowed", func() {
-					url := fmt.Sprintf("http://localhost:%d/v0/cluster", switchboardAPIPort)
-					req, err := http.NewRequest("PUT", url, nil)
-					Expect(err).NotTo(HaveOccurred())
-					req.SetBasicAuth("username", "password")
-
-					client := &http.Client{}
-					resp, err := client.Do(req)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(resp.StatusCode).To(Equal(http.StatusMethodNotAllowed))
-				})
-			})
-
-			Describe("DELETE", func() {
-				It("returns http 405 - Method not allowed", func() {
-					url := fmt.Sprintf("http://localhost:%d/v0/cluster", switchboardAPIPort)
-					req, err := http.NewRequest("DELETE", url, nil)
-					Expect(err).NotTo(HaveOccurred())
-					req.SetBasicAuth("username", "password")
-
-					client := &http.Client{}
-					resp, err := client.Do(req)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(resp.StatusCode).To(Equal(http.StatusMethodNotAllowed))
-				})
-			})
 		})
 	})
 

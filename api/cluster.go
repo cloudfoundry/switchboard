@@ -3,33 +3,30 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httputil"
 	"strconv"
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
-var Cluster = func(cluster domain.Cluster, logger lager.Logger) http.Handler {
+var Cluster = func(cluster domain.Cluster, logger lager.Logger) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "GET":
-			writeClusterResponse(cluster, w)
+			writeClusterResponse(w, cluster)
 			return
 		case "PATCH":
-			handleUpdate(req, cluster, logger)
-			writeClusterResponse(cluster, w)
+			handleUpdate(w, req, cluster, logger)
+			writeClusterResponse(w, cluster)
 			return
 		default:
-			writeMethodNotAllowedResponse(w)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
 }
 
-func writeMethodNotAllowedResponse(w http.ResponseWriter) {
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-}
-
-func writeClusterResponse(cluster domain.Cluster, w http.ResponseWriter) {
+func writeClusterResponse(w http.ResponseWriter, cluster domain.Cluster) {
 	clusterJSON, err := json.Marshal(cluster.AsJSON())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -44,18 +41,35 @@ func writeClusterResponse(cluster domain.Cluster, w http.ResponseWriter) {
 	}
 }
 
-func handleUpdate(req *http.Request, cluster domain.Cluster, logger lager.Logger) {
+func handleUpdate(
+	w http.ResponseWriter,
+	req *http.Request,
+	cluster domain.Cluster,
+	logger lager.Logger,
+) {
 	logger.Debug("API /cluster update")
 
 	err := req.ParseForm()
 	if err != nil {
-		panic(err)
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
 	}
 
-	enabledStr := req.FormValue("trafficEnabled")
+	dumpBody := true
+	b, err := httputil.DumpRequest(req, dumpBody)
+	if err != nil {
+		http.Error(w, "Failed to dump http body", http.StatusInternalServerError)
+		return
+	}
+
+	logger.Debug("API /cluster req", lager.Data{"dump": string(b)})
+	logger.Debug("API /cluster req form", lager.Data{"form": req.Form})
+
+	enabledStr := req.Form.Get("trafficEnabled")
 	enabled, err := strconv.ParseBool(enabledStr)
 	if err != nil {
-		panic(err)
+		http.Error(w, "Failed to parse trafficEnabled", http.StatusBadRequest)
+		return
 	}
 
 	if enabled {

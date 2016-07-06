@@ -291,10 +291,12 @@ var _ = Describe("Switchboard", func() {
 				})
 
 				It("returns valid JSON in body", func() {
-
 					returnedBackends := getBackendsFromApi(req)
 
 					Expect(len(returnedBackends)).To(Equal(2))
+
+					Expect(returnedBackends[0]["trafficEnabled"]).To(BeTrue())
+					Expect(returnedBackends[1]["trafficEnabled"]).To(BeTrue())
 
 					Expect(returnedBackends[0]["host"]).To(Equal("localhost"))
 					Expect(returnedBackends[0]["healthy"]).To(BeTrue(), "Expected backends[0] to be healthy")

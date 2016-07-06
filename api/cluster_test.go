@@ -3,6 +3,7 @@ package api_test
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
@@ -47,9 +48,12 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("contains expected fields", func() {
+			updateTime := time.Now()
+
 			expectedClusterJSON := domain.ClusterJSON{
 				TrafficEnabled:      true,
 				CurrentBackendIndex: 2,
+				LastUpdated:         updateTime,
 			}
 			fakeCluster.AsJSONReturns(expectedClusterJSON)
 
@@ -67,6 +71,7 @@ var _ = Describe("Cluster", func() {
 
 			Expect(returnedCluster.TrafficEnabled).To(BeTrue())
 			Expect(returnedCluster.CurrentBackendIndex).To(BeNumerically("==", 2))
+			Expect(returnedCluster.LastUpdated).To(Equal(updateTime))
 		})
 	})
 

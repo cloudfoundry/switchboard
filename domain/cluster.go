@@ -42,6 +42,7 @@ type cluster struct {
 	healthcheckTimeout  time.Duration
 	arpManager          ArpManager
 	message             string
+	lastUpdated         time.Time
 }
 
 func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) Cluster {
@@ -155,9 +156,10 @@ func (c *cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *D
 }
 
 type ClusterJSON struct {
-	CurrentBackendIndex uint   `json:"currentBackendIndex"`
-	TrafficEnabled      bool   `json:"trafficEnabled"`
-	Message             string `json:"message"`
+	CurrentBackendIndex uint      `json:"currentBackendIndex"`
+	TrafficEnabled      bool      `json:"trafficEnabled"`
+	Message             string    `json:"message"`
+	LastUpdated         time.Time `json:"lastUpdated"`
 }
 
 func (c *cluster) AsJSON() ClusterJSON {
@@ -172,7 +174,8 @@ func (c *cluster) AsJSON() ClusterJSON {
 		// the system as a whole
 		TrafficEnabled: c.backends.Any().TrafficEnabled(),
 
-		Message: c.message,
+		Message:     c.message,
+		LastUpdated: c.lastUpdated,
 	}
 }
 
@@ -183,6 +186,7 @@ func (c *cluster) EnableTraffic(message string) {
 	c.logger.Info("Enabling traffic for cluster", lager.Data{"message": message})
 
 	c.message = message
+	c.lastUpdated = time.Now()
 
 	for backend := range c.backends.All() {
 		backend.EnableTraffic()
@@ -196,6 +200,7 @@ func (c *cluster) DisableTraffic(message string) {
 	c.logger.Info("Disabling traffic for cluster", lager.Data{"message": message})
 
 	c.message = message
+	c.lastUpdated = time.Now()
 
 	for backend := range c.backends.All() {
 		backend.DisableTraffic()

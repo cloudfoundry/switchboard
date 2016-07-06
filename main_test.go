@@ -388,6 +388,7 @@ var _ = Describe("Switchboard", func() {
 
 					Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
 					Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
+					Expect(returnedCluster["lastUpdated"]).NotTo(BeEmpty())
 				})
 
 				It("persists the provided value of enableTraffic", func() {

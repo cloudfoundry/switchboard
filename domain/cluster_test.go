@@ -16,15 +16,47 @@ import (
 )
 
 var _ = Describe("Cluster", func() {
-	var backends *domainfakes.FakeBackends
-	var logger lager.Logger
-	var cluster domain.Cluster
-	var fakeArpManager *domainfakes.FakeArpManager
-	healthcheckTimeout := time.Second
+	const healthcheckTimeout = time.Second
+
+	var (
+		backends                     *domainfakes.FakeBackends
+		backendSlice                 []*domainfakes.FakeBackend
+		logger                       lager.Logger
+		cluster                      domain.Cluster
+		fakeArpManager               *domainfakes.FakeArpManager
+		backend1, backend2, backend3 *domainfakes.FakeBackend
+	)
 
 	BeforeEach(func() {
 		fakeArpManager = nil
 		backends = &domainfakes.FakeBackends{}
+
+		backend1 = &domainfakes.FakeBackend{}
+		backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
+		backend1.HealthcheckUrlReturns("backend1")
+
+		backend2 = &domainfakes.FakeBackend{}
+		backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
+		backend2.HealthcheckUrlReturns("backend2")
+
+		backend3 = &domainfakes.FakeBackend{}
+		backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
+		backend3.HealthcheckUrlReturns("backend3")
+
+		backendSlice = []*domainfakes.FakeBackend{backend1, backend2, backend3}
+
+		backends.AllStub = func() <-chan domain.Backend {
+			c := make(chan domain.Backend)
+			go func() {
+				c <- backend1
+				c <- backend2
+				c <- backend3
+				close(c)
+			}()
+			return c
+		}
+
+		backends.AnyReturns(backend1)
 	})
 
 	JustBeforeEach(func() {
@@ -33,7 +65,6 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("Monitor", func() {
-		var backend1, backend2, backend3 *domainfakes.FakeBackend
 		var urlGetter *domainfakes.FakeUrlGetter
 		var healthyResponse = &http.Response{
 			Body:       &domainfakes.FakeReadWriteCloser{},
@@ -41,29 +72,6 @@ var _ = Describe("Cluster", func() {
 		}
 
 		BeforeEach(func() {
-			backend1 = &domainfakes.FakeBackend{}
-			backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
-			backend1.HealthcheckUrlReturns("backend1")
-
-			backend2 = &domainfakes.FakeBackend{}
-			backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
-			backend2.HealthcheckUrlReturns("backend2")
-
-			backend3 = &domainfakes.FakeBackend{}
-			backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
-			backend3.HealthcheckUrlReturns("backend3")
-
-			backends.AllStub = func() <-chan domain.Backend {
-				c := make(chan domain.Backend)
-				go func() {
-					c <- backend1
-					c <- backend2
-					c <- backend3
-					close(c)
-				}()
-				return c
-			}
-
 			urlGetter = &domainfakes.FakeUrlGetter{}
 			urlGetter := urlGetter
 			domain.UrlGetterProvider = func(time.Duration) domain.UrlGetter {
@@ -263,6 +271,7 @@ var _ = Describe("Cluster", func() {
 			})
 		})
 	})
+
 	Describe("RouteToBackend", func() {
 		var clientConn net.Conn
 
@@ -287,6 +296,80 @@ var _ = Describe("Cluster", func() {
 			err := cluster.RouteToBackend(clientConn)
 
 			Expect(err).Should(HaveOccurred())
+		})
+	})
+
+	Describe("EnableTraffic", func() {
+		var (
+			message string
+		)
+
+		BeforeEach(func() {
+			message = "some message"
+		})
+
+		It("calls EnableTraffic on all the backends", func() {
+			cluster.EnableTraffic(message)
+
+			for _, backend := range backendSlice {
+				Expect(backend.EnableTrafficCallCount()).To(Equal(1))
+			}
+		})
+
+		It("records the message", func() {
+			cluster.EnableTraffic(message)
+
+			clusterJSON := cluster.AsJSON()
+
+			Expect(clusterJSON.Message).To(Equal(message))
+		})
+
+		It("records the current time", func() {
+			beforeTime := time.Now()
+			cluster.EnableTraffic(message)
+			afterTime := time.Now()
+
+			clusterJSON := cluster.AsJSON()
+
+			Expect(clusterJSON.LastUpdated.After(beforeTime)).To(BeTrue())
+			Expect(clusterJSON.LastUpdated.Before(afterTime)).To(BeTrue())
+		})
+	})
+
+	Describe("DisableTraffic", func() {
+		var (
+			message string
+		)
+
+		BeforeEach(func() {
+			message = "some message"
+		})
+
+		It("calls DisableTraffic on all the backends", func() {
+			cluster.DisableTraffic(message)
+
+			for _, backend := range backendSlice {
+				Expect(backend.DisableTrafficCallCount()).To(Equal(1))
+			}
+		})
+
+		It("records the message", func() {
+			cluster.DisableTraffic(message)
+
+			clusterJSON := cluster.AsJSON()
+
+			Expect(clusterJSON.Message).To(Equal(message))
+		})
+
+		It("records the current time", func() {
+			beforeTime := time.Now()
+			cluster.DisableTraffic(message)
+			afterTime := time.Now()
+
+			clusterJSON := cluster.AsJSON()
+
+			Expect(clusterJSON.LastUpdated.After(beforeTime)).To(BeTrue())
+			Expect(clusterJSON.LastUpdated.Before(afterTime)).To(BeTrue())
 		})
 	})
 })

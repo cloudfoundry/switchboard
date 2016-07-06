@@ -12,7 +12,7 @@ type FakeCluster struct {
 	MonitorStub        func() chan<- interface{}
 	monitorMutex       sync.RWMutex
 	monitorArgsForCall []struct{}
-	monitorReturns struct {
+	monitorReturns     struct {
 		result1 chan<- interface{}
 	}
 	RouteToBackendStub        func(clientConn net.Conn) error
@@ -26,15 +26,17 @@ type FakeCluster struct {
 	AsJSONStub        func() domain.ClusterJSON
 	asJSONMutex       sync.RWMutex
 	asJSONArgsForCall []struct{}
-	asJSONReturns struct {
+	asJSONReturns     struct {
 		result1 domain.ClusterJSON
 	}
-	EnableTrafficStub        func()
-	enableTrafficMutex       sync.RWMutex
-	enableTrafficArgsForCall []struct{}
-	DisableTrafficStub        func()
+	EnableTrafficStub         func()
+	enableTrafficMutex        sync.RWMutex
+	enableTrafficArgsForCall  []struct{}
+	DisableTrafficStub        func(message string)
 	disableTrafficMutex       sync.RWMutex
-	disableTrafficArgsForCall []struct{}
+	disableTrafficArgsForCall []struct {
+		message string
+	}
 }
 
 func (fake *FakeCluster) Monitor() chan<- interface{} {
@@ -132,12 +134,14 @@ func (fake *FakeCluster) EnableTrafficCallCount() int {
 	return len(fake.enableTrafficArgsForCall)
 }
 
-func (fake *FakeCluster) DisableTraffic() {
+func (fake *FakeCluster) DisableTraffic(message string) {
 	fake.disableTrafficMutex.Lock()
-	fake.disableTrafficArgsForCall = append(fake.disableTrafficArgsForCall, struct{}{})
+	fake.disableTrafficArgsForCall = append(fake.disableTrafficArgsForCall, struct {
+		message string
+	}{message})
 	fake.disableTrafficMutex.Unlock()
 	if fake.DisableTrafficStub != nil {
-		fake.DisableTrafficStub()
+		fake.DisableTrafficStub(message)
 	}
 }
 
@@ -145,6 +149,12 @@ func (fake *FakeCluster) DisableTrafficCallCount() int {
 	fake.disableTrafficMutex.RLock()
 	defer fake.disableTrafficMutex.RUnlock()
 	return len(fake.disableTrafficArgsForCall)
+}
+
+func (fake *FakeCluster) DisableTrafficArgsForCall(i int) string {
+	fake.disableTrafficMutex.RLock()
+	defer fake.disableTrafficMutex.RUnlock()
+	return fake.disableTrafficArgsForCall[i].message
 }
 
 var _ domain.Cluster = new(FakeCluster)

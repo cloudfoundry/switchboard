@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/pivotal-golang/lager"
@@ -29,15 +30,17 @@ type Cluster interface {
 	RouteToBackend(clientConn net.Conn) error
 	AsJSON() ClusterJSON
 	EnableTraffic()
-	DisableTraffic()
+	DisableTraffic(message string)
 }
 
 type cluster struct {
-	backends            Backends
-	currentBackendIndex int
-	logger              lager.Logger
-	healthcheckTimeout  time.Duration
-	arpManager          ArpManager
+	mutex                  sync.RWMutex
+	backends               Backends
+	currentBackendIndex    int
+	logger                 lager.Logger
+	healthcheckTimeout     time.Duration
+	arpManager             ArpManager
+	trafficDisabledMessage string
 }
 
 func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) Cluster {
@@ -151,11 +154,15 @@ func (c cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *De
 }
 
 type ClusterJSON struct {
-	CurrentBackendIndex uint `json:"currentBackendIndex"`
-	TrafficEnabled      bool `json:"trafficEnabled"`
+	CurrentBackendIndex    uint   `json:"currentBackendIndex"`
+	TrafficEnabled         bool   `json:"trafficEnabled"`
+	TrafficDisabledMessage string `json:"trafficDisabledMessage"`
 }
 
 func (c cluster) AsJSON() ClusterJSON {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
 	return ClusterJSON{
 		CurrentBackendIndex: uint(c.currentBackendIndex),
 
@@ -163,19 +170,31 @@ func (c cluster) AsJSON() ClusterJSON {
 		// so we only need to read the state of one to get the state of
 		// the system as a whole
 		TrafficEnabled: c.backends.Any().TrafficEnabled(),
+
+		TrafficDisabledMessage: c.trafficDisabledMessage,
 	}
 }
 
 func (c *cluster) EnableTraffic() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	c.logger.Info("Enabling traffic for cluster")
+
+	c.trafficDisabledMessage = ""
 
 	for backend := range c.backends.All() {
 		backend.EnableTraffic()
 	}
 }
 
-func (c *cluster) DisableTraffic() {
-	c.logger.Info("Disabling traffic for cluster")
+func (c *cluster) DisableTraffic(message string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.logger.Info("Disabling traffic for cluster", lager.Data{"message": message})
+
+	c.trafficDisabledMessage = message
 
 	for backend := range c.backends.All() {
 		backend.DisableTraffic()

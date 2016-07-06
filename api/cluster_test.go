@@ -1,9 +1,11 @@
 package api_test
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 	domainfakes "github.com/cloudfoundry-incubator/switchboard/domain/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,6 +25,7 @@ var _ = Describe("Cluster", func() {
 
 	BeforeEach(func() {
 		fakeCluster = &domainfakes.FakeCluster{}
+
 		testLogger = lagertest.NewTestLogger("Switchboard API test")
 
 		handler = api.Cluster(fakeCluster, testLogger)
@@ -42,12 +45,42 @@ var _ = Describe("Cluster", func() {
 
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		})
+
+		It("contains expected fields", func() {
+			expectedClusterJSON := domain.ClusterJSON{
+				TrafficEnabled:      true,
+				CurrentBackendIndex: 2,
+			}
+			fakeCluster.AsJSONReturns(expectedClusterJSON)
+
+			req, err := http.NewRequest("GET", server.URL(), nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+
+			var returnedCluster domain.ClusterJSON
+			decoder := json.NewDecoder(resp.Body)
+			err = decoder.Decode(&returnedCluster)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(returnedCluster.TrafficEnabled).To(BeTrue())
+			Expect(returnedCluster.CurrentBackendIndex).To(BeNumerically("==", 2))
+		})
 	})
 
 	Describe("PATCH", func() {
+		var (
+			patchURL string
+		)
+
+		BeforeEach(func() {
+			patchURL = server.URL() + "?trafficEnabled=true"
+		})
+
 		It("returns 200", func() {
-			url := server.URL() + "?trafficEnabled=true"
-			req, err := http.NewRequest("PATCH", url, nil)
+			req, err := http.NewRequest("PATCH", patchURL, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			client := &http.Client{}
@@ -57,28 +90,66 @@ var _ = Describe("Cluster", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		})
 
-		It("invokes cluster.EnableTraffic when trafficEnabled=true", func() {
-			url := server.URL() + "?trafficEnabled=true"
-			req, err := http.NewRequest("PATCH", url, nil)
+		It("contains expected fields", func() {
+			expectedClusterJSON := domain.ClusterJSON{
+				TrafficEnabled:         true,
+				CurrentBackendIndex:    2,
+				TrafficDisabledMessage: "some reason",
+			}
+			fakeCluster.AsJSONReturns(expectedClusterJSON)
+
+			req, err := http.NewRequest("PATCH", patchURL, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			client := &http.Client{}
-			_, err = client.Do(req)
+			resp, err := client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeCluster.EnableTrafficCallCount()).To(Equal(1))
+			var returnedCluster domain.ClusterJSON
+			decoder := json.NewDecoder(resp.Body)
+			err = decoder.Decode(&returnedCluster)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(returnedCluster.TrafficEnabled).To(BeTrue())
+			Expect(returnedCluster.CurrentBackendIndex).To(BeNumerically("==", 2))
+			Expect(returnedCluster.TrafficDisabledMessage).To(Equal("some reason"))
 		})
 
-		It("invokes cluster.DisableTraffic when trafficEnabled=false", func() {
-			url := server.URL() + "?trafficEnabled=false"
-			req, err := http.NewRequest("PATCH", url, nil)
-			Expect(err).NotTo(HaveOccurred())
+		Context("when traffic is enabled", func() {
+			BeforeEach(func() {
+				patchURL = server.URL() + "?trafficEnabled=true"
+			})
 
-			client := &http.Client{}
-			_, err = client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
+			It("invokes cluster.EnableTraffic", func() {
+				req, err := http.NewRequest("PATCH", patchURL, nil)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeCluster.DisableTrafficCallCount()).To(Equal(1))
+				client := &http.Client{}
+				_, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeCluster.EnableTrafficCallCount()).To(Equal(1))
+			})
+		})
+
+		Context("when traffic is disabled", func() {
+			BeforeEach(func() {
+				patchURL = server.URL() + "?trafficEnabled=false&trafficDisabledMessage=some%20message"
+			})
+
+			It("invokes cluster.DisableTraffic", func() {
+				req, err := http.NewRequest("PATCH", patchURL, nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				client := &http.Client{}
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				Expect(fakeCluster.DisableTrafficCallCount()).To(Equal(1))
+				Expect(fakeCluster.DisableTrafficArgsForCall(0)).To(Equal("some message"))
+			})
 		})
 
 		Context("when the URL is missing trafficEnabled", func() {

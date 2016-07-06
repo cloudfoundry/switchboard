@@ -30,7 +30,21 @@ type Response struct {
 }
 
 func allowTraffic(allow bool) {
-	url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=%t", switchboardAPIPort, allow)
+	var url string
+	if allow {
+		url = fmt.Sprintf(
+			"http://localhost:%d/v0/cluster?trafficEnabled=%t",
+			switchboardAPIPort,
+			allow,
+		)
+	} else {
+		url = fmt.Sprintf(
+			"http://localhost:%d/v0/cluster?trafficEnabled=%t&trafficDisabledMessage=%s",
+			switchboardAPIPort,
+			allow,
+			"main%20test%20is%20disabling%20traffic",
+		)
+	}
 
 	req, err := http.NewRequest("PATCH", url, nil)
 	Expect(err).NotTo(HaveOccurred())
@@ -377,7 +391,7 @@ var _ = Describe("Switchboard", func() {
 				})
 
 				It("persists the provided value of enableTraffic", func() {
-					url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=false", switchboardAPIPort)
+					url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=false&trafficDisabledMessage=some-reason", switchboardAPIPort)
 					req, err := http.NewRequest("PATCH", url, nil)
 					Expect(err).NotTo(HaveOccurred())
 					req.SetBasicAuth("username", "password")

@@ -75,6 +75,11 @@ func handleUpdate(
 	if enabled {
 		cluster.EnableTraffic()
 	} else {
-		cluster.DisableTraffic()
+		message := req.Form.Get("trafficDisabledMessage")
+		if message == "" {
+			http.Error(w, "trafficDisabledMessage must not be empty", http.StatusBadRequest)
+			return
+		}
+		cluster.DisableTraffic(message)
 	}
 }

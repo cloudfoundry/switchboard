@@ -71,7 +71,7 @@ var _ = Describe("Cluster", func() {
 
 			Expect(returnedCluster.TrafficEnabled).To(BeTrue())
 			Expect(returnedCluster.CurrentBackendIndex).To(BeNumerically("==", 2))
-			Expect(returnedCluster.LastUpdated).To(Equal(updateTime))
+			Expect(returnedCluster.LastUpdated.Second()).To(Equal(updateTime.Second()))
 		})
 	})
 

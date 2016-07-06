@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	domainfakes "github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"

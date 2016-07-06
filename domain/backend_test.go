@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
@@ -13,10 +13,10 @@ import (
 
 var _ = Describe("Backend", func() {
 	var backend domain.Backend
-	var bridges *fakes.FakeBridges
+	var bridges *domainfakes.FakeBridges
 
 	BeforeEach(func() {
-		bridges = &fakes.FakeBridges{}
+		bridges = &domainfakes.FakeBridges{}
 
 		domain.BridgesProvider = func(lager.Logger) domain.Bridges {
 			return bridges
@@ -45,16 +45,16 @@ var _ = Describe("Backend", func() {
 	})
 
 	Describe("Bridge", func() {
-		var backendConn *fakes.FakeConn
-		var clientConn *fakes.FakeConn
+		var backendConn *domainfakes.FakeConn
+		var clientConn *domainfakes.FakeConn
 
 		var dialErr error
 		var dialedProtocol, dialedAddress string
-		var bridge *fakes.FakeBridge
+		var bridge *domainfakes.FakeBridge
 		var connectReadyChan, disconnectChan chan interface{}
 
 		BeforeEach(func() {
-			bridge = &fakes.FakeBridge{}
+			bridge = &domainfakes.FakeBridge{}
 
 			connectReadyChan = make(chan interface{})
 			disconnectChan = make(chan interface{})
@@ -68,11 +68,11 @@ var _ = Describe("Backend", func() {
 
 			bridges.CreateReturns(bridge)
 
-			clientConn = &fakes.FakeConn{}
-			backendConn = &fakes.FakeConn{}
+			clientConn = &domainfakes.FakeConn{}
+			backendConn = &domainfakes.FakeConn{}
 
-			clientAddr := &fakes.FakeAddr{}
-			backendAddr := &fakes.FakeAddr{}
+			clientAddr := &domainfakes.FakeAddr{}
+			backendAddr := &domainfakes.FakeAddr{}
 
 			clientConn.RemoteAddrReturns(clientAddr)
 			backendConn.RemoteAddrReturns(backendAddr)

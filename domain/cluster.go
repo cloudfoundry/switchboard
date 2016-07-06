@@ -12,6 +12,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+//go:generate counterfeiter . UrlGetter
 type UrlGetter interface {
 	Get(url string) (*http.Response, error)
 }

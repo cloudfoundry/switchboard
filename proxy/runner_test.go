@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	"github.com/cloudfoundry-incubator/switchboard/proxy"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("ProxyRunner", func() {
 	It("shuts down gracefully when signalled", func() {
-		cluster := &fakes.FakeCluster{}
+		cluster := &domainfakes.FakeCluster{}
 		proxyPort := 10000 + GinkgoParallelNode()
 		logger := lagertest.NewTestLogger("ProxyRunner test")
 		proxyRunner := proxy.NewRunner(cluster, uint(proxyPort), logger)

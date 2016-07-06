@@ -8,6 +8,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+//go:generate counterfeiter . ArpManager
 type ArpManager interface {
 	ClearCache(ip string) error
 	IsCached(ip string) bool

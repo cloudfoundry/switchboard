@@ -8,6 +8,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+//go:generate counterfeiter . Bridge
 type Bridge interface {
 	Connect()
 	Close()

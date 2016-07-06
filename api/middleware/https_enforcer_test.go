@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/cloudfoundry-incubator/switchboard/api/middleware"
-	"github.com/cloudfoundry-incubator/switchboard/api/middleware/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/api/middleware/middlewarefakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,7 +15,7 @@ var _ = Describe("HttpsEnforcer", func() {
 	var (
 		request           *http.Request
 		writer            *httptest.ResponseRecorder
-		fakeHandler       *fakes.FakeHandler
+		fakeHandler       *middlewarefakes.FakeHandler
 		wrappedMiddleware http.Handler
 		forceHttps        bool
 	)
@@ -25,7 +25,7 @@ var _ = Describe("HttpsEnforcer", func() {
 	})
 
 	JustBeforeEach(func() {
-		fakeHandler = &fakes.FakeHandler{}
+		fakeHandler = &middlewarefakes.FakeHandler{}
 		writer = httptest.NewRecorder()
 		enforcer := middleware.NewHttpsEnforcer(forceHttps)
 

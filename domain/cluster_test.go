@@ -10,21 +10,21 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Cluster", func() {
-	var backends *fakes.FakeBackends
+	var backends *domainfakes.FakeBackends
 	var logger lager.Logger
 	var cluster domain.Cluster
-	var fakeArpManager *fakes.FakeArpManager
+	var fakeArpManager *domainfakes.FakeArpManager
 	healthcheckTimeout := time.Second
 
 	BeforeEach(func() {
 		fakeArpManager = nil
-		backends = &fakes.FakeBackends{}
+		backends = &domainfakes.FakeBackends{}
 	})
 
 	JustBeforeEach(func() {
@@ -33,23 +33,23 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("Monitor", func() {
-		var backend1, backend2, backend3 *fakes.FakeBackend
-		var urlGetter *fakes.FakeUrlGetter
+		var backend1, backend2, backend3 *domainfakes.FakeBackend
+		var urlGetter *domainfakes.FakeUrlGetter
 		var healthyResponse = &http.Response{
-			Body:       &fakes.FakeReadWriteCloser{},
+			Body:       &domainfakes.FakeReadWriteCloser{},
 			StatusCode: http.StatusOK,
 		}
 
 		BeforeEach(func() {
-			backend1 = &fakes.FakeBackend{}
+			backend1 = &domainfakes.FakeBackend{}
 			backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
 			backend1.HealthcheckUrlReturns("backend1")
 
-			backend2 = &fakes.FakeBackend{}
+			backend2 = &domainfakes.FakeBackend{}
 			backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
 			backend2.HealthcheckUrlReturns("backend2")
 
-			backend3 = &fakes.FakeBackend{}
+			backend3 = &domainfakes.FakeBackend{}
 			backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
 			backend3.HealthcheckUrlReturns("backend3")
 
@@ -64,7 +64,7 @@ var _ = Describe("Cluster", func() {
 				return c
 			}
 
-			urlGetter = &fakes.FakeUrlGetter{}
+			urlGetter = &domainfakes.FakeUrlGetter{}
 			urlGetter := urlGetter
 			domain.UrlGetterProvider = func(time.Duration) domain.UrlGetter {
 				return urlGetter
@@ -103,7 +103,7 @@ var _ = Describe("Cluster", func() {
 			defer close(done)
 
 			unhealthyResponse := &http.Response{
-				Body:       &fakes.FakeReadWriteCloser{},
+				Body:       &domainfakes.FakeReadWriteCloser{},
 				StatusCode: http.StatusInternalServerError,
 			}
 
@@ -168,7 +168,7 @@ var _ = Describe("Cluster", func() {
 			defer close(done)
 
 			unhealthyResponse := &http.Response{
-				Body:       &fakes.FakeReadWriteCloser{},
+				Body:       &domainfakes.FakeReadWriteCloser{},
 				StatusCode: http.StatusInternalServerError,
 			}
 
@@ -195,7 +195,7 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is healthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = &fakes.FakeArpManager{}
+				fakeArpManager = &domainfakes.FakeArpManager{}
 			})
 
 			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
@@ -209,9 +209,9 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is unhealthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = &fakes.FakeArpManager{}
+				fakeArpManager = &domainfakes.FakeArpManager{}
 				unhealthyResponse := &http.Response{
-					Body:       &fakes.FakeReadWriteCloser{},
+					Body:       &domainfakes.FakeReadWriteCloser{},
 					StatusCode: http.StatusInternalServerError,
 				}
 
@@ -267,11 +267,11 @@ var _ = Describe("Cluster", func() {
 		var clientConn net.Conn
 
 		BeforeEach(func() {
-			clientConn = &fakes.FakeConn{}
+			clientConn = &domainfakes.FakeConn{}
 		})
 
 		It("bridges the client connection to the active backend", func() {
-			activeBackend := &fakes.FakeBackend{}
+			activeBackend := &domainfakes.FakeBackend{}
 			backends.ActiveReturns(activeBackend)
 
 			err := cluster.RouteToBackend(clientConn)

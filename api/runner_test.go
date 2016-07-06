@@ -7,7 +7,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/config"
-	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	"github.com/pivotal-golang/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
@@ -19,8 +19,8 @@ var _ = Describe("APIRunner", func() {
 	It("shuts down gracefully when signalled", func() {
 		apiPort := 10000 + GinkgoParallelNode()
 
-		backends := &fakes.FakeBackends{}
-		cluster := &fakes.FakeCluster{}
+		backends := &domainfakes.FakeBackends{}
+		cluster := &domainfakes.FakeCluster{}
 		logger := lagertest.NewTestLogger("APIRunner Test")
 		config := config.API{}
 		staticDir := ""

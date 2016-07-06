@@ -3,12 +3,12 @@ package middleware_test
 import (
 	"net/http"
 
-	apifakes "github.com/cloudfoundry-incubator/switchboard/api/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 
 	"github.com/cloudfoundry-incubator/switchboard/api/middleware"
-	"github.com/cloudfoundry-incubator/switchboard/api/middleware/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/api/middleware/middlewarefakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -19,7 +19,7 @@ var _ = Describe("Logger", func() {
 	var err error
 
 	var fakeResponseWriter http.ResponseWriter
-	var fakeHandler *fakes.FakeHandler
+	var fakeHandler *middlewarefakes.FakeHandler
 	var logger *lagertest.TestLogger
 	var routePrefix string
 
@@ -32,7 +32,7 @@ var _ = Describe("Logger", func() {
 		dummyRequest.Header.Add("Authorization", fakePassword)
 
 		fakeResponseWriter = &apifakes.FakeResponseWriter{}
-		fakeHandler = &fakes.FakeHandler{}
+		fakeHandler = &middlewarefakes.FakeHandler{}
 
 		logger = lagertest.NewTestLogger("backup-download-test")
 		logger.RegisterSink(lager.NewWriterSink(GinkgoWriter, lager.INFO))

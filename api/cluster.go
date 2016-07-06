@@ -20,9 +20,13 @@ var Cluster = func(cluster domain.Cluster, logger lager.Logger) http.Handler {
 			writeClusterResponse(cluster, w)
 			return
 		default:
-			panic("unrecognized method")
+			writeMethodNotAllowedResponse(w)
 		}
 	})
+}
+
+func writeMethodNotAllowedResponse(w http.ResponseWriter) {
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 func writeClusterResponse(cluster domain.Cluster, w http.ResponseWriter) {
@@ -41,7 +45,7 @@ func writeClusterResponse(cluster domain.Cluster, w http.ResponseWriter) {
 }
 
 func setAllowTraffic(req *http.Request, cluster domain.Cluster, logger lager.Logger) {
-	logger.Info("API Received enable traffic invocation")
+	logger.Info("API received enable traffic invocation")
 
 	err := req.ParseForm()
 	if err != nil {

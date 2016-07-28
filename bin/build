@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+root_dir=$(cd $(dirname $(dirname "$0")) && pwd)
+
+go build -o "${root_dir}/out/switchboard" "github.com/cloudfoundry-incubator/switchboard"

@@ -9,6 +9,7 @@ import (
 
 var BackendProvider = NewBackend
 
+//go:generate counterfeiter . Backends
 type Backends interface {
 	All() <-chan Backend
 	Any() Backend

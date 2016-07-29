@@ -5,10 +5,10 @@ import (
 	"net/http/httptest"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
-	apifakes "github.com/cloudfoundry-incubator/switchboard/api/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	domainfakes "github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager/lagertest"

@@ -9,6 +9,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+//go:generate counterfeiter -o apifakes/fake_response_writer.go /usr/local/opt/go/libexec/src/net/http/server.go ResponseWriter
 func NewHandler(backends domain.Backends, logger lager.Logger, apiConfig config.API, staticDir string) http.Handler {
 	mux := http.NewServeMux()
 

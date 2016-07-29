@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
@@ -16,23 +16,17 @@ var _ = Describe("Bridge", func() {
 	Describe("#Connect", func() {
 		var (
 			bridge          domain.Bridge
-			client, backend *fakes.FakeConn
+			client, backend *domainfakes.FakeConn
 			logger          lager.Logger
 		)
 
 		BeforeEach(func() {
 			logger = lagertest.NewTestLogger("Bridge test")
-			backend = new(fakes.FakeConn)
-			client = new(fakes.FakeConn)
-
-			clientAddr := new(fakes.FakeAddr)
-			backendAddr := new(fakes.FakeAddr)
+			backend = new(domainfakes.FakeConn)
+			client = new(domainfakes.FakeConn)
 
 			backend.ReadReturns(0, io.EOF)
 			client.ReadReturns(0, io.EOF)
-
-			client.RemoteAddrReturns(clientAddr)
-			backend.RemoteAddrReturns(backendAddr)
 
 			bridge = domain.NewBridge(client, backend, logger)
 		})

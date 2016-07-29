@@ -3,7 +3,7 @@ package domain_test
 import (
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
@@ -157,7 +157,7 @@ var _ = Describe("Backends", func() {
 		Context("when this is active", func() {
 			BeforeEach(func() {
 				domain.BackendProvider = func(string, string, uint, uint, string, lager.Logger) domain.Backend {
-					return new(fakes.FakeBackend)
+					return new(domainfakes.FakeBackend)
 				}
 			})
 
@@ -168,7 +168,7 @@ var _ = Describe("Backends", func() {
 			It("severs all open connections", func() {
 				backend := backends.Active()
 				backends.SetUnhealthy(backend)
-				Expect(backend.(*fakes.FakeBackend).SeverConnectionsCallCount()).To(Equal(1))
+				Expect(backend.(*domainfakes.FakeBackend).SeverConnectionsCallCount()).To(Equal(1))
 			})
 
 			It("sets another healthy backend as the new active backend", func() {

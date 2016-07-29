@@ -5,17 +5,22 @@ import (
 	"net"
 	"os"
 
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
+
+//go:generate counterfeiter . Cluster
+type Cluster interface {
+	Monitor() chan<- interface{}
+	RouteToBackend(clientConn net.Conn) error
+}
 
 type Runner struct {
 	logger  lager.Logger
 	port    uint
-	cluster domain.Cluster
+	cluster Cluster
 }
 
-func NewRunner(cluster domain.Cluster, port uint, logger lager.Logger) Runner {
+func NewRunner(cluster Cluster, port uint, logger lager.Logger) Runner {
 	return Runner{
 		logger:  logger,
 		port:    port,

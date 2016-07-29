@@ -10,6 +10,7 @@ import (
 
 var BridgeProvider = NewBridge
 
+//go:generate counterfeiter . Bridges
 type Bridges interface {
 	Create(clientConn, backendConn net.Conn) Bridge
 	Remove(bridge Bridge) error

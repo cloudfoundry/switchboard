@@ -3,7 +3,7 @@ package middleware_test
 import (
 	"net/http"
 
-	apifakes "github.com/cloudfoundry-incubator/switchboard/api/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 

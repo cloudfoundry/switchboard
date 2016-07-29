@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
@@ -92,7 +92,7 @@ var _ = Describe("Bridges", func() {
 
 		Context("when the bridge cannot be found", func() {
 			It("returns an error", func() {
-				err := bridges.Remove(domain.NewBridge(new(fakes.FakeConn), new(fakes.FakeConn), nil))
+				err := bridges.Remove(domain.NewBridge(new(domainfakes.FakeConn), new(domainfakes.FakeConn), nil))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("Bridge not found"))
 			})
@@ -102,7 +102,7 @@ var _ = Describe("Bridges", func() {
 	Describe("RemoveAndCloseAll", func() {
 		BeforeEach(func() {
 			domain.BridgeProvider = func(_, _ net.Conn, logger lager.Logger) domain.Bridge {
-				return new(fakes.FakeBridge)
+				return new(domainfakes.FakeBridge)
 			}
 		})
 
@@ -113,9 +113,9 @@ var _ = Describe("Bridges", func() {
 		It("closes all bridges", func() {
 			bridges.RemoveAndCloseAll()
 
-			Expect(bridge1.(*fakes.FakeBridge).CloseCallCount()).To(Equal(1))
-			Expect(bridge2.(*fakes.FakeBridge).CloseCallCount()).To(Equal(1))
-			Expect(bridge3.(*fakes.FakeBridge).CloseCallCount()).To(Equal(1))
+			Expect(bridge1.(*domainfakes.FakeBridge).CloseCallCount()).To(Equal(1))
+			Expect(bridge2.(*domainfakes.FakeBridge).CloseCallCount()).To(Equal(1))
+			Expect(bridge3.(*domainfakes.FakeBridge).CloseCallCount()).To(Equal(1))
 		})
 
 		It("removes all bridges", func() {

@@ -9,22 +9,25 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"bytes"
+	"io/ioutil"
+
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/fakes"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Cluster", func() {
-	var backends *fakes.FakeBackends
+	var backends *domainfakes.FakeBackends
 	var logger lager.Logger
-	var cluster domain.Cluster
-	var fakeArpManager *fakes.FakeArpManager
+	var cluster *domain.Cluster
+	var fakeArpManager *domainfakes.FakeArpManager
 	const healthcheckTimeout = time.Second
 
 	BeforeEach(func() {
 		fakeArpManager = nil
-		backends = new(fakes.FakeBackends)
+		backends = new(domainfakes.FakeBackends)
 	})
 
 	JustBeforeEach(func() {
@@ -33,23 +36,23 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("Monitor", func() {
-		var backend1, backend2, backend3 *fakes.FakeBackend
-		var urlGetter *fakes.FakeUrlGetter
+		var backend1, backend2, backend3 *domainfakes.FakeBackend
+		var urlGetter *domainfakes.FakeUrlGetter
 		var healthyResponse = &http.Response{
-			Body:       new(fakes.FakeReadWriteCloser),
+			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 			StatusCode: http.StatusOK,
 		}
 
 		BeforeEach(func() {
-			backend1 = new(fakes.FakeBackend)
+			backend1 = new(domainfakes.FakeBackend)
 			backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
 			backend1.HealthcheckUrlReturns("backend1")
 
-			backend2 = new(fakes.FakeBackend)
+			backend2 = new(domainfakes.FakeBackend)
 			backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
 			backend2.HealthcheckUrlReturns("backend2")
 
-			backend3 = new(fakes.FakeBackend)
+			backend3 = new(domainfakes.FakeBackend)
 			backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
 			backend3.HealthcheckUrlReturns("backend3")
 
@@ -64,7 +67,7 @@ var _ = Describe("Cluster", func() {
 				return c
 			}
 
-			urlGetter = new(fakes.FakeUrlGetter)
+			urlGetter = new(domainfakes.FakeUrlGetter)
 			urlGetter := urlGetter
 			domain.UrlGetterProvider = func(time.Duration) domain.UrlGetter {
 				return urlGetter
@@ -97,7 +100,7 @@ var _ = Describe("Cluster", func() {
 		It("notices when a healthy backend becomes unhealthy", func() {
 
 			unhealthyResponse := &http.Response{
-				Body:       new(fakes.FakeReadWriteCloser),
+				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 				StatusCode: http.StatusInternalServerError,
 			}
 
@@ -153,7 +156,7 @@ var _ = Describe("Cluster", func() {
 
 		It("notices when an unhealthy backend becomes healthy", func() {
 			unhealthyResponse := &http.Response{
-				Body:       new(fakes.FakeReadWriteCloser),
+				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 				StatusCode: http.StatusInternalServerError,
 			}
 
@@ -187,7 +190,7 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is healthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = new(fakes.FakeArpManager)
+				fakeArpManager = new(domainfakes.FakeArpManager)
 			})
 
 			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
@@ -201,9 +204,9 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is unhealthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = new(fakes.FakeArpManager)
+				fakeArpManager = new(domainfakes.FakeArpManager)
 				unhealthyResponse := &http.Response{
-					Body:       new(fakes.FakeReadWriteCloser),
+					Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 					StatusCode: http.StatusInternalServerError,
 				}
 
@@ -259,11 +262,11 @@ var _ = Describe("Cluster", func() {
 		var clientConn net.Conn
 
 		BeforeEach(func() {
-			clientConn = new(fakes.FakeConn)
+			clientConn = new(domainfakes.FakeConn)
 		})
 
 		It("bridges the client connection to the active backend", func() {
-			activeBackend := new(fakes.FakeBackend)
+			activeBackend := new(domainfakes.FakeBackend)
 			backends.ActiveReturns(activeBackend)
 
 			err := cluster.RouteToBackend(clientConn)

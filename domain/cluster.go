@@ -11,6 +11,7 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+//go:generate counterfeiter . UrlGetter
 type UrlGetter interface {
 	Get(url string) (*http.Response, error)
 }
@@ -23,12 +24,7 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 
 var UrlGetterProvider = HttpUrlGetterProvider
 
-type Cluster interface {
-	Monitor() chan<- interface{}
-	RouteToBackend(clientConn net.Conn) error
-}
-
-type cluster struct {
+type Cluster struct {
 	backends            Backends
 	currentBackendIndex int
 	logger              lager.Logger
@@ -36,8 +32,8 @@ type cluster struct {
 	arpManager          ArpManager
 }
 
-func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) Cluster {
-	return cluster{
+func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
+	return &Cluster{
 		backends:            backends,
 		currentBackendIndex: 0,
 		logger:              logger,
@@ -46,7 +42,7 @@ func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lage
 	}
 }
 
-func (c cluster) Monitor() chan<- interface{} {
+func (c Cluster) Monitor() chan<- interface{} {
 	client := UrlGetterProvider(c.healthcheckTimeout)
 	stopChan := make(chan interface{})
 	for backend := range c.backends.All() {
@@ -55,7 +51,7 @@ func (c cluster) Monitor() chan<- interface{} {
 	return stopChan
 }
 
-func (c cluster) RouteToBackend(clientConn net.Conn) error {
+func (c Cluster) RouteToBackend(clientConn net.Conn) error {
 	activeBackend := c.backends.Active()
 	if activeBackend == nil {
 		return errors.New("No active Backend")
@@ -63,7 +59,7 @@ func (c cluster) RouteToBackend(clientConn net.Conn) error {
 	return activeBackend.Bridge(clientConn)
 }
 
-func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
+func (c Cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
 	go func() {
 		counters := c.setupCounters()
 		for {
@@ -77,7 +73,7 @@ func (c cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-cha
 	}()
 }
 
-func (c cluster) setupCounters() *DecisionCounters {
+func (c Cluster) setupCounters() *DecisionCounters {
 	counters := NewDecisionCounters()
 	logFreq := uint64(5)
 	clearArpFreq := uint64(5)
@@ -101,7 +97,7 @@ func (c cluster) setupCounters() *DecisionCounters {
 	return counters
 }
 
-func (c cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *DecisionCounters) {
+func (c Cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *DecisionCounters) {
 
 	counters.IncrementCount("dial")
 	shouldLog := counters.Should("log")

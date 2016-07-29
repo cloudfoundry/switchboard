@@ -2,9 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"net/http"
-
 	"github.com/cloudfoundry-incubator/switchboard/domain"
+	"net/http"
 )
 
 var BackendsIndex = func(backends domain.Backends) http.Handler {

@@ -12,14 +12,14 @@ type FakeAgent struct {
 	ChecksStub        func() (map[string]*api.AgentCheck, error)
 	checksMutex       sync.RWMutex
 	checksArgsForCall []struct{}
-	checksReturns struct {
+	checksReturns     struct {
 		result1 map[string]*api.AgentCheck
 		result2 error
 	}
 	ServicesStub        func() (map[string]*api.AgentService, error)
 	servicesMutex       sync.RWMutex
 	servicesArgsForCall []struct{}
-	servicesReturns struct {
+	servicesReturns     struct {
 		result1 map[string]*api.AgentService
 		result2 error
 	}
@@ -69,7 +69,7 @@ type FakeAgent struct {
 	NodeNameStub        func() (string, error)
 	nodeNameMutex       sync.RWMutex
 	nodeNameArgsForCall []struct{}
-	nodeNameReturns struct {
+	nodeNameReturns     struct {
 		result1 string
 		result2 error
 	}

@@ -157,7 +157,7 @@ var _ = Describe("Backends", func() {
 		Context("when this is active", func() {
 			BeforeEach(func() {
 				domain.BackendProvider = func(string, string, uint, uint, string, lager.Logger) domain.Backend {
-					return &fakes.FakeBackend{}
+					return new(fakes.FakeBackend)
 				}
 			})
 

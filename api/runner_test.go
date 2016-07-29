@@ -18,7 +18,7 @@ import (
 var _ = Describe("APIRunner", func() {
 	It("shuts down gracefully when signalled", func() {
 		apiPort := 10000 + GinkgoParallelNode()
-		backends := &fakes.FakeBackends{}
+		backends := new(fakes.FakeBackends)
 		logger := lagertest.NewTestLogger("APIRunner Test")
 		config := config.API{}
 		staticDir := ""

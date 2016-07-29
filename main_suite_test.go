@@ -103,7 +103,7 @@ func initConfig() {
 
 func writeConfig() {
 	fileToWrite, err := os.Create(configPath)
-	Ω(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	b, err := yaml.Marshal(rootConfig)
 	Expect(err).NotTo(HaveOccurred())

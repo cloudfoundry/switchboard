@@ -31,8 +31,8 @@ var _ = Describe("Logger", func() {
 		Expect(err).NotTo(HaveOccurred())
 		dummyRequest.Header.Add("Authorization", fakePassword)
 
-		fakeResponseWriter = &apifakes.FakeResponseWriter{}
-		fakeHandler = &fakes.FakeHandler{}
+		fakeResponseWriter = new(apifakes.FakeResponseWriter)
+		fakeHandler = new(fakes.FakeHandler)
 
 		logger = lagertest.NewTestLogger("backup-download-test")
 		logger.RegisterSink(lager.NewWriterSink(GinkgoWriter, lager.INFO))

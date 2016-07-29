@@ -24,7 +24,7 @@ var _ = Describe("Cluster", func() {
 
 	BeforeEach(func() {
 		fakeArpManager = nil
-		backends = &fakes.FakeBackends{}
+		backends = new(fakes.FakeBackends)
 	})
 
 	JustBeforeEach(func() {
@@ -36,20 +36,20 @@ var _ = Describe("Cluster", func() {
 		var backend1, backend2, backend3 *fakes.FakeBackend
 		var urlGetter *fakes.FakeUrlGetter
 		var healthyResponse = &http.Response{
-			Body:       &fakes.FakeReadWriteCloser{},
+			Body:       new(fakes.FakeReadWriteCloser),
 			StatusCode: http.StatusOK,
 		}
 
 		BeforeEach(func() {
-			backend1 = &fakes.FakeBackend{}
+			backend1 = new(fakes.FakeBackend)
 			backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
 			backend1.HealthcheckUrlReturns("backend1")
 
-			backend2 = &fakes.FakeBackend{}
+			backend2 = new(fakes.FakeBackend)
 			backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
 			backend2.HealthcheckUrlReturns("backend2")
 
-			backend3 = &fakes.FakeBackend{}
+			backend3 = new(fakes.FakeBackend)
 			backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
 			backend3.HealthcheckUrlReturns("backend3")
 
@@ -64,7 +64,7 @@ var _ = Describe("Cluster", func() {
 				return c
 			}
 
-			urlGetter = &fakes.FakeUrlGetter{}
+			urlGetter = new(fakes.FakeUrlGetter)
 			urlGetter := urlGetter
 			domain.UrlGetterProvider = func(time.Duration) domain.UrlGetter {
 				return urlGetter
@@ -97,7 +97,7 @@ var _ = Describe("Cluster", func() {
 		It("notices when a healthy backend becomes unhealthy", func() {
 
 			unhealthyResponse := &http.Response{
-				Body:       &fakes.FakeReadWriteCloser{},
+				Body:       new(fakes.FakeReadWriteCloser),
 				StatusCode: http.StatusInternalServerError,
 			}
 
@@ -153,7 +153,7 @@ var _ = Describe("Cluster", func() {
 
 		It("notices when an unhealthy backend becomes healthy", func() {
 			unhealthyResponse := &http.Response{
-				Body:       &fakes.FakeReadWriteCloser{},
+				Body:       new(fakes.FakeReadWriteCloser),
 				StatusCode: http.StatusInternalServerError,
 			}
 
@@ -187,7 +187,7 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is healthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = &fakes.FakeArpManager{}
+				fakeArpManager = new(fakes.FakeArpManager)
 			})
 
 			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
@@ -201,9 +201,9 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is unhealthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = &fakes.FakeArpManager{}
+				fakeArpManager = new(fakes.FakeArpManager)
 				unhealthyResponse := &http.Response{
-					Body:       &fakes.FakeReadWriteCloser{},
+					Body:       new(fakes.FakeReadWriteCloser),
 					StatusCode: http.StatusInternalServerError,
 				}
 
@@ -259,11 +259,11 @@ var _ = Describe("Cluster", func() {
 		var clientConn net.Conn
 
 		BeforeEach(func() {
-			clientConn = &fakes.FakeConn{}
+			clientConn = new(fakes.FakeConn)
 		})
 
 		It("bridges the client connection to the active backend", func() {
-			activeBackend := &fakes.FakeBackend{}
+			activeBackend := new(fakes.FakeBackend)
 			backends.ActiveReturns(activeBackend)
 
 			err := cluster.RouteToBackend(clientConn)

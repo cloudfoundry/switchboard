@@ -25,7 +25,7 @@ var _ = Describe("HttpsEnforcer", func() {
 	})
 
 	JustBeforeEach(func() {
-		fakeHandler = &fakes.FakeHandler{}
+		fakeHandler = new(fakes.FakeHandler)
 		writer = httptest.NewRecorder()
 		enforcer := middleware.NewHttpsEnforcer(forceHttps)
 

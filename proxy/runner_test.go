@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("ProxyRunner", func() {
 	It("shuts down gracefully when signalled", func() {
-		cluster := &fakes.FakeCluster{}
+		cluster := new(fakes.FakeCluster)
 		proxyPort := 10000 + GinkgoParallelNode()
 		logger := lagertest.NewTestLogger("ProxyRunner test")
 		proxyRunner := proxy.NewRunner(cluster, uint(proxyPort), logger)

@@ -22,7 +22,7 @@ var _ = Describe("Handler", func() {
 	)
 
 	JustBeforeEach(func() {
-		backends := &domainfakes.FakeBackends{}
+		backends := new(domainfakes.FakeBackends)
 		logger := lagertest.NewTestLogger("Handler Test")
 
 		staticDir := ""
@@ -49,7 +49,7 @@ var _ = Describe("Handler", func() {
 				})
 			}
 
-			responseWriter = &apifakes.FakeResponseWriter{}
+			responseWriter = new(apifakes.FakeResponseWriter)
 			var err error
 			request, err = http.NewRequest("GET", "/v0/backends", nil)
 			Expect(err).NotTo(HaveOccurred())

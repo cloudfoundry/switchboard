@@ -22,11 +22,11 @@ var _ = Describe("Bridge", func() {
 
 		BeforeEach(func() {
 			logger = lagertest.NewTestLogger("Bridge test")
-			backend = &fakes.FakeConn{}
-			client = &fakes.FakeConn{}
+			backend = new(fakes.FakeConn)
+			client = new(fakes.FakeConn)
 
-			clientAddr := &fakes.FakeAddr{}
-			backendAddr := &fakes.FakeAddr{}
+			clientAddr := new(fakes.FakeAddr)
+			backendAddr := new(fakes.FakeAddr)
 
 			backend.ReadReturns(0, io.EOF)
 			client.ReadReturns(0, io.EOF)

@@ -16,7 +16,7 @@ var _ = Describe("Backend", func() {
 	var bridges *fakes.FakeBridges
 
 	BeforeEach(func() {
-		bridges = &fakes.FakeBridges{}
+		bridges = new(fakes.FakeBridges)
 
 		domain.BridgesProvider = func(lager.Logger) domain.Bridges {
 			return bridges
@@ -54,7 +54,7 @@ var _ = Describe("Backend", func() {
 		var connectReadyChan, disconnectChan chan interface{}
 
 		BeforeEach(func() {
-			bridge = &fakes.FakeBridge{}
+			bridge = new(fakes.FakeBridge)
 
 			connectReadyChan = make(chan interface{})
 			disconnectChan = make(chan interface{})
@@ -68,11 +68,11 @@ var _ = Describe("Backend", func() {
 
 			bridges.CreateReturns(bridge)
 
-			clientConn = &fakes.FakeConn{}
-			backendConn = &fakes.FakeConn{}
+			clientConn = new(fakes.FakeConn)
+			backendConn = new(fakes.FakeConn)
 
-			clientAddr := &fakes.FakeAddr{}
-			backendAddr := &fakes.FakeAddr{}
+			clientAddr := new(fakes.FakeAddr)
+			backendAddr := new(fakes.FakeAddr)
 
 			clientConn.RemoteAddrReturns(clientAddr)
 			backendConn.RemoteAddrReturns(backendAddr)

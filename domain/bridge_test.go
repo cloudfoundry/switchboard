@@ -14,9 +14,11 @@ import (
 
 var _ = Describe("Bridge", func() {
 	Describe("#Connect", func() {
-		var bridge domain.Bridge
-		var client, backend *fakes.FakeConn
-		var logger lager.Logger
+		var (
+			bridge          domain.Bridge
+			client, backend *fakes.FakeConn
+			logger          lager.Logger
+		)
 
 		BeforeEach(func() {
 			logger = lagertest.NewTestLogger("Bridge test")
@@ -26,6 +28,9 @@ var _ = Describe("Bridge", func() {
 			clientAddr := &fakes.FakeAddr{}
 			backendAddr := &fakes.FakeAddr{}
 
+			backend.ReadReturns(0, io.EOF)
+			client.ReadReturns(0, io.EOF)
+
 			client.RemoteAddrReturns(clientAddr)
 			backend.RemoteAddrReturns(backendAddr)
 
@@ -33,7 +38,6 @@ var _ = Describe("Bridge", func() {
 		})
 
 		Context("When operating normally", func() {
-
 			It("forwards data from the client to backend", func() {
 				expectedText := "hello"
 				var copiedToBackend string

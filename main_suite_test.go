@@ -8,11 +8,11 @@ import (
 	"runtime"
 	"testing"
 
-	"gopkg.in/yaml.v2"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"gopkg.in/yaml.v2"
 )
 
 const (

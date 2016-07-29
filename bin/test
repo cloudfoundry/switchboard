@@ -13,8 +13,7 @@ function get_cpu_count() {
 }
 
 echo -e "\nVetting packages for potential issues..."
-$MY_DIR/govet
-let "result+=$?"
+#$MY_DIR/govet
 
 echo -e "\nTesting packages..."
 

@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/cloudfoundry-incubator/candiedyaml"
+	"gopkg.in/yaml.v2"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -105,9 +105,11 @@ func writeConfig() {
 	fileToWrite, err := os.Create(configPath)
 	Ω(err).ShouldNot(HaveOccurred())
 
-	encoder := candiedyaml.NewEncoder(fileToWrite)
-	err = encoder.Encode(rootConfig)
-	Ω(err).ShouldNot(HaveOccurred())
+	b, err := yaml.Marshal(rootConfig)
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = fileToWrite.Write(b)
+	Expect(err).NotTo(HaveOccurred())
 }
 
 func getDirOfCurrentFile() string {

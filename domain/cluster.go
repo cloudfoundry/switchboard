@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pivotal-golang/lager"
+	"github.com/cloudfoundry-incubator/switchboard/models"
 )
 
 //go:generate counterfeiter . UrlGetter
@@ -25,14 +26,14 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 var UrlGetterProvider = HttpUrlGetterProvider
 
 type Cluster struct {
-	backends            Backends
+	backends            models.Backends
 	currentBackendIndex int
 	logger              lager.Logger
 	healthcheckTimeout  time.Duration
-	arpManager          ArpManager
+	arpManager          models.ArpManager
 }
 
-func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
+func NewCluster(backends models.Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager models.ArpManager) *Cluster {
 	return &Cluster{
 		backends:            backends,
 		currentBackendIndex: 0,
@@ -59,7 +60,7 @@ func (c Cluster) RouteToBackend(clientConn net.Conn) error {
 	return activeBackend.Bridge(clientConn)
 }
 
-func (c Cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
+func (c Cluster) monitorHealth(backend models.Backend, client UrlGetter, stopChan <-chan interface{}) {
 	go func() {
 		counters := c.setupCounters()
 		for {
@@ -97,7 +98,7 @@ func (c Cluster) setupCounters() *DecisionCounters {
 	return counters
 }
 
-func (c Cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *DecisionCounters) {
+func (c Cluster) dialHealthcheck(backend models.Backend, client UrlGetter, counters *DecisionCounters) {
 
 	counters.IncrementCount("dial")
 	shouldLog := counters.Should("log")
@@ -131,7 +132,12 @@ func (c Cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *De
 	}
 
 	if counters.Should("clearArp") {
-		backendHost := backend.AsJSON().Host
+		backend, ok := backend.AsJSON().(BackendJSON)
+		if !ok {
+			return
+		}
+
+		backendHost := backend.Host
 
 		if c.arpManager.IsCached(backendHost) {
 			err = c.arpManager.ClearCache(backendHost)

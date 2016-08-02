@@ -7,8 +7,7 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
 	"github.com/cloudfoundry-incubator/switchboard/config"
-	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
+	"github.com/cloudfoundry-incubator/switchboard/models/modelsfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager/lagertest"
@@ -22,7 +21,7 @@ var _ = Describe("Handler", func() {
 	)
 
 	JustBeforeEach(func() {
-		backends := new(domainfakes.FakeBackends)
+		backends := new(modelsfakes.FakeBackends)
 		logger := lagertest.NewTestLogger("Handler Test")
 
 		staticDir := ""
@@ -31,7 +30,7 @@ var _ = Describe("Handler", func() {
 
 	Context("when a request panics", func() {
 		var (
-			realBackendsIndex func(backends domain.Backends) http.Handler
+			realBackendsIndex func(api.JSONSerializable) http.Handler
 			responseWriter    *apifakes.FakeResponseWriter
 			request           *http.Request
 		)
@@ -43,7 +42,7 @@ var _ = Describe("Handler", func() {
 				Password:   "bar",
 			}
 			realBackendsIndex = api.BackendsIndex
-			api.BackendsIndex = func(domain.Backends) http.Handler {
+			api.BackendsIndex = func(api.JSONSerializable) http.Handler {
 				return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 					panic("fake request panic")
 				})

@@ -15,7 +15,7 @@ import (
 var _ = Describe("Bridge", func() {
 	Describe("#Connect", func() {
 		var (
-			bridge          domain.Bridge
+			bridge          *domain.Bridge
 			client, backend *domainfakes.FakeConn
 			logger          lager.Logger
 		)

@@ -13,21 +13,23 @@ import (
 	"io/ioutil"
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
+	"github.com/cloudfoundry-incubator/switchboard/models/modelsfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
+	"github.com/cloudfoundry-incubator/switchboard/models"
 )
 
 var _ = Describe("Cluster", func() {
-	var backends *domainfakes.FakeBackends
+	var backends *modelsfakes.FakeBackends
 	var logger lager.Logger
 	var cluster *domain.Cluster
-	var fakeArpManager *domainfakes.FakeArpManager
+	var fakeArpManager *modelsfakes.FakeArpManager
 	const healthcheckTimeout = time.Second
 
 	BeforeEach(func() {
 		fakeArpManager = nil
-		backends = new(domainfakes.FakeBackends)
+		backends = new(modelsfakes.FakeBackends)
 	})
 
 	JustBeforeEach(func() {
@@ -36,7 +38,7 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("Monitor", func() {
-		var backend1, backend2, backend3 *domainfakes.FakeBackend
+		var backend1, backend2, backend3 *modelsfakes.FakeBackend
 		var urlGetter *domainfakes.FakeUrlGetter
 		var healthyResponse = &http.Response{
 			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
@@ -44,20 +46,20 @@ var _ = Describe("Cluster", func() {
 		}
 
 		BeforeEach(func() {
-			backend1 = new(domainfakes.FakeBackend)
+			backend1 = new(modelsfakes.FakeBackend)
 			backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
 			backend1.HealthcheckUrlReturns("backend1")
 
-			backend2 = new(domainfakes.FakeBackend)
+			backend2 = new(modelsfakes.FakeBackend)
 			backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
 			backend2.HealthcheckUrlReturns("backend2")
 
-			backend3 = new(domainfakes.FakeBackend)
+			backend3 = new(modelsfakes.FakeBackend)
 			backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
 			backend3.HealthcheckUrlReturns("backend3")
 
-			backends.AllStub = func() <-chan domain.Backend {
-				c := make(chan domain.Backend)
+			backends.AllStub = func() <-chan models.Backend {
+				c := make(chan models.Backend)
 				go func() {
 					c <- backend1
 					c <- backend2
@@ -89,7 +91,7 @@ var _ = Describe("Cluster", func() {
 				return getUniqueBackendArgs(
 					backends.SetHealthyArgsForCall,
 					backends.SetHealthyCallCount)
-			}).Should(ConsistOf([]domain.Backend{
+			}).Should(ConsistOf([]models.Backend{
 				backend1,
 				backend2,
 				backend3,
@@ -119,7 +121,7 @@ var _ = Describe("Cluster", func() {
 				return getUniqueBackendArgs(
 					backends.SetHealthyArgsForCall,
 					backends.SetHealthyCallCount)
-			}).Should(ConsistOf([]domain.Backend{
+			}).Should(ConsistOf([]models.Backend{
 				backend1,
 				backend3,
 			}))
@@ -145,7 +147,7 @@ var _ = Describe("Cluster", func() {
 				return getUniqueBackendArgs(
 					backends.SetHealthyArgsForCall,
 					backends.SetHealthyCallCount)
-			}).Should(ConsistOf([]domain.Backend{
+			}).Should(ConsistOf([]models.Backend{
 				backend1,
 				backend3,
 			}))
@@ -180,7 +182,7 @@ var _ = Describe("Cluster", func() {
 				return getUniqueBackendArgs(
 					backends.SetHealthyArgsForCall,
 					backends.SetHealthyCallCount)
-			}).Should(ConsistOf([]domain.Backend{
+			}).Should(ConsistOf([]models.Backend{
 				backend1,
 				backend2,
 				backend3,
@@ -190,7 +192,7 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is healthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = new(domainfakes.FakeArpManager)
+				fakeArpManager = new(modelsfakes.FakeArpManager)
 			})
 
 			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
@@ -204,7 +206,7 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is unhealthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = new(domainfakes.FakeArpManager)
+				fakeArpManager = new(modelsfakes.FakeArpManager)
 				unhealthyResponse := &http.Response{
 					Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 					StatusCode: http.StatusInternalServerError,
@@ -223,7 +225,7 @@ var _ = Describe("Cluster", func() {
 
 				BeforeEach(func() {
 					fakeArpManager.IsCachedStub = func(ip string) bool {
-						if ip == backend2.AsJSON().Host {
+						if ip == backend2.AsJSON().(domain.BackendJSON).Host {
 							return true
 						} else {
 							return false
@@ -237,7 +239,7 @@ var _ = Describe("Cluster", func() {
 					defer close(stopMonitoring)
 
 					Eventually(fakeArpManager.ClearCacheCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
-					Expect(fakeArpManager.ClearCacheArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
+					Expect(fakeArpManager.ClearCacheArgsForCall(0)).To(Equal(backend2.AsJSON().(domain.BackendJSON).Host))
 				})
 			})
 
@@ -266,7 +268,7 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("bridges the client connection to the active backend", func() {
-			activeBackend := new(domainfakes.FakeBackend)
+			activeBackend := new(modelsfakes.FakeBackend)
 			backends.ActiveReturns(activeBackend)
 
 			err := cluster.RouteToBackend(clientConn)
@@ -286,14 +288,14 @@ var _ = Describe("Cluster", func() {
 	})
 })
 
-func getUniqueBackendArgs(getArgsForCall func(int) domain.Backend, getCallCount func() int) []interface{} {
+func getUniqueBackendArgs(getArgsForCall func(int) models.Backend, getCallCount func() int) []interface{} {
 
 	args := []interface{}{}
 	backendMap := make(map[string]bool)
 	callCount := getCallCount()
 	for i := 0; i < callCount; i++ {
 		arg := getArgsForCall(i)
-		host := arg.AsJSON().Host
+		host := arg.AsJSON().(domain.BackendJSON).Host
 		if _, keyExists := backendMap[host]; keyExists == false {
 			args = append(args, arg)
 			backendMap[host] = true

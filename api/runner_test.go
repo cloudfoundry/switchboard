@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/pivotal-golang/lager/lagertest"
 
-	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
+	"github.com/cloudfoundry-incubator/switchboard/models/modelsfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"
@@ -18,7 +18,7 @@ import (
 var _ = Describe("APIRunner", func() {
 	It("shuts down gracefully when signalled", func() {
 		apiPort := 10000 + GinkgoParallelNode()
-		backends := new(domainfakes.FakeBackends)
+		backends := new(modelsfakes.FakeBackends)
 		logger := lagertest.NewTestLogger("APIRunner Test")
 		config := config.API{}
 		staticDir := ""

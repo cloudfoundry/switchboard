@@ -2,11 +2,14 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"net/http"
 )
 
-var BackendsIndex = func(backends domain.Backends) http.Handler {
+type JSONSerializable interface {
+	AsJSON() interface{}
+}
+
+var BackendsIndex = func(backends JSONSerializable) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		backendsJSON, err := json.Marshal(backends.AsJSON())
 		if err != nil {

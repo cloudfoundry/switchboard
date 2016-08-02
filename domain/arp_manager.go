@@ -8,17 +8,11 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-//go:generate counterfeiter . ArpManager
-type ArpManager interface {
-	ClearCache(ip string) error
-	IsCached(ip string) bool
-}
-
 type ArpManagerCmd struct {
 	logger lager.Logger
 }
 
-func NewArmManager(logger lager.Logger) ArpManager {
+func NewArmManager(logger lager.Logger) *ArpManagerCmd {
 	return &ArpManagerCmd{
 		logger: logger,
 	}

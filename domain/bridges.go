@@ -6,41 +6,35 @@ import (
 	"sync"
 
 	"github.com/pivotal-golang/lager"
+	"github.com/cloudfoundry-incubator/switchboard/models"
 )
 
-var BridgeProvider = NewBridge
-
-//go:generate counterfeiter . Bridges
-type Bridges interface {
-	Create(clientConn, backendConn net.Conn) Bridge
-	Remove(bridge Bridge) error
-	RemoveAndCloseAll()
-	Size() uint
-	Contains(bridge Bridge) bool
+var BridgeProvider = func(client, backend net.Conn, logger lager.Logger) models.Bridge {
+	return NewBridge(client, backend, logger)
 }
 
-type concurrentBridges struct {
+type ConcurrentBridges struct {
 	mutex   sync.RWMutex
-	bridges []Bridge
-	logger  lager.Logger
+	bridges []models.Bridge
+	Logger  lager.Logger
 }
 
-func NewBridges(logger lager.Logger) Bridges {
-	return &concurrentBridges{
-		logger: logger,
+func NewBridges(logger lager.Logger) *ConcurrentBridges {
+	return &ConcurrentBridges{
+		Logger: logger,
 	}
 }
 
-func (b *concurrentBridges) Create(clientConn, backendConn net.Conn) Bridge {
+func (b *ConcurrentBridges) Create(clientConn, backendConn net.Conn) models.Bridge {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	bridge := BridgeProvider(clientConn, backendConn, b.logger)
+	bridge := BridgeProvider(clientConn, backendConn, b.Logger)
 	b.bridges = append(b.bridges, bridge)
 	return bridge
 }
 
-func (b *concurrentBridges) Remove(bridge Bridge) error {
+func (b *ConcurrentBridges) Remove(bridge models.Bridge) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
@@ -55,35 +49,35 @@ func (b *concurrentBridges) Remove(bridge Bridge) error {
 	return nil
 }
 
-func (b *concurrentBridges) RemoveAndCloseAll() {
+func (b *ConcurrentBridges) RemoveAndCloseAll() {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
 	for _, bridge := range b.bridges {
 		bridge.Close()
 	}
-	b.bridges = []Bridge{}
+	b.bridges = nil
 }
 
-func (b *concurrentBridges) Size() uint {
+func (b *ConcurrentBridges) Size() uint {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 
 	return uint(len(b.bridges))
 }
 
-func (b *concurrentBridges) Contains(bridge Bridge) bool {
+func (b *ConcurrentBridges) Contains(bridge models.Bridge) bool {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 
 	return b.unsafeContains(bridge)
 }
 
-func (b *concurrentBridges) unsafeContains(bridge Bridge) bool {
+func (b *ConcurrentBridges) unsafeContains(bridge models.Bridge) bool {
 	return b.unsafeIndexOf(bridge) != -1
 }
 
-func (b *concurrentBridges) unsafeIndexOf(bridge Bridge) int {
+func (b *ConcurrentBridges) unsafeIndexOf(bridge models.Bridge) int {
 	index := -1
 	for i, aBridge := range b.bridges {
 		if aBridge == bridge {

@@ -8,46 +8,41 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-//go:generate counterfeiter . Bridge
-type Bridge interface {
-	Connect()
-	Close()
-}
-
-type bridge struct {
+type Bridge struct {
 	done            chan struct{}
-	client, backend net.Conn
-	logger          lager.Logger
+	Client, Backend net.Conn
+	Logger          lager.Logger
 }
 
-func NewBridge(client, backend net.Conn, logger lager.Logger) Bridge {
-	return &bridge{
+//go:generate counterfeiter -o domainfakes/fake_net_conn.go /usr/local/opt/go/libexec/src/net/net.go Conn
+func NewBridge(client, backend net.Conn, logger lager.Logger) *Bridge {
+	return &Bridge{
 		done:    make(chan struct{}),
-		client:  client,
-		backend: backend,
-		logger:  logger,
+		Client:  client,
+		Backend: backend,
+		Logger:  logger,
 	}
 }
 
-func (b bridge) Connect() {
-	b.logger.Info(fmt.Sprintf("Session established %s", b))
+func (b Bridge) Connect() {
+	b.Logger.Info(fmt.Sprintf("Session established %s", b))
 
-	defer b.logger.Info(fmt.Sprintf("Session closed %s", b)) // defers are LIFO
-	defer b.client.Close()
-	defer b.backend.Close()
+	defer b.Logger.Info(fmt.Sprintf("Session closed %s", b)) // defers are LIFO
+	defer b.Client.Close()
+	defer b.Backend.Close()
 
 	select {
-	case <-b.safeCopy(b.client, b.backend):
-	case <-b.safeCopy(b.backend, b.client):
+	case <-b.safeCopy(b.Client, b.Backend):
+	case <-b.safeCopy(b.Backend, b.Client):
 	case <-b.done:
 	}
 }
 
-func (b bridge) Close() {
+func (b Bridge) Close() {
 	close(b.done)
 }
 
-func (b bridge) safeCopy(from, to net.Conn) chan struct{} {
+func (b Bridge) safeCopy(from, to net.Conn) chan struct{} {
 	copyDone := make(chan struct{})
 	go func() {
 		// We don't want to capture the error because it's not meaningful -
@@ -65,6 +60,6 @@ func (b bridge) safeCopy(from, to net.Conn) chan struct{} {
 	return copyDone
 }
 
-func (b bridge) String() string {
-	return fmt.Sprintf("from client at %v to backend at %v", b.client.RemoteAddr(), b.backend.RemoteAddr())
+func (b Bridge) String() string {
+	return fmt.Sprintf("from client at %v to backend at %v", b.Client.RemoteAddr(), b.Backend.RemoteAddr())
 }

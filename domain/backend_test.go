@@ -5,29 +5,34 @@ import (
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
+	"github.com/cloudfoundry-incubator/switchboard/models/modelsfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Backend", func() {
-	var backend domain.Backend
-	var bridges *domainfakes.FakeBridges
-
+	var (
+		backend *domain.Backend
+		bridges *modelsfakes.FakeBridges
+	)
 	BeforeEach(func() {
-		bridges = new(domainfakes.FakeBridges)
+		bridges = new(modelsfakes.FakeBridges)
+	})
 
-		domain.BridgesProvider = func(lager.Logger) domain.Bridges {
-			return bridges
+	JustBeforeEach(func() {
+		backend = &domain.Backend{
+			Name:           "backend-0",
+			Host:           "1.2.3.4",
+			Port:           3306,
+			StatusPort:     9902,
+			StatusEndpoint: "status",
+			Logger:         lagertest.NewTestLogger("Backend test"),
+			Bridges:        bridges,
 		}
-
-		logger := lagertest.NewTestLogger("Backend test")
-		backend = domain.NewBackend("backend-0", "1.2.3.4", 3306, 9902, "status", logger)
 	})
 
 	AfterEach(func() {
-		domain.BridgesProvider = domain.NewBridges
 	})
 
 	Describe("HealthcheckUrl", func() {
@@ -45,16 +50,18 @@ var _ = Describe("Backend", func() {
 	})
 
 	Describe("Bridge", func() {
-		var backendConn *domainfakes.FakeConn
-		var clientConn *domainfakes.FakeConn
+		var (
+			backendConn *domainfakes.FakeConn
+			clientConn  *domainfakes.FakeConn
 
-		var dialErr error
-		var dialedProtocol, dialedAddress string
-		var bridge *domainfakes.FakeBridge
-		var connectReadyChan, disconnectChan chan interface{}
+			dialErr                          error
+			dialedProtocol, dialedAddress    string
+			bridge                           *modelsfakes.FakeBridge
+			connectReadyChan, disconnectChan chan interface{}
+		)
 
 		BeforeEach(func() {
-			bridge = new(domainfakes.FakeBridge)
+			bridge = new(modelsfakes.FakeBridge)
 
 			connectReadyChan = make(chan interface{})
 			disconnectChan = make(chan interface{})
@@ -79,6 +86,7 @@ var _ = Describe("Backend", func() {
 				dialedAddress = address
 				return backendConn, dialErr
 			}
+
 		})
 
 		AfterEach(func() {

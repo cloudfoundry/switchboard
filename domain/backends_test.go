@@ -3,25 +3,30 @@ package domain_test
 import (
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
+	"github.com/cloudfoundry-incubator/switchboard/models/modelsfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
+	"github.com/cloudfoundry-incubator/switchboard/models"
 )
 
 var _ = Describe("Backends", func() {
 	var (
-		backends domain.Backends
+		backends        *domain.Backends
+		backendProvider func(name string, host string, port uint, statusPort uint, statusEndpoint string, logger lager.Logger) models.Backend
 	)
 
-	var backendChanToSlice = func(c <-chan domain.Backend) []domain.Backend {
-		var result []domain.Backend
+	var backendChanToSlice = func(c <-chan models.Backend) []models.Backend {
+		var result []models.Backend
 		for b := range c {
 			result = append(result, b)
 		}
 		return result
 	}
+	BeforeEach(func() {
+		backendProvider = domain.BackendProvider
+	})
 
 	JustBeforeEach(func() {
 		logger := lagertest.NewTestLogger("Backends test")
@@ -33,6 +38,10 @@ var _ = Describe("Backends", func() {
 		}
 
 		backends = domain.NewBackends(backendConfigs, logger)
+	})
+
+	AfterEach(func() {
+		domain.BackendProvider = backendProvider
 	})
 
 	Describe("Concurrent operations", func() {
@@ -117,7 +126,7 @@ var _ = Describe("Backends", func() {
 	})
 
 	Describe("SetHealthy", func() {
-		var unhealthy domain.Backend
+		var unhealthy models.Backend
 
 		JustBeforeEach(func() {
 			unhealthy = backendChanToSlice(backends.Healthy())[0]
@@ -156,19 +165,15 @@ var _ = Describe("Backends", func() {
 
 		Context("when this is active", func() {
 			BeforeEach(func() {
-				domain.BackendProvider = func(string, string, uint, uint, string, lager.Logger) domain.Backend {
-					return new(domainfakes.FakeBackend)
+				domain.BackendProvider = func(string, string, uint, uint, string, lager.Logger) models.Backend {
+					return new(modelsfakes.FakeBackend)
 				}
-			})
-
-			AfterEach(func() {
-				domain.BackendProvider = domain.NewBackend
 			})
 
 			It("severs all open connections", func() {
 				backend := backends.Active()
 				backends.SetUnhealthy(backend)
-				Expect(backend.(*domainfakes.FakeBackend).SeverConnectionsCallCount()).To(Equal(1))
+				Expect(backend.(*modelsfakes.FakeBackend).SeverConnectionsCallCount()).To(Equal(1))
 			})
 
 			It("sets another healthy backend as the new active backend", func() {

@@ -4,22 +4,32 @@ import (
 	"net"
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
+	"github.com/cloudfoundry-incubator/switchboard/models/modelsfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
+	"github.com/cloudfoundry-incubator/switchboard/models"
+	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 )
 
 var _ = Describe("Bridges", func() {
-	var bridges domain.Bridges
-	var bridge1 domain.Bridge
-	var bridge2 domain.Bridge
-	var bridge3 domain.Bridge
+	var (
+		bridges        models.Bridges
+		bridge1        models.Bridge
+		bridge2        models.Bridge
+		bridge3        models.Bridge
+		bridgeProvider func(net.Conn, net.Conn, lager.Logger) models.Bridge
+	)
 
 	BeforeEach(func() {
 		logger := lagertest.NewTestLogger("Bridges Test")
 		bridges = domain.NewBridges(logger)
+		bridgeProvider = domain.BridgeProvider
+	})
+
+	AfterEach(func() {
+		domain.BridgeProvider = bridgeProvider
 	})
 
 	JustBeforeEach(func() {
@@ -101,21 +111,17 @@ var _ = Describe("Bridges", func() {
 
 	Describe("RemoveAndCloseAll", func() {
 		BeforeEach(func() {
-			domain.BridgeProvider = func(_, _ net.Conn, logger lager.Logger) domain.Bridge {
-				return new(domainfakes.FakeBridge)
+			domain.BridgeProvider = func(client, backend net.Conn, logger lager.Logger) models.Bridge {
+				return new(modelsfakes.FakeBridge)
 			}
-		})
-
-		AfterEach(func() {
-			domain.BridgeProvider = domain.NewBridge
 		})
 
 		It("closes all bridges", func() {
 			bridges.RemoveAndCloseAll()
 
-			Expect(bridge1.(*domainfakes.FakeBridge).CloseCallCount()).To(Equal(1))
-			Expect(bridge2.(*domainfakes.FakeBridge).CloseCallCount()).To(Equal(1))
-			Expect(bridge3.(*domainfakes.FakeBridge).CloseCallCount()).To(Equal(1))
+			Expect(bridge1.(*modelsfakes.FakeBridge).CloseCallCount()).To(Equal(1))
+			Expect(bridge2.(*modelsfakes.FakeBridge).CloseCallCount()).To(Equal(1))
+			Expect(bridge3.(*modelsfakes.FakeBridge).CloseCallCount()).To(Equal(1))
 		})
 
 		It("removes all bridges", func() {

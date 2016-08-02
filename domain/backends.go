@@ -85,17 +85,6 @@ func (b *Backends) Healthy() <-chan models.Backend {
 	return c
 }
 
-func (b *Backends) Any() models.Backend {
-	b.mutex.RLock()
-	defer b.mutex.RUnlock()
-
-	for backend := range b.all {
-		return backend
-	}
-
-	return nil
-}
-
 func (b *Backends) Active() models.Backend {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()

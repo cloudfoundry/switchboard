@@ -14,12 +14,6 @@ type FakeBackends struct {
 	allReturns     struct {
 		result1 <-chan models.Backend
 	}
-	AnyStub        func() models.Backend
-	anyMutex       sync.RWMutex
-	anyArgsForCall []struct{}
-	anyReturns     struct {
-		result1 models.Backend
-	}
 	ActiveStub        func() models.Backend
 	activeMutex       sync.RWMutex
 	activeArgsForCall []struct{}
@@ -74,31 +68,6 @@ func (fake *FakeBackends) AllReturns(result1 <-chan models.Backend) {
 	fake.AllStub = nil
 	fake.allReturns = struct {
 		result1 <-chan models.Backend
-	}{result1}
-}
-
-func (fake *FakeBackends) Any() models.Backend {
-	fake.anyMutex.Lock()
-	fake.anyArgsForCall = append(fake.anyArgsForCall, struct{}{})
-	fake.recordInvocation("Any", []interface{}{})
-	fake.anyMutex.Unlock()
-	if fake.AnyStub != nil {
-		return fake.AnyStub()
-	} else {
-		return fake.anyReturns.result1
-	}
-}
-
-func (fake *FakeBackends) AnyCallCount() int {
-	fake.anyMutex.RLock()
-	defer fake.anyMutex.RUnlock()
-	return len(fake.anyArgsForCall)
-}
-
-func (fake *FakeBackends) AnyReturns(result1 models.Backend) {
-	fake.AnyStub = nil
-	fake.anyReturns = struct {
-		result1 models.Backend
 	}{result1}
 }
 
@@ -230,8 +199,6 @@ func (fake *FakeBackends) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.allMutex.RLock()
 	defer fake.allMutex.RUnlock()
-	fake.anyMutex.RLock()
-	defer fake.anyMutex.RUnlock()
 	fake.activeMutex.RLock()
 	defer fake.activeMutex.RUnlock()
 	fake.setHealthyMutex.RLock()

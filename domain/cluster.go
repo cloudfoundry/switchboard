@@ -131,6 +131,7 @@ func (c Cluster) dialHealthcheck(backend models.Backend, client UrlGetter, count
 		}
 	}
 
+	// FIXME: This is gross.
 	if counters.Should("clearArp") {
 		backend, ok := backend.AsJSON().(BackendJSON)
 		if !ok {

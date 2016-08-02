@@ -9,7 +9,6 @@ type JSONSerializable interface {
 //go:generate counterfeiter . Backends
 type Backends interface {
 	All() <-chan Backend
-	Any() Backend
 	Active() Backend
 	SetHealthy(backend Backend)
 	SetUnhealthy(backend Backend)

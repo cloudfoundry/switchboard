@@ -56,7 +56,7 @@ var _ = Describe("Backends", func() {
 				make(chan interface{}),
 			}
 
-			backend := backends.Any()
+			backend := backendChanToSlice(backends.All())[0]
 
 			go func() {
 				<-readySetGo
@@ -148,7 +148,7 @@ var _ = Describe("Backends", func() {
 
 			It("sets the newly healthy backend as the new active backend", func() {
 				Expect(backends.Active()).To(BeNil())
-				backend := backends.Any()
+				backend := backendChanToSlice(backends.All())[0]
 				backends.SetHealthy(backend)
 				Expect(backends.Active()).To(Equal(backend))
 			})

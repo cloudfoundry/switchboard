@@ -18,16 +18,50 @@ import (
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
+const healthcheckTimeout = time.Second
+
 var _ = Describe("Cluster", func() {
-	var backends *domainfakes.FakeBackends
-	var logger lager.Logger
-	var cluster *domain.Cluster
-	var fakeArpManager *domainfakes.FakeArpManager
-	const healthcheckTimeout = time.Second
+	var (
+		backends                     *domainfakes.FakeBackends
+		backendSlice                 []*domainfakes.FakeBackend
+		logger                       lager.Logger
+		cluster                      *domain.Cluster
+		fakeArpManager               *domainfakes.FakeArpManager
+		backend1, backend2, backend3 *domainfakes.FakeBackend
+	)
 
 	BeforeEach(func() {
 		fakeArpManager = nil
 		backends = new(domainfakes.FakeBackends)
+
+		backend1 = new(domainfakes.FakeBackend)
+		backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
+		backend1.HealthcheckUrlReturns("backend1")
+
+		backend2 = new(domainfakes.FakeBackend)
+		backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
+		backend2.HealthcheckUrlReturns("backend2")
+		backend2.TrafficEnabledReturns(true)
+
+		backend3 = new(domainfakes.FakeBackend)
+		backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
+		backend3.HealthcheckUrlReturns("backend3")
+		backend3.TrafficEnabledReturns(true)
+
+		backendSlice = []*domainfakes.FakeBackend{backend1, backend2, backend3}
+
+		backends.AllStub = func() <-chan domain.Backend {
+			c := make(chan domain.Backend)
+			go func() {
+				c <- backend1
+				c <- backend2
+				c <- backend3
+				close(c)
+			}()
+			return c
+		}
+
+		backends.AnyReturns(backend1)
 	})
 
 	JustBeforeEach(func() {
@@ -36,7 +70,6 @@ var _ = Describe("Cluster", func() {
 	})
 
 	Describe("Monitor", func() {
-		var backend1, backend2, backend3 *domainfakes.FakeBackend
 		var urlGetter *domainfakes.FakeUrlGetter
 		var healthyResponse = &http.Response{
 			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
@@ -44,29 +77,6 @@ var _ = Describe("Cluster", func() {
 		}
 
 		BeforeEach(func() {
-			backend1 = new(domainfakes.FakeBackend)
-			backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
-			backend1.HealthcheckUrlReturns("backend1")
-
-			backend2 = new(domainfakes.FakeBackend)
-			backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
-			backend2.HealthcheckUrlReturns("backend2")
-
-			backend3 = new(domainfakes.FakeBackend)
-			backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
-			backend3.HealthcheckUrlReturns("backend3")
-
-			backends.AllStub = func() <-chan domain.Backend {
-				c := make(chan domain.Backend)
-				go func() {
-					c <- backend1
-					c <- backend2
-					c <- backend3
-					close(c)
-				}()
-				return c
-			}
-
 			urlGetter = new(domainfakes.FakeUrlGetter)
 			urlGetter := urlGetter
 			domain.UrlGetterProvider = func(time.Duration) domain.UrlGetter {
@@ -80,7 +90,7 @@ var _ = Describe("Cluster", func() {
 			domain.UrlGetterProvider = domain.HttpUrlGetterProvider
 		})
 
-		It("notices when each backend stays healthy", func() {
+		It("notices when each backend stays healthy", func(done Done) {
 
 			stopMonitoring := cluster.Monitor()
 			defer close(stopMonitoring)
@@ -95,7 +105,9 @@ var _ = Describe("Cluster", func() {
 				backend3,
 			}))
 			Expect(backends.SetUnhealthyCallCount()).To(BeZero())
-		})
+
+			close(done)
+		}, 5)
 
 		It("notices when a healthy backend becomes unhealthy", func() {
 
@@ -282,6 +294,80 @@ var _ = Describe("Cluster", func() {
 			err := cluster.RouteToBackend(clientConn)
 
 			Expect(err).Should(HaveOccurred())
+		})
+	})
+
+	Describe("EnableTraffic", func() {
+		var (
+			message string
+		)
+
+		BeforeEach(func() {
+			message = "some message"
+		})
+
+		It("calls EnableTraffic on all the backends", func() {
+			cluster.EnableTraffic(message)
+
+			for _, backend := range backendSlice {
+				Expect(backend.EnableTrafficCallCount()).To(Equal(1))
+			}
+		})
+
+		It("records the message", func() {
+			cluster.EnableTraffic(message)
+
+			clusterJSON := cluster.AsJSON()
+
+			Expect(clusterJSON.Message).To(Equal(message))
+		})
+
+		It("records the current time", func() {
+			beforeTime := time.Now()
+			cluster.EnableTraffic(message)
+			afterTime := time.Now()
+
+			clusterJSON := cluster.AsJSON()
+
+			Expect(clusterJSON.LastUpdated.After(beforeTime)).To(BeTrue())
+			Expect(clusterJSON.LastUpdated.Before(afterTime)).To(BeTrue())
+		})
+	})
+
+	Describe("DisableTraffic", func() {
+		var (
+			message string
+		)
+
+		BeforeEach(func() {
+			message = "some message"
+		})
+
+		It("calls DisableTraffic on all the backends", func() {
+			cluster.DisableTraffic(message)
+
+			for _, backend := range backendSlice {
+				Expect(backend.DisableTrafficCallCount()).To(Equal(1))
+			}
+		})
+
+		It("records the message", func() {
+			cluster.DisableTraffic(message)
+
+			clusterJSON := cluster.AsJSON()
+
+			Expect(clusterJSON.Message).To(Equal(message))
+		})
+
+		It("records the current time", func() {
+			beforeTime := time.Now()
+			cluster.DisableTraffic(message)
+			afterTime := time.Now()
+
+			clusterJSON := cluster.AsJSON()
+
+			Expect(clusterJSON.LastUpdated.After(beforeTime)).To(BeTrue())
+			Expect(clusterJSON.LastUpdated.Before(afterTime)).To(BeTrue())
 		})
 	})
 })

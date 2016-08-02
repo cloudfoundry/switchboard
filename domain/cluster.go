@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"time"
 
+	"sync"
+
 	"github.com/pivotal-golang/lager"
 )
 
@@ -25,11 +27,14 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 var UrlGetterProvider = HttpUrlGetterProvider
 
 type Cluster struct {
+	mutex               sync.RWMutex
 	backends            Backends
 	currentBackendIndex int
 	logger              lager.Logger
 	healthcheckTimeout  time.Duration
 	arpManager          ArpManager
+	message             string
+	lastUpdated         time.Time
 }
 
 func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
@@ -42,7 +47,7 @@ func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lage
 	}
 }
 
-func (c Cluster) Monitor() chan<- interface{} {
+func (c *Cluster) Monitor() chan<- interface{} {
 	client := UrlGetterProvider(c.healthcheckTimeout)
 	stopChan := make(chan interface{})
 	for backend := range c.backends.All() {
@@ -51,7 +56,7 @@ func (c Cluster) Monitor() chan<- interface{} {
 	return stopChan
 }
 
-func (c Cluster) RouteToBackend(clientConn net.Conn) error {
+func (c *Cluster) RouteToBackend(clientConn net.Conn) error {
 	activeBackend := c.backends.Active()
 	if activeBackend == nil {
 		return errors.New("No active Backend")
@@ -59,7 +64,7 @@ func (c Cluster) RouteToBackend(clientConn net.Conn) error {
 	return activeBackend.Bridge(clientConn)
 }
 
-func (c Cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
+func (c *Cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
 	go func() {
 		counters := c.setupCounters()
 		for {
@@ -73,7 +78,7 @@ func (c Cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-cha
 	}()
 }
 
-func (c Cluster) setupCounters() *DecisionCounters {
+func (c *Cluster) setupCounters() *DecisionCounters {
 	counters := NewDecisionCounters()
 	logFreq := uint64(5)
 	clearArpFreq := uint64(5)
@@ -97,7 +102,7 @@ func (c Cluster) setupCounters() *DecisionCounters {
 	return counters
 }
 
-func (c Cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *DecisionCounters) {
+func (c *Cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *DecisionCounters) {
 
 	counters.IncrementCount("dial")
 	shouldLog := counters.Should("log")
@@ -140,4 +145,56 @@ func (c Cluster) dialHealthcheck(backend Backend, client UrlGetter, counters *De
 			}
 		}
 	}
+}
+
+func (c *Cluster) AsJSON() ClusterJSON {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	return ClusterJSON{
+		CurrentBackendIndex: uint(c.currentBackendIndex),
+
+		// Traffic is enabled and disabled on all backends collectively
+		// so we only need to read the state of one to get the state of
+		// the system as a whole
+		TrafficEnabled: c.backends.Any().TrafficEnabled(),
+
+		Message:     c.message,
+		LastUpdated: c.lastUpdated,
+	}
+}
+
+func (c *Cluster) EnableTraffic(message string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.logger.Info("Enabling traffic for cluster", lager.Data{"message": message})
+
+	c.message = message
+	c.lastUpdated = time.Now()
+
+	for backend := range c.backends.All() {
+		backend.EnableTraffic()
+	}
+}
+
+func (c *Cluster) DisableTraffic(message string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.logger.Info("Disabling traffic for cluster", lager.Data{"message": message})
+
+	c.message = message
+	c.lastUpdated = time.Now()
+
+	for backend := range c.backends.All() {
+		backend.DisableTraffic()
+	}
+}
+
+type ClusterJSON struct {
+	CurrentBackendIndex uint      `json:"currentBackendIndex"`
+	TrafficEnabled      bool      `json:"trafficEnabled"`
+	Message             string    `json:"message"`
+	LastUpdated         time.Time `json:"lastUpdated"`
 }

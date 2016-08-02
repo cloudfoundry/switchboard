@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -12,6 +13,9 @@ import (
 type Cluster interface {
 	Monitor() chan<- interface{}
 	RouteToBackend(clientConn net.Conn) error
+	AsJSON() domain.ClusterJSON
+	EnableTraffic(message string)
+	DisableTraffic(message string)
 }
 
 type Runner struct {

@@ -58,7 +58,7 @@ func main() {
 		arpManager,
 	)
 
-	handler := api.NewHandler(backends, logger, rootConfig.API, rootConfig.StaticDir)
+	handler := api.NewHandler(cluster, backends, logger, rootConfig.API, rootConfig.StaticDir)
 
 	members := grouper.Members{
 		{

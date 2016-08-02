@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 
+	"sync"
+
 	"github.com/pivotal-golang/lager"
 )
 
@@ -18,9 +20,13 @@ type Backend interface {
 	Bridge(clientConn net.Conn) error
 	SeverConnections()
 	AsJSON() BackendJSON
+	EnableTraffic()
+	DisableTraffic()
+	TrafficEnabled() bool
 }
 
 type backend struct {
+	mutex          sync.RWMutex
 	host           string
 	port           uint
 	statusPort     uint
@@ -28,6 +34,7 @@ type backend struct {
 	logger         lager.Logger
 	bridges        Bridges
 	name           string
+	trafficEnabled bool
 }
 
 type BackendJSON struct {
@@ -37,6 +44,7 @@ type BackendJSON struct {
 	Active              bool   `json:"active"`
 	Name                string `json:"name"`
 	CurrentSessionCount uint   `json:"currentSessionCount"`
+	TrafficEnabled      bool   `json:"trafficEnabled"`
 }
 
 func NewBackend(
@@ -55,15 +63,30 @@ func NewBackend(
 		statusEndpoint: statusEndpoint,
 		logger:         logger,
 		bridges:        BridgesProvider(logger),
+		trafficEnabled: true,
 	}
 }
 
-func (b backend) HealthcheckUrl() string {
+func (b *backend) HealthcheckUrl() string {
 	return fmt.Sprintf("http://%s:%d/%s", b.host, b.statusPort, b.statusEndpoint)
 }
 
-func (b backend) Bridge(clientConn net.Conn) error {
+func (b *backend) TrafficEnabled() bool {
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
+
+	return b.trafficEnabled
+}
+
+func (b *backend) Bridge(clientConn net.Conn) error {
 	backendAddr := fmt.Sprintf("%s:%d", b.host, b.port)
+
+	if !b.TrafficEnabled() {
+		b.logger.Info(fmt.Sprintf("Traffic disabled - not routing to %s at %s:%d", b.name, b.host, b.port))
+		err := clientConn.Close()
+		return err
+	}
+
 	backendConn, err := Dialer("tcp", backendAddr)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Error establishing connection to backend: %s", err))
@@ -78,16 +101,32 @@ func (b backend) Bridge(clientConn net.Conn) error {
 	return nil
 }
 
-func (b backend) SeverConnections() {
+func (b *backend) SeverConnections() {
 	b.logger.Info(fmt.Sprintf("Severing all connections to %s at %s:%d", b.name, b.host, b.port))
 	b.bridges.RemoveAndCloseAll()
 }
 
-func (b backend) AsJSON() BackendJSON {
+func (b *backend) AsJSON() BackendJSON {
 	return BackendJSON{
 		Host:                b.host,
 		Port:                b.port,
 		Name:                b.name,
 		CurrentSessionCount: b.bridges.Size(),
+		TrafficEnabled:      b.TrafficEnabled(),
 	}
+}
+
+func (b *backend) EnableTraffic() {
+	b.logger.Info(fmt.Sprintf("Enabling traffic for backend %s at %s:%d", b.name, b.host, b.port))
+	b.mutex.Lock()
+	b.trafficEnabled = true
+	b.mutex.Unlock()
+}
+
+func (b *backend) DisableTraffic() {
+	b.logger.Info(fmt.Sprintf("Disabling traffic for backend %s at %s:%d", b.name, b.host, b.port))
+	b.mutex.Lock()
+	b.trafficEnabled = false
+	b.mutex.Unlock()
+	b.SeverConnections()
 }

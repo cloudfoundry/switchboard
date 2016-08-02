@@ -10,12 +10,19 @@ import (
 )
 
 //go:generate counterfeiter -o apifakes/fake_response_writer.go /usr/local/opt/go/libexec/src/net/http/server.go ResponseWriter
-func NewHandler(backends domain.Backends, logger lager.Logger, apiConfig config.API, staticDir string) http.Handler {
+func NewHandler(
+	cluster ClusterManager,
+	backends domain.Backends,
+	logger lager.Logger,
+	apiConfig config.API,
+	staticDir string,
+) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
 
 	mux.Handle("/v0/backends", BackendsIndex(backends))
+	mux.Handle("/v0/cluster", Cluster(cluster, logger))
 
 	return middleware.Chain{
 		middleware.NewPanicRecovery(logger),

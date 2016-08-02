@@ -36,6 +36,47 @@ type Response struct {
 	Message      string
 }
 
+func allowTraffic(allow bool) {
+	var url string
+	if allow {
+		url = fmt.Sprintf(
+			"http://localhost:%d/v0/cluster?trafficEnabled=%t",
+			switchboardAPIPort,
+			allow,
+		)
+	} else {
+		url = fmt.Sprintf(
+			"http://localhost:%d/v0/cluster?trafficEnabled=%t&message=%s",
+			switchboardAPIPort,
+			allow,
+			"main%20test%20is%20disabling%20traffic",
+		)
+	}
+
+	req, err := http.NewRequest("PATCH", url, nil)
+	Expect(err).NotTo(HaveOccurred())
+	req.SetBasicAuth("username", "password")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+}
+
+func getClusterFromAPI(req *http.Request) map[string]interface{} {
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+	returnedCluster := map[string]interface{}{}
+
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&returnedCluster)
+	Expect(err).NotTo(HaveOccurred())
+	return returnedCluster
+}
+
 func sendData(conn net.Conn, data string) (Response, error) {
 	conn.Write([]byte(data))
 	buffer := make([]byte, 1024)
@@ -70,6 +111,7 @@ func getBackendsFromApi(req *http.Request) []map[string]interface{} {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	returnedBackends := []map[string]interface{}{}
 
@@ -110,10 +152,12 @@ var _ = Describe("Switchboard", func() {
 			dummies.NewHealthcheckRunner(backends[1]),
 		}
 
+		logLevel := "debug"
 		switchboardRunner := ginkgomon.New(ginkgomon.Config{
 			Command: exec.Command(
 				switchboardBinPath,
 				fmt.Sprintf("-configPath=%s", configPath),
+				fmt.Sprintf("-logLevel=%s", logLevel),
 			),
 			Name:              fmt.Sprintf("switchboard"),
 			StartCheck:        "started",
@@ -281,6 +325,9 @@ var _ = Describe("Switchboard", func() {
 
 							Expect(len(returnedBackends)).To(Equal(2))
 
+							Expect(returnedBackends[0]["trafficEnabled"]).To(BeTrue())
+							Expect(returnedBackends[1]["trafficEnabled"]).To(BeTrue())
+
 							Expect(returnedBackends[0]["host"]).To(Equal("localhost"))
 							Expect(returnedBackends[0]["healthy"]).To(BeTrue(), "Expected backends[0] to be healthy")
 
@@ -328,6 +375,57 @@ var _ = Describe("Switchboard", func() {
 							Expect(inactiveBackend["currentSessionCount"]).To(BeNumerically("==", 0), "Expected inactive backend to have SessionCount == 0")
 							Expect(inactiveBackend["active"]).To(BeFalse(), "Expected inactive backend to not be active")
 						})
+					})
+				})
+			})
+
+			Describe("/v0/cluster", func() {
+				Describe("GET", func() {
+					It("returns valid JSON in body", func() {
+						url := fmt.Sprintf("http://localhost:%d/v0/cluster", switchboardAPIPort)
+						req, err := http.NewRequest("GET", url, nil)
+						Expect(err).NotTo(HaveOccurred())
+						req.SetBasicAuth("username", "password")
+
+						returnedCluster := getClusterFromAPI(req)
+
+						Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
+						Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
+					})
+				})
+
+				Describe("PATCH", func() {
+					It("returns valid JSON in body", func() {
+						url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=true", switchboardAPIPort)
+						req, err := http.NewRequest("PATCH", url, nil)
+						Expect(err).NotTo(HaveOccurred())
+						req.SetBasicAuth("username", "password")
+
+						returnedCluster := getClusterFromAPI(req)
+
+						Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
+						Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
+						Expect(returnedCluster["lastUpdated"]).NotTo(BeEmpty())
+					})
+
+					It("persists the provided value of enableTraffic", func() {
+						url := fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=false&message=some-reason", switchboardAPIPort)
+						req, err := http.NewRequest("PATCH", url, nil)
+						Expect(err).NotTo(HaveOccurred())
+						req.SetBasicAuth("username", "password")
+
+						returnedCluster := getClusterFromAPI(req)
+
+						Expect(returnedCluster["trafficEnabled"]).To(BeFalse())
+
+						url = fmt.Sprintf("http://localhost:%d/v0/cluster?trafficEnabled=true", switchboardAPIPort)
+						req, err = http.NewRequest("PATCH", url, nil)
+						Expect(err).NotTo(HaveOccurred())
+						req.SetBasicAuth("username", "password")
+
+						returnedCluster = getClusterFromAPI(req)
+
+						Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
 					})
 				})
 			})
@@ -509,6 +607,52 @@ var _ = Describe("Switchboard", func() {
 								return err
 							}, healthcheckWaitDuration, 200*time.Millisecond).Should(matchConnectionDisconnect())
 						})
+					})
+				})
+
+				Context("when traffic is disabled", func() {
+					It("disconnects client connections", func() {
+						var conn net.Conn
+						Eventually(func() error {
+							var err error
+							conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							return err
+						}).Should(Succeed())
+
+						dataWhileHealthy, err := sendData(conn, "data while healthy")
+						Expect(err).ToNot(HaveOccurred())
+						Expect(dataWhileHealthy.Message).To(Equal("data while healthy"))
+
+						allowTraffic(false)
+
+						Eventually(func() error {
+							_, err := sendData(conn, "data when unhealthy")
+							return err
+						}, healthcheckWaitDuration).Should(matchConnectionDisconnect())
+					})
+
+					It("rejects new connections", func() {
+						Eventually(func() error {
+							allowTraffic(false)
+
+							conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							if err != nil {
+								return err
+							}
+							_, err = sendData(conn, "write that should fail")
+							return err
+						}, healthcheckWaitDuration, 200*time.Millisecond).Should(matchConnectionDisconnect())
+					})
+
+					It("permits new connections again after re-enabling traffic", func() {
+						allowTraffic(false)
+						allowTraffic(true)
+
+						Eventually(func() error {
+							var err error
+							_, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							return err
+						}).Should(Succeed())
 					})
 				})
 			})

@@ -19,14 +19,22 @@ var _ = Describe("Handler", func() {
 		handler          http.Handler
 		responseRecorder *httptest.ResponseRecorder
 		cfg              config.API
+		cluster          *apifakes.FakeClusterManager
 	)
 
 	JustBeforeEach(func() {
 		backends := new(domainfakes.FakeBackends)
+		cluster = new(apifakes.FakeClusterManager)
 		logger := lagertest.NewTestLogger("Handler Test")
 
 		staticDir := ""
-		handler = api.NewHandler(backends, logger, cfg, staticDir)
+		handler = api.NewHandler(
+			cluster,
+			backends,
+			logger,
+			cfg,
+			staticDir,
+		)
 	})
 
 	Context("when a request panics", func() {

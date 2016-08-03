@@ -27,23 +27,21 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 var UrlGetterProvider = HttpUrlGetterProvider
 
 type Cluster struct {
-	mutex               sync.RWMutex
-	backends            Backends
-	currentBackendIndex int
-	logger              lager.Logger
-	healthcheckTimeout  time.Duration
-	arpManager          ArpManager
-	message             string
-	lastUpdated         time.Time
+	mutex              sync.RWMutex
+	backends           Backends
+	logger             lager.Logger
+	healthcheckTimeout time.Duration
+	arpManager         ArpManager
+	message            string
+	lastUpdated        time.Time
 }
 
 func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
 	return &Cluster{
-		backends:            backends,
-		currentBackendIndex: 0,
-		logger:              logger,
-		healthcheckTimeout:  healthcheckTimeout,
-		arpManager:          arpManager,
+		backends:           backends,
+		logger:             logger,
+		healthcheckTimeout: healthcheckTimeout,
+		arpManager:         arpManager,
 	}
 }
 
@@ -152,8 +150,6 @@ func (c *Cluster) AsJSON() ClusterJSON {
 	defer c.mutex.RUnlock()
 
 	return ClusterJSON{
-		CurrentBackendIndex: uint(c.currentBackendIndex),
-
 		// Traffic is enabled and disabled on all backends collectively
 		// so we only need to read the state of one to get the state of
 		// the system as a whole
@@ -193,8 +189,7 @@ func (c *Cluster) DisableTraffic(message string) {
 }
 
 type ClusterJSON struct {
-	CurrentBackendIndex uint      `json:"currentBackendIndex"`
-	TrafficEnabled      bool      `json:"trafficEnabled"`
-	Message             string    `json:"message"`
-	LastUpdated         time.Time `json:"lastUpdated"`
+	TrafficEnabled bool      `json:"trafficEnabled"`
+	Message        string    `json:"message"`
+	LastUpdated    time.Time `json:"lastUpdated"`
 }

@@ -389,7 +389,6 @@ var _ = Describe("Switchboard", func() {
 
 						returnedCluster := getClusterFromAPI(req)
 
-						Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
 						Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
 					})
 				})
@@ -403,7 +402,6 @@ var _ = Describe("Switchboard", func() {
 
 						returnedCluster := getClusterFromAPI(req)
 
-						Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
 						Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
 						Expect(returnedCluster["lastUpdated"]).NotTo(BeEmpty())
 					})

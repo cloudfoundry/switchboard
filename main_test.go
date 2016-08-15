@@ -213,11 +213,18 @@ var _ = Describe("Switchboard", func() {
 
 			Describe("Health", func() {
 				var acceptsAndClosesTCPConnections = func() {
-					conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", rootConfig.HealthPort))
-					Expect(err).NotTo(HaveOccurred())
+					var err error
+					var conn net.Conn
+					Eventually(func() error {
+						conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", rootConfig.HealthPort))
+						if err != nil {
+							return err
+						}
+						return nil
 
-					err = conn.Close()
-					Expect(err).NotTo(HaveOccurred())
+					}, startupTimeout).Should(Succeed())
+					defer conn.Close()
+
 				}
 
 				It("accepts and immediately closes TCP connections on HealthPort", func() {
@@ -351,9 +358,16 @@ var _ = Describe("Switchboard", func() {
 						})
 
 						It("returns session count for active and inactive backends", func() {
+							var err error
+							var conn net.Conn
+							Eventually(func() error {
+								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+								if err != nil {
+									return err
+								}
+								return nil
 
-							conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
-							Expect(err).ToNot(HaveOccurred())
+							}, startupTimeout).Should(Succeed())
 							defer conn.Close()
 
 							connData, err := sendData(conn, "success")
@@ -451,7 +465,7 @@ var _ = Describe("Switchboard", func() {
 								Eventually(func() error {
 									conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 									return err
-								}).ShouldNot(HaveOccurred())
+								}, startupTimeout).ShouldNot(HaveOccurred())
 
 								data, err := sendData(conn, fmt.Sprintf("test%d", index))
 								Expect(err).ToNot(HaveOccurred())
@@ -478,13 +492,13 @@ var _ = Describe("Switchboard", func() {
 							var err error
 							conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 							return err
-						}).Should(Succeed())
+						}, startupTimeout).Should(Succeed())
 
 						Eventually(func() error {
 							var err error
 							connToDisconnect, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 							return err
-						}).Should(Succeed())
+						}, "5s").Should(Succeed())
 
 						dataBeforeDisconnect, err := sendData(conn, "data before disconnect")
 						Expect(err).ToNot(HaveOccurred())
@@ -505,7 +519,7 @@ var _ = Describe("Switchboard", func() {
 							var err error
 							client, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 							return err
-						}).Should(Succeed())
+						}, startupTimeout).Should(Succeed())
 
 						data, err := sendData(client, "data around first healthcheck")
 						Expect(err).NotTo(HaveOccurred())
@@ -526,7 +540,7 @@ var _ = Describe("Switchboard", func() {
 								var err error
 								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 								return err
-							}).Should(Succeed())
+							}, startupTimeout).Should(Succeed())
 
 							dataWhileHealthy, err := sendData(conn, "data while healthy")
 							Expect(err).ToNot(HaveOccurred())
@@ -553,7 +567,7 @@ var _ = Describe("Switchboard", func() {
 							Eventually(func() (err error) {
 								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 								return err
-							}).Should(Succeed())
+							}, startupTimeout).Should(Succeed())
 
 							data, err := sendData(conn, "data before hang")
 							Expect(err).ToNot(HaveOccurred())
@@ -617,7 +631,7 @@ var _ = Describe("Switchboard", func() {
 							var err error
 							conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 							return err
-						}).Should(Succeed())
+						}, startupTimeout).Should(Succeed())
 
 						dataWhileHealthy, err := sendData(conn, "data while healthy")
 						Expect(err).ToNot(HaveOccurred())
@@ -652,7 +666,7 @@ var _ = Describe("Switchboard", func() {
 							var err error
 							_, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 							return err
-						}).Should(Succeed())
+						}, "5s").Should(Succeed())
 					})
 				})
 			})
@@ -699,10 +713,13 @@ var _ = Describe("Switchboard", func() {
 		})
 
 		It("immediately writes its PidFile", func() {
-			finfo, err := os.Stat(pidFile)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(finfo.Mode().Perm()).To(Equal(os.FileMode(0644)))
-
+			Eventually(func() os.FileMode {
+				finfo, err := os.Stat(pidFile)
+				if err != nil {
+					return 0
+				}
+				return finfo.Mode().Perm()
+			}, startupTimeout).Should(Equal(os.FileMode(0644)))
 		})
 
 		Context("the switchboard acquires the lock", func() {
@@ -710,14 +727,14 @@ var _ = Describe("Switchboard", func() {
 				Eventually(func() error {
 					_, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 					return err
-				}).Should(Succeed())
+				}, startupTimeout).Should(Succeed())
 			})
 
 			It("registers itself with consul", func() {
 				Eventually(func() map[string]*api.AgentService {
 					services, _ := consulClient.Agent().Services()
 					return services
-				}).Should(HaveKeyWithValue("test_mysql",
+				}, startupTimeout).Should(HaveKeyWithValue("test_mysql",
 					&api.AgentService{
 						Service: "test_mysql",
 						ID:      "test_mysql",

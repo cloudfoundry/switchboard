@@ -164,7 +164,7 @@ var _ = Describe("Switchboard", func() {
 			StartCheckTimeout: startupTimeout,
 		})
 
-		group := grouper.NewParallel(os.Kill, grouper.Members{
+		group := grouper.NewParallel(os.Interrupt, grouper.Members{
 			{Name: "backend-0", Runner: dummies.NewBackendRunner(0, backends[0])},
 			{Name: "backend-1", Runner: dummies.NewBackendRunner(1, backends[1])},
 			{Name: "healthcheck-0", Runner: healthcheckRunners[0]},

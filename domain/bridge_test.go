@@ -26,6 +26,9 @@ var _ = Describe("Bridge", func() {
 			clientAddr := &domainfakes.FakeAddr{}
 			backendAddr := &domainfakes.FakeAddr{}
 
+			backend.ReadReturns(0, io.EOF)
+			client.ReadReturns(0, io.EOF)
+
 			client.RemoteAddrReturns(clientAddr)
 			backend.RemoteAddrReturns(backendAddr)
 

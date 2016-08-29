@@ -13,15 +13,15 @@ type Router interface {
 }
 
 type Runner struct {
-	logger  lager.Logger
-	port    uint
+	logger lager.Logger
+	port   uint
 	router Router
 }
 
 func NewRunner(router Router, port uint, logger lager.Logger) Runner {
 	return Runner{
-		logger:  logger,
-		port:    port,
+		logger: logger,
+		port:   port,
 		router: router,
 	}
 }

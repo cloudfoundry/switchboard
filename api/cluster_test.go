@@ -51,8 +51,8 @@ var _ = Describe("Cluster", func() {
 			updateTime := time.Now()
 
 			expectedClusterJSON := domain.ClusterJSON{
-				TrafficEnabled:      true,
-				LastUpdated:         updateTime,
+				TrafficEnabled: true,
+				LastUpdated:    updateTime,
 			}
 			fakeCluster.AsJSONReturns(expectedClusterJSON)
 
@@ -95,8 +95,8 @@ var _ = Describe("Cluster", func() {
 
 		It("contains expected fields", func() {
 			expectedClusterJSON := domain.ClusterJSON{
-				TrafficEnabled:      true,
-				Message:             "some reason",
+				TrafficEnabled: true,
+				Message:        "some reason",
 			}
 			fakeCluster.AsJSONReturns(expectedClusterJSON)
 

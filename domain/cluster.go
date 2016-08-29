@@ -27,21 +27,21 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 var UrlGetterProvider = HttpUrlGetterProvider
 
 type Cluster struct {
-	mutex               sync.RWMutex
-	backends            Backends
-	logger              lager.Logger
-	healthcheckTimeout  time.Duration
-	arpManager          ArpManager
-	message             string
-	lastUpdated         time.Time
+	mutex              sync.RWMutex
+	backends           Backends
+	logger             lager.Logger
+	healthcheckTimeout time.Duration
+	arpManager         ArpManager
+	message            string
+	lastUpdated        time.Time
 }
 
 func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
 	return &Cluster{
-		backends:            backends,
-		logger:              logger,
-		healthcheckTimeout:  healthcheckTimeout,
-		arpManager:          arpManager,
+		backends:           backends,
+		logger:             logger,
+		healthcheckTimeout: healthcheckTimeout,
+		arpManager:         arpManager,
 	}
 }
 
@@ -134,53 +134,4 @@ func (c *Cluster) setupCounters() *DecisionCounters {
 	})
 
 	return counters
-}
-
-func (c *Cluster) AsJSON() ClusterJSON {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	return ClusterJSON{
-		// Traffic is enabled and disabled on all backends collectively
-		// so we only need to read the state of one to get the state of
-		// the system as a whole
-		TrafficEnabled: c.backends.Any().TrafficEnabled(),
-
-		Message:     c.message,
-		LastUpdated: c.lastUpdated,
-	}
-}
-
-func (c *Cluster) EnableTraffic(message string) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.logger.Info("Enabling traffic for cluster", lager.Data{"message": message})
-
-	c.message = message
-	c.lastUpdated = time.Now()
-
-	for backend := range c.backends.All() {
-		backend.EnableTraffic()
-	}
-}
-
-func (c *Cluster) DisableTraffic(message string) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.logger.Info("Disabling traffic for cluster", lager.Data{"message": message})
-
-	c.message = message
-	c.lastUpdated = time.Now()
-
-	for backend := range c.backends.All() {
-		backend.DisableTraffic()
-	}
-}
-
-type ClusterJSON struct {
-	TrafficEnabled      bool      `json:"trafficEnabled"`
-	Message             string    `json:"message"`
-	LastUpdated         time.Time `json:"lastUpdated"`
 }

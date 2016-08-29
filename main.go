@@ -23,9 +23,9 @@ import (
 
 	"time"
 
+	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
-	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 )
 
 func main() {
@@ -59,8 +59,9 @@ func main() {
 		logger,
 		arpManager,
 	)
+	clusterApi := domain.NewClusterAPI(backends, logger)
 
-	handler := api.NewHandler(cluster, backends, logger, rootConfig.API, rootConfig.StaticDir)
+	handler := api.NewHandler(clusterApi, backends, logger, rootConfig.API, rootConfig.StaticDir)
 
 	members := grouper.Members{
 		{
@@ -72,7 +73,7 @@ func main() {
 			Runner: apirunner.NewRunner(rootConfig.API.Port, handler, logger),
 		},
 		{
-			Name: "monitor",
+			Name:   "monitor",
 			Runner: monitor.NewRunner(cluster, logger),
 		},
 	}

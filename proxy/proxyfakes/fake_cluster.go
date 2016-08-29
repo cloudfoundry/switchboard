@@ -5,7 +5,6 @@ import (
 	"net"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/cloudfoundry-incubator/switchboard/proxy"
 )
 
@@ -23,22 +22,6 @@ type FakeCluster struct {
 	}
 	routeToBackendReturns struct {
 		result1 error
-	}
-	AsJSONStub        func() domain.ClusterJSON
-	asJSONMutex       sync.RWMutex
-	asJSONArgsForCall []struct{}
-	asJSONReturns     struct {
-		result1 domain.ClusterJSON
-	}
-	EnableTrafficStub        func(message string)
-	enableTrafficMutex       sync.RWMutex
-	enableTrafficArgsForCall []struct {
-		message string
-	}
-	DisableTrafficStub        func(message string)
-	disableTrafficMutex       sync.RWMutex
-	disableTrafficArgsForCall []struct {
-		message string
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -102,79 +85,6 @@ func (fake *FakeCluster) RouteToBackendReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeCluster) AsJSON() domain.ClusterJSON {
-	fake.asJSONMutex.Lock()
-	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
-	fake.recordInvocation("AsJSON", []interface{}{})
-	fake.asJSONMutex.Unlock()
-	if fake.AsJSONStub != nil {
-		return fake.AsJSONStub()
-	} else {
-		return fake.asJSONReturns.result1
-	}
-}
-
-func (fake *FakeCluster) AsJSONCallCount() int {
-	fake.asJSONMutex.RLock()
-	defer fake.asJSONMutex.RUnlock()
-	return len(fake.asJSONArgsForCall)
-}
-
-func (fake *FakeCluster) AsJSONReturns(result1 domain.ClusterJSON) {
-	fake.AsJSONStub = nil
-	fake.asJSONReturns = struct {
-		result1 domain.ClusterJSON
-	}{result1}
-}
-
-func (fake *FakeCluster) EnableTraffic(message string) {
-	fake.enableTrafficMutex.Lock()
-	fake.enableTrafficArgsForCall = append(fake.enableTrafficArgsForCall, struct {
-		message string
-	}{message})
-	fake.recordInvocation("EnableTraffic", []interface{}{message})
-	fake.enableTrafficMutex.Unlock()
-	if fake.EnableTrafficStub != nil {
-		fake.EnableTrafficStub(message)
-	}
-}
-
-func (fake *FakeCluster) EnableTrafficCallCount() int {
-	fake.enableTrafficMutex.RLock()
-	defer fake.enableTrafficMutex.RUnlock()
-	return len(fake.enableTrafficArgsForCall)
-}
-
-func (fake *FakeCluster) EnableTrafficArgsForCall(i int) string {
-	fake.enableTrafficMutex.RLock()
-	defer fake.enableTrafficMutex.RUnlock()
-	return fake.enableTrafficArgsForCall[i].message
-}
-
-func (fake *FakeCluster) DisableTraffic(message string) {
-	fake.disableTrafficMutex.Lock()
-	fake.disableTrafficArgsForCall = append(fake.disableTrafficArgsForCall, struct {
-		message string
-	}{message})
-	fake.recordInvocation("DisableTraffic", []interface{}{message})
-	fake.disableTrafficMutex.Unlock()
-	if fake.DisableTrafficStub != nil {
-		fake.DisableTrafficStub(message)
-	}
-}
-
-func (fake *FakeCluster) DisableTrafficCallCount() int {
-	fake.disableTrafficMutex.RLock()
-	defer fake.disableTrafficMutex.RUnlock()
-	return len(fake.disableTrafficArgsForCall)
-}
-
-func (fake *FakeCluster) DisableTrafficArgsForCall(i int) string {
-	fake.disableTrafficMutex.RLock()
-	defer fake.disableTrafficMutex.RUnlock()
-	return fake.disableTrafficArgsForCall[i].message
-}
-
 func (fake *FakeCluster) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -182,12 +92,6 @@ func (fake *FakeCluster) Invocations() map[string][][]interface{} {
 	defer fake.monitorMutex.RUnlock()
 	fake.routeToBackendMutex.RLock()
 	defer fake.routeToBackendMutex.RUnlock()
-	fake.asJSONMutex.RLock()
-	defer fake.asJSONMutex.RUnlock()
-	fake.enableTrafficMutex.RLock()
-	defer fake.enableTrafficMutex.RUnlock()
-	fake.disableTrafficMutex.RLock()
-	defer fake.disableTrafficMutex.RUnlock()
 	return fake.invocations
 }
 

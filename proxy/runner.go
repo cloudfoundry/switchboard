@@ -5,17 +5,21 @@ import (
 	"net"
 	"os"
 
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
 //go:generate counterfeiter . Cluster
 type Cluster interface {
+	Monitor
+	Router
+}
+
+type Monitor interface {
 	Monitor() chan<- interface{}
+}
+
+type Router interface {
 	RouteToBackend(clientConn net.Conn) error
-	AsJSON() domain.ClusterJSON
-	EnableTraffic(message string)
-	DisableTraffic(message string)
 }
 
 type Runner struct {

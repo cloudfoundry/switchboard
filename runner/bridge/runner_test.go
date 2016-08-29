@@ -10,15 +10,13 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit"
-	"github.com/cloudfoundry-incubator/switchboard/runner/bridge/bridgefakes"
 )
 
-var _ = Describe("ProxyRunner", func() {
+var _ = Describe("Bridge Runner", func() {
 	It("shuts down gracefully when signalled", func() {
-		cluster := new(bridgefakes.FakeCluster)
 		proxyPort := 10000 + GinkgoParallelNode()
 		logger := lagertest.NewTestLogger("ProxyRunner test")
-		proxyRunner := bridge.NewRunner(cluster, uint(proxyPort), logger)
+		proxyRunner := bridge.NewRunner(nil, uint(proxyPort), logger)
 		proxyProcess := ifrit.Invoke(proxyRunner)
 		proxyProcess.Signal(os.Kill)
 		Eventually(proxyProcess.Wait()).Should(Receive())

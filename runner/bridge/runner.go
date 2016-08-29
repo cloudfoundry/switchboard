@@ -8,16 +8,6 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-//go:generate counterfeiter . Cluster
-type Cluster interface {
-	Monitor
-	Router
-}
-
-type Monitor interface {
-	Monitor() chan<- interface{}
-}
-
 type Router interface {
 	RouteToBackend(clientConn net.Conn) error
 }
@@ -25,20 +15,19 @@ type Router interface {
 type Runner struct {
 	logger  lager.Logger
 	port    uint
-	cluster Cluster
+	router Router
 }
 
-func NewRunner(cluster Cluster, port uint, logger lager.Logger) Runner {
+func NewRunner(router Router, port uint, logger lager.Logger) Runner {
 	return Runner{
 		logger:  logger,
 		port:    port,
-		cluster: cluster,
+		router: router,
 	}
 }
 
 func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	pr.logger.Info(fmt.Sprintf("Proxy listening on port %d", pr.port))
-	pr.cluster.Monitor()
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", pr.port))
 	if err != nil {
 		return err
@@ -61,7 +50,7 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				pr.logger.Error("Error accepting client connection", err)
 			} else {
 
-				err := pr.cluster.RouteToBackend(clientConn)
+				err := pr.router.RouteToBackend(clientConn)
 				if err != nil {
 					clientConn.Close()
 					pr.logger.Error("Error routing to backend", err)

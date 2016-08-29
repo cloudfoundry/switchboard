@@ -25,6 +25,7 @@ import (
 
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
+	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 )
 
 func main() {
@@ -69,6 +70,10 @@ func main() {
 		{
 			Name:   "api",
 			Runner: apirunner.NewRunner(rootConfig.API.Port, handler, logger),
+		},
+		{
+			Name: "monitor",
+			Runner: monitor.NewRunner(cluster, logger),
 		},
 	}
 

@@ -6,16 +6,12 @@ import (
 	"net/http/httputil"
 	"strconv"
 
-	"net"
-
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
 //go:generate counterfeiter . ClusterManager
 type ClusterManager interface {
-	Monitor() chan<- interface{}
-	RouteToBackend(net.Conn) error
 	AsJSON() domain.ClusterJSON
 	EnableTraffic(string)
 	DisableTraffic(string)

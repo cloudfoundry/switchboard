@@ -75,6 +75,7 @@ var _ = Describe("Cluster", func() {
 			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 			StatusCode: http.StatusOK,
 		}
+		var stopMonitoring chan interface{}
 
 		BeforeEach(func() {
 			urlGetter = new(domainfakes.FakeUrlGetter)
@@ -84,16 +85,17 @@ var _ = Describe("Cluster", func() {
 			}
 
 			urlGetter.GetReturns(healthyResponse, nil)
+
+			stopMonitoring = make(chan interface{})
 		})
 
 		AfterEach(func() {
 			domain.UrlGetterProvider = domain.HttpUrlGetterProvider
+			close(stopMonitoring)
 		})
 
 		It("notices when each backend stays healthy", func(done Done) {
-
-			stopMonitoring := cluster.Monitor()
-			defer close(stopMonitoring)
+			cluster.Monitor(stopMonitoring)
 
 			Eventually(func() []interface{} {
 				return getUniqueBackendArgs(
@@ -110,7 +112,6 @@ var _ = Describe("Cluster", func() {
 		}, 5)
 
 		It("notices when a healthy backend becomes unhealthy", func() {
-
 			unhealthyResponse := &http.Response{
 				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 				StatusCode: http.StatusInternalServerError,
@@ -124,8 +125,7 @@ var _ = Describe("Cluster", func() {
 				}
 			}
 
-			stopMonitoring := cluster.Monitor()
-			defer close(stopMonitoring)
+			cluster.Monitor(stopMonitoring)
 
 			Eventually(func() []interface{} {
 				return getUniqueBackendArgs(
@@ -150,8 +150,7 @@ var _ = Describe("Cluster", func() {
 				}
 			}
 
-			stopMonitoring := cluster.Monitor()
-			defer close(stopMonitoring)
+			cluster.Monitor(stopMonitoring)
 
 			Eventually(func() []interface{} {
 				return getUniqueBackendArgs(
@@ -182,8 +181,7 @@ var _ = Describe("Cluster", func() {
 				}
 			}
 
-			stopMonitoring := cluster.Monitor()
-			defer close(stopMonitoring)
+			cluster.Monitor(stopMonitoring)
 
 			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
 			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
@@ -206,8 +204,7 @@ var _ = Describe("Cluster", func() {
 			})
 
 			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
-				stopMonitoring := cluster.Monitor()
-				defer close(stopMonitoring)
+				cluster.Monitor(stopMonitoring)
 
 				Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
 			})
@@ -245,8 +242,7 @@ var _ = Describe("Cluster", func() {
 
 				It("clears the arp cache after ArpFlushInterval has elapsed", func() {
 
-					stopMonitoring := cluster.Monitor()
-					defer close(stopMonitoring)
+					cluster.Monitor(stopMonitoring)
 
 					Eventually(fakeArpManager.ClearCacheCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
 					Expect(fakeArpManager.ClearCacheArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
@@ -260,9 +256,7 @@ var _ = Describe("Cluster", func() {
 				})
 
 				It("does not clear arp cache", func() {
-
-					stopMonitoring := cluster.Monitor()
-					defer close(stopMonitoring)
+					cluster.Monitor(stopMonitoring)
 
 					Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
 				})

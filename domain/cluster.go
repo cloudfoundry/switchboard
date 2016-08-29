@@ -47,13 +47,11 @@ func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lage
 	}
 }
 
-func (c *Cluster) Monitor() chan<- interface{} {
+func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 	client := UrlGetterProvider(c.healthcheckTimeout)
-	stopChan := make(chan interface{})
 	for backend := range c.backends.All() {
-		c.monitorHealth(backend, client, stopChan)
+		go c.monitorHealth(backend, client, stopChan)
 	}
-	return stopChan
 }
 
 func (c *Cluster) RouteToBackend(clientConn net.Conn) error {
@@ -65,17 +63,15 @@ func (c *Cluster) RouteToBackend(clientConn net.Conn) error {
 }
 
 func (c *Cluster) monitorHealth(backend Backend, client UrlGetter, stopChan <-chan interface{}) {
-	go func() {
-		counters := c.setupCounters()
-		for {
-			select {
-			case <-time.After(c.healthcheckTimeout / 5):
-				c.dialHealthcheck(backend, client, counters)
-			case <-stopChan:
-				return
-			}
+	counters := c.setupCounters()
+	for {
+		select {
+		case <-time.After(c.healthcheckTimeout / 5):
+			c.dialHealthcheck(backend, client, counters)
+		case <-stopChan:
+			return
 		}
-	}()
+	}
 }
 
 func (c *Cluster) setupCounters() *DecisionCounters {

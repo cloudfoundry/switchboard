@@ -52,7 +52,6 @@ var _ = Describe("Cluster", func() {
 
 			expectedClusterJSON := domain.ClusterJSON{
 				TrafficEnabled:      true,
-				CurrentBackendIndex: 2,
 				LastUpdated:         updateTime,
 			}
 			fakeCluster.AsJSONReturns(expectedClusterJSON)
@@ -70,7 +69,6 @@ var _ = Describe("Cluster", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(returnedCluster.TrafficEnabled).To(BeTrue())
-			Expect(returnedCluster.CurrentBackendIndex).To(BeNumerically("==", 2))
 			Expect(returnedCluster.LastUpdated.Second()).To(Equal(updateTime.Second()))
 		})
 	})
@@ -98,7 +96,6 @@ var _ = Describe("Cluster", func() {
 		It("contains expected fields", func() {
 			expectedClusterJSON := domain.ClusterJSON{
 				TrafficEnabled:      true,
-				CurrentBackendIndex: 2,
 				Message:             "some reason",
 			}
 			fakeCluster.AsJSONReturns(expectedClusterJSON)
@@ -116,7 +113,6 @@ var _ = Describe("Cluster", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(returnedCluster.TrafficEnabled).To(BeTrue())
-			Expect(returnedCluster.CurrentBackendIndex).To(BeNumerically("==", 2))
 			Expect(returnedCluster.Message).To(Equal("some reason"))
 		})
 

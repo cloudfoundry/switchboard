@@ -1,9 +1,7 @@
 package domain
 
 import (
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"reflect"
 	"time"
@@ -102,14 +100,6 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 			}
 		}(b)
 	}
-}
-
-func (c *Cluster) RouteToBackend(clientConn net.Conn) error {
-	activeBackend := c.backends.Active()
-	if activeBackend == nil {
-		return errors.New("No active Backend")
-	}
-	return activeBackend.Bridge(clientConn)
 }
 
 func (c *Cluster) setupCounters() *DecisionCounters {

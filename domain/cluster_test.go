@@ -2,7 +2,6 @@ package domain_test
 
 import (
 	"errors"
-	"net"
 	"net/http"
 	"time"
 
@@ -261,33 +260,6 @@ var _ = Describe("Cluster", func() {
 					Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
 				})
 			})
-		})
-	})
-
-	Describe("RouteToBackend", func() {
-		var clientConn net.Conn
-
-		BeforeEach(func() {
-			clientConn = new(domainfakes.FakeConn)
-		})
-
-		It("bridges the client connection to the active backend", func() {
-			activeBackend := new(domainfakes.FakeBackend)
-			backends.ActiveReturns(activeBackend)
-
-			err := cluster.RouteToBackend(clientConn)
-
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(activeBackend.BridgeCallCount()).To(Equal(1))
-			Expect(activeBackend.BridgeArgsForCall(0)).To(Equal(clientConn))
-		})
-
-		It("returns an error if there is no active backend", func() {
-			backends.ActiveReturns(nil)
-
-			err := cluster.RouteToBackend(clientConn)
-
-			Expect(err).Should(HaveOccurred())
 		})
 	})
 })

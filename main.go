@@ -60,13 +60,14 @@ func main() {
 		arpManager,
 	)
 	clusterApi := domain.NewClusterAPI(backends, logger)
+	clusterRouter := domain.NewClusterRouter(backends)
 
 	handler := api.NewHandler(clusterApi, backends, logger, rootConfig.API, rootConfig.StaticDir)
 
 	members := grouper.Members{
 		{
 			Name:   "proxy",
-			Runner: bridge.NewRunner(cluster, rootConfig.Proxy.Port, logger),
+			Runner: bridge.NewRunner(clusterRouter, rootConfig.Proxy.Port, logger),
 		},
 		{
 			Name:   "api",

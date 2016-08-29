@@ -15,7 +15,8 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/cloudfoundry-incubator/switchboard/health"
-	"github.com/cloudfoundry-incubator/switchboard/proxy"
+	apirunner "github.com/cloudfoundry-incubator/switchboard/runner/api"
+	"github.com/cloudfoundry-incubator/switchboard/runner/bridge"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
@@ -63,11 +64,11 @@ func main() {
 	members := grouper.Members{
 		{
 			Name:   "proxy",
-			Runner: proxy.NewRunner(cluster, rootConfig.Proxy.Port, logger),
+			Runner: bridge.NewRunner(cluster, rootConfig.Proxy.Port, logger),
 		},
 		{
 			Name:   "api",
-			Runner: api.NewRunner(rootConfig.API.Port, handler, logger),
+			Runner: apirunner.NewRunner(rootConfig.API.Port, handler, logger),
 		},
 	}
 

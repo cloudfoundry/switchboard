@@ -5,12 +5,9 @@ import (
 	"net"
 	"os"
 
-	"github.com/cloudfoundry-incubator/switchboard/api"
-	"github.com/cloudfoundry-incubator/switchboard/config"
+	"github.com/cloudfoundry-incubator/switchboard/runner/api"
 	"github.com/pivotal-golang/lager/lagertest"
 
-	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
-	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"
@@ -19,13 +16,8 @@ import (
 var _ = Describe("APIRunner", func() {
 	It("shuts down gracefully when signalled", func() {
 		apiPort := 10000 + GinkgoParallelNode()
-		backends := new(domainfakes.FakeBackends)
 		logger := lagertest.NewTestLogger("APIRunner Test")
-		config := config.API{}
-		staticDir := ""
-		cluster := new(apifakes.FakeClusterManager)
-		handler := api.NewHandler(cluster, backends, logger, config, staticDir)
-		apiRunner := api.NewRunner(uint(apiPort), handler, logger)
+		apiRunner := api.NewRunner(uint(apiPort), nil, logger)
 		apiProcess := ifrit.Invoke(apiRunner)
 		apiProcess.Signal(os.Kill)
 		Eventually(apiProcess.Wait()).Should(Receive())

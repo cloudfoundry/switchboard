@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"time"
 
-	"sync"
-
 	"github.com/pivotal-golang/lager"
 )
 
@@ -25,13 +23,10 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 var UrlGetterProvider = HttpUrlGetterProvider
 
 type Cluster struct {
-	mutex              sync.RWMutex
 	backends           Backends
 	logger             lager.Logger
 	healthcheckTimeout time.Duration
 	arpManager         ArpManager
-	message            string
-	lastUpdated        time.Time
 }
 
 func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {

@@ -5,15 +5,14 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
 type FakeClusterManager struct {
-	AsJSONStub        func() domain.ClusterJSON
+	AsJSONStub        func() api.ClusterJSON
 	asJSONMutex       sync.RWMutex
 	asJSONArgsForCall []struct{}
 	asJSONReturns     struct {
-		result1 domain.ClusterJSON
+		result1 api.ClusterJSON
 	}
 	EnableTrafficStub        func(string)
 	enableTrafficMutex       sync.RWMutex
@@ -29,7 +28,7 @@ type FakeClusterManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeClusterManager) AsJSON() domain.ClusterJSON {
+func (fake *FakeClusterManager) AsJSON() api.ClusterJSON {
 	fake.asJSONMutex.Lock()
 	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
 	fake.recordInvocation("AsJSON", []interface{}{})
@@ -47,10 +46,10 @@ func (fake *FakeClusterManager) AsJSONCallCount() int {
 	return len(fake.asJSONArgsForCall)
 }
 
-func (fake *FakeClusterManager) AsJSONReturns(result1 domain.ClusterJSON) {
+func (fake *FakeClusterManager) AsJSONReturns(result1 api.ClusterJSON) {
 	fake.AsJSONStub = nil
 	fake.asJSONReturns = struct {
-		result1 domain.ClusterJSON
+		result1 api.ClusterJSON
 	}{result1}
 }
 

@@ -1,21 +1,22 @@
-package domain
+package api
 
 import (
 	"sync"
 	"time"
 
 	"github.com/pivotal-golang/lager"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
 type ClusterAPI struct {
 	mutex       sync.RWMutex
-	backends    Backends
+	backends    domain.Backends
 	logger      lager.Logger
 	message     string
 	lastUpdated time.Time
 }
 
-func NewClusterAPI(backends Backends, logger lager.Logger) *ClusterAPI {
+func NewClusterAPI(backends domain.Backends, logger lager.Logger) *ClusterAPI {
 	return &ClusterAPI{
 		backends: backends,
 		logger:   logger,

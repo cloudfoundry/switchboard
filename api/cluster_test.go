@@ -7,7 +7,6 @@ import (
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
@@ -50,7 +49,7 @@ var _ = Describe("Cluster", func() {
 		It("contains expected fields", func() {
 			updateTime := time.Now()
 
-			expectedClusterJSON := domain.ClusterJSON{
+			expectedClusterJSON := api.ClusterJSON{
 				TrafficEnabled: true,
 				LastUpdated:    updateTime,
 			}
@@ -63,7 +62,7 @@ var _ = Describe("Cluster", func() {
 			resp, err := client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 
-			var returnedCluster domain.ClusterJSON
+			var returnedCluster api.ClusterJSON
 			decoder := json.NewDecoder(resp.Body)
 			err = decoder.Decode(&returnedCluster)
 			Expect(err).NotTo(HaveOccurred())
@@ -94,7 +93,7 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("contains expected fields", func() {
-			expectedClusterJSON := domain.ClusterJSON{
+			expectedClusterJSON := api.ClusterJSON{
 				TrafficEnabled: true,
 				Message:        "some reason",
 			}
@@ -107,7 +106,7 @@ var _ = Describe("Cluster", func() {
 			resp, err := client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 
-			var returnedCluster domain.ClusterJSON
+			var returnedCluster api.ClusterJSON
 			decoder := json.NewDecoder(resp.Body)
 			err = decoder.Decode(&returnedCluster)
 			Expect(err).NotTo(HaveOccurred())

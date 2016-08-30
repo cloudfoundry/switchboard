@@ -59,8 +59,9 @@ func main() {
 		logger,
 		arpManager,
 	)
-	clusterApi := domain.NewClusterAPI(backends, logger)
-	clusterRouter := domain.NewClusterRouter(backends)
+	clusterApi := api.NewClusterAPI(backends, logger)
+
+	clusterRouter := bridge.NewClusterRouter(backends)
 
 	handler := api.NewHandler(clusterApi, backends, logger, rootConfig.API, rootConfig.StaticDir)
 

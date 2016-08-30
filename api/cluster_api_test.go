@@ -1,4 +1,4 @@
-package domain_test
+package api_test
 
 import (
 	"time"
@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
+	"github.com/cloudfoundry-incubator/switchboard/api"
 )
 
 var _ = Describe("ClusterAPI", func() {
@@ -17,7 +18,7 @@ var _ = Describe("ClusterAPI", func() {
 		backends                     *domainfakes.FakeBackends
 		backendSlice                 []*domainfakes.FakeBackend
 		logger                       lager.Logger
-		cluster                      *domain.ClusterAPI
+		cluster                      *api.ClusterAPI
 		backend1, backend2, backend3 *domainfakes.FakeBackend
 	)
 
@@ -56,7 +57,7 @@ var _ = Describe("ClusterAPI", func() {
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("Cluster test")
-		cluster = domain.NewClusterAPI(backends, logger)
+		cluster = api.NewClusterAPI(backends, logger)
 	})
 
 	Describe("EnableTraffic", func() {

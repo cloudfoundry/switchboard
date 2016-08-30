@@ -24,12 +24,6 @@ type FakeBackends struct {
 	setUnhealthyArgsForCall []struct {
 		backend domain.Backend
 	}
-	AsJSONStub        func() []domain.BackendJSON
-	asJSONMutex       sync.RWMutex
-	asJSONArgsForCall []struct{}
-	asJSONReturns     struct {
-		result1 []domain.BackendJSON
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -107,31 +101,6 @@ func (fake *FakeBackends) SetUnhealthyArgsForCall(i int) domain.Backend {
 	return fake.setUnhealthyArgsForCall[i].backend
 }
 
-func (fake *FakeBackends) AsJSON() []domain.BackendJSON {
-	fake.asJSONMutex.Lock()
-	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
-	fake.recordInvocation("AsJSON", []interface{}{})
-	fake.asJSONMutex.Unlock()
-	if fake.AsJSONStub != nil {
-		return fake.AsJSONStub()
-	} else {
-		return fake.asJSONReturns.result1
-	}
-}
-
-func (fake *FakeBackends) AsJSONCallCount() int {
-	fake.asJSONMutex.RLock()
-	defer fake.asJSONMutex.RUnlock()
-	return len(fake.asJSONArgsForCall)
-}
-
-func (fake *FakeBackends) AsJSONReturns(result1 []domain.BackendJSON) {
-	fake.AsJSONStub = nil
-	fake.asJSONReturns = struct {
-		result1 []domain.BackendJSON
-	}{result1}
-}
-
 func (fake *FakeBackends) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -141,8 +110,6 @@ func (fake *FakeBackends) Invocations() map[string][][]interface{} {
 	defer fake.setHealthyMutex.RUnlock()
 	fake.setUnhealthyMutex.RLock()
 	defer fake.setUnhealthyMutex.RUnlock()
-	fake.asJSONMutex.RLock()
-	defer fake.asJSONMutex.RUnlock()
 	return fake.invocations
 }
 

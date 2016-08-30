@@ -6,7 +6,12 @@ import (
 	"net/http"
 )
 
-var BackendsIndex = func(backends domain.Backends) http.Handler {
+//go:generate counterfeiter . JSONableBackends
+type JSONableBackends interface {
+	AsJSON() []domain.BackendJSON
+}
+
+var BackendsIndex = func(backends JSONableBackends) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		backendsJSON, err := json.Marshal(backends.AsJSON())
 		if err != nil {

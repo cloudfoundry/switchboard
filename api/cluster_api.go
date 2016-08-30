@@ -10,20 +10,25 @@ import (
 
 type ClusterAPI struct {
 	mutex       sync.RWMutex
-	backends    domain.Backends
+	backends    Backends
 	logger      lager.Logger
 	message     string
 	lastUpdated time.Time
 }
 
-func NewClusterAPI(backends domain.Backends, logger lager.Logger) *ClusterAPI {
+//go:generate counterfeiter . Backends
+type Backends interface {
+	All() <-chan domain.Backend
+}
+
+func NewClusterAPI(backends Backends, logger lager.Logger) *ClusterAPI {
 	return &ClusterAPI{
 		backends: backends,
 		logger:   logger,
 	}
 }
 
-func anyBackend(backends domain.Backends) domain.Backend {
+func anyBackend(backends Backends) domain.Backend {
 	for backend := range backends.All() {
 		return backend
 	}

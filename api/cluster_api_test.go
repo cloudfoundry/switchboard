@@ -11,11 +11,12 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
+	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
 )
 
 var _ = Describe("ClusterAPI", func() {
 	var (
-		backends                     *domainfakes.FakeBackends
+		backends                     *apifakes.FakeBackends
 		backendSlice                 []*domainfakes.FakeBackend
 		logger                       lager.Logger
 		cluster                      *api.ClusterAPI
@@ -23,7 +24,7 @@ var _ = Describe("ClusterAPI", func() {
 	)
 
 	BeforeEach(func() {
-		backends = new(domainfakes.FakeBackends)
+		backends = new(apifakes.FakeBackends)
 
 		backend1 = new(domainfakes.FakeBackend)
 		backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})

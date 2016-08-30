@@ -5,14 +5,13 @@ import (
 
 	"github.com/cloudfoundry-incubator/switchboard/api/middleware"
 	"github.com/cloudfoundry-incubator/switchboard/config"
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
 //go:generate counterfeiter -o apifakes/fake_response_writer.go /usr/local/opt/go/libexec/src/net/http/server.go ResponseWriter
 func NewHandler(
 	cluster ClusterManager,
-	backends domain.Backends,
+	backends JSONableBackends,
 	logger lager.Logger,
 	apiConfig config.API,
 	staticDir string,

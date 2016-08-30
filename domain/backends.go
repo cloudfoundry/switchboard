@@ -14,8 +14,6 @@ type Backends interface {
 	All() <-chan Backend
 	SetHealthy(backend Backend)   // Monitor
 	SetUnhealthy(backend Backend) // Monitor
-
-	AsJSON() []BackendJSON //BackendsIndex
 }
 
 type BackendsRepository struct {

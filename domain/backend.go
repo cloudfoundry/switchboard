@@ -92,11 +92,9 @@ func (b *backend) Bridge(clientConn net.Conn) error {
 		return errors.New(fmt.Sprintf("Error establishing connection to backend: %s", err))
 	}
 
-	go func() {
-		bridge := b.bridges.Create(clientConn, backendConn)
-		bridge.Connect()
-		b.bridges.Remove(bridge)
-	}()
+	bridge := b.bridges.Create(clientConn, backendConn)
+	bridge.Connect()
+	_ = b.bridges.Remove(bridge) //untested
 
 	return nil
 }

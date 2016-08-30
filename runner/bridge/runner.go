@@ -28,6 +28,7 @@ func NewRunner(router Router, port uint, logger lager.Logger) Runner {
 
 func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	pr.logger.Info(fmt.Sprintf("Proxy listening on port %d", pr.port))
+
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", pr.port))
 	if err != nil {
 		return err
@@ -36,9 +37,6 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	shutdown := make(chan interface{})
 	go func() {
 		for {
-
-			clientConn, err := listener.Accept()
-
 			select {
 			case <-shutdown:
 				return
@@ -46,16 +44,19 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				//continue
 			}
 
+			clientConn, err := listener.Accept()
 			if err != nil {
 				pr.logger.Error("Error accepting client connection", err)
-			} else {
+				continue
+			}
 
+			go func(clientConn net.Conn) {
 				err := pr.router.RouteToBackend(clientConn)
 				if err != nil {
 					clientConn.Close()
 					pr.logger.Error("Error routing to backend", err)
 				}
-			}
+			}(clientConn)
 		}
 	}()
 

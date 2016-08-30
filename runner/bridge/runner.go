@@ -35,7 +35,7 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	}
 
 	shutdown := make(chan interface{})
-	go func() {
+	go func(shutdown <-chan interface{}) {
 		for {
 			select {
 			case <-shutdown:
@@ -58,7 +58,7 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				}
 			}(clientConn)
 		}
-	}()
+	}(shutdown)
 
 	close(ready)
 

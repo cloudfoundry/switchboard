@@ -94,18 +94,39 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("notices when each backend stays healthy", func(done Done) {
+			// backendStates := make(map[domain.Backend]bool)
+			// backends.SetStateStub = func(backend domain.Backend, healthy bool) {
+			// 	backendStates[backend] = healthy
+			// }
+
+			healthyBackends := make(map[domain.Backend]interface{})
+			unhealthyBackends := make(map[domain.Backend]interface{})
+			backends.SetStateStub = func(backend domain.Backend, healthy bool) {
+				if healthy {
+					delete(healthyBackends, backend)
+					healthyBackends[backend] = struct{}{}
+				} else {
+					delete(healthyBackends, backend)
+					unhealthyBackends[backend] = struct{}{}
+				}
+			}
+
 			cluster.Monitor(stopMonitoring)
 
-			Eventually(func() []interface{} {
-				return getUniqueBackendArgs(
-					backends.SetHealthyArgsForCall,
-					backends.SetHealthyCallCount)
-			}).Should(ConsistOf([]domain.Backend{
-				backend1,
-				backend2,
-				backend3,
-			}))
-			Expect(backends.SetUnhealthyCallCount()).To(BeZero())
+			// cluster.Monitor(stopMonitoring)
+
+			// Expect(len(backendStates)).To(Equal(len(backendSlice)))
+			// Expect(backendStates[backend1]).To(BeTrue())
+			// Expect(backendStates[backend2]).To(BeTrue())
+			// Expect(backendStates[backend3]).To(BeTrue())
+
+			Expect(healthyBackends.Keys()).To(ConsistOf(backendSlice))
+			Expect(healthyBackends).To(BeEmpty())
+
+			for i := 0; i < backends.SetStateCallCount(); i++ {
+				_, healthy := backends.SetStateArgsForCall(i)
+				Expect(healthy).To(BeTrue())
+			}
 
 			close(done)
 		}, 5)

@@ -15,15 +15,11 @@ type FakeBackends struct {
 	allReturns     struct {
 		result1 <-chan domain.Backend
 	}
-	SetHealthyStub        func(backend domain.Backend)
-	setHealthyMutex       sync.RWMutex
-	setHealthyArgsForCall []struct {
+	SetStateStub        func(backend domain.Backend, state bool)
+	setStateMutex       sync.RWMutex
+	setStateArgsForCall []struct {
 		backend domain.Backend
-	}
-	SetUnhealthyStub        func(backend domain.Backend)
-	setUnhealthyMutex       sync.RWMutex
-	setUnhealthyArgsForCall []struct {
-		backend domain.Backend
+		state   bool
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -54,52 +50,29 @@ func (fake *FakeBackends) AllReturns(result1 <-chan domain.Backend) {
 	}{result1}
 }
 
-func (fake *FakeBackends) SetHealthy(backend domain.Backend) {
-	fake.setHealthyMutex.Lock()
-	fake.setHealthyArgsForCall = append(fake.setHealthyArgsForCall, struct {
+func (fake *FakeBackends) SetState(backend domain.Backend, state bool) {
+	fake.setStateMutex.Lock()
+	fake.setStateArgsForCall = append(fake.setStateArgsForCall, struct {
 		backend domain.Backend
-	}{backend})
-	fake.recordInvocation("SetHealthy", []interface{}{backend})
-	fake.setHealthyMutex.Unlock()
-	if fake.SetHealthyStub != nil {
-		fake.SetHealthyStub(backend)
+		state   bool
+	}{backend, state})
+	fake.recordInvocation("SetState", []interface{}{backend, state})
+	fake.setStateMutex.Unlock()
+	if fake.SetStateStub != nil {
+		fake.SetStateStub(backend, state)
 	}
 }
 
-func (fake *FakeBackends) SetHealthyCallCount() int {
-	fake.setHealthyMutex.RLock()
-	defer fake.setHealthyMutex.RUnlock()
-	return len(fake.setHealthyArgsForCall)
+func (fake *FakeBackends) SetStateCallCount() int {
+	fake.setStateMutex.RLock()
+	defer fake.setStateMutex.RUnlock()
+	return len(fake.setStateArgsForCall)
 }
 
-func (fake *FakeBackends) SetHealthyArgsForCall(i int) domain.Backend {
-	fake.setHealthyMutex.RLock()
-	defer fake.setHealthyMutex.RUnlock()
-	return fake.setHealthyArgsForCall[i].backend
-}
-
-func (fake *FakeBackends) SetUnhealthy(backend domain.Backend) {
-	fake.setUnhealthyMutex.Lock()
-	fake.setUnhealthyArgsForCall = append(fake.setUnhealthyArgsForCall, struct {
-		backend domain.Backend
-	}{backend})
-	fake.recordInvocation("SetUnhealthy", []interface{}{backend})
-	fake.setUnhealthyMutex.Unlock()
-	if fake.SetUnhealthyStub != nil {
-		fake.SetUnhealthyStub(backend)
-	}
-}
-
-func (fake *FakeBackends) SetUnhealthyCallCount() int {
-	fake.setUnhealthyMutex.RLock()
-	defer fake.setUnhealthyMutex.RUnlock()
-	return len(fake.setUnhealthyArgsForCall)
-}
-
-func (fake *FakeBackends) SetUnhealthyArgsForCall(i int) domain.Backend {
-	fake.setUnhealthyMutex.RLock()
-	defer fake.setUnhealthyMutex.RUnlock()
-	return fake.setUnhealthyArgsForCall[i].backend
+func (fake *FakeBackends) SetStateArgsForCall(i int) (domain.Backend, bool) {
+	fake.setStateMutex.RLock()
+	defer fake.setStateMutex.RUnlock()
+	return fake.setStateArgsForCall[i].backend, fake.setStateArgsForCall[i].state
 }
 
 func (fake *FakeBackends) Invocations() map[string][][]interface{} {
@@ -107,10 +80,8 @@ func (fake *FakeBackends) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.allMutex.RLock()
 	defer fake.allMutex.RUnlock()
-	fake.setHealthyMutex.RLock()
-	defer fake.setHealthyMutex.RUnlock()
-	fake.setUnhealthyMutex.RLock()
-	defer fake.setUnhealthyMutex.RUnlock()
+	fake.setStateMutex.RLock()
+	defer fake.setStateMutex.RUnlock()
 	return fake.invocations
 }
 

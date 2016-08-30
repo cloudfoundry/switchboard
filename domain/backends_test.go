@@ -63,13 +63,13 @@ var _ = Describe("Backends", func() {
 
 			go func() {
 				<-readySetGo
-				backends.SetHealthy(backend)
+				backends.SetState(backend, true)
 				close(doneChans[2])
 			}()
 
 			go func() {
 				<-readySetGo
-				backends.SetUnhealthy(backend)
+				backends.SetState(backend, false)
 				close(doneChans[3])
 			}()
 
@@ -108,7 +108,7 @@ var _ = Describe("Backends", func() {
 			Expect(len(healthy)).To(Equal(numHealthy))
 
 			for _, b := range healthy {
-				backends.SetUnhealthy(b)
+				backends.SetState(b, false)
 				numHealthy--
 				healthy = backendChanToSlice(backends.Healthy())
 				Expect(len(healthy)).To(Equal(numHealthy))
@@ -116,41 +116,41 @@ var _ = Describe("Backends", func() {
 		})
 	})
 
-	Describe("SetHealthy", func() {
+	Describe("SetState (healthy)", func() {
 		var unhealthy domain.Backend
 
 		JustBeforeEach(func() {
 			unhealthy = backendChanToSlice(backends.Healthy())[0]
-			backends.SetUnhealthy(unhealthy)
+			backends.SetState(unhealthy, false)
 		})
 
 		It("sets the backend to be healthy", func() {
 			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(2))
-			backends.SetHealthy(unhealthy)
+			backends.SetState(unhealthy, true)
 			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(3))
 		})
 
 		Context("when all backends are unhealthy and there is no active backend", func() {
 			JustBeforeEach(func() {
 				for backend := range backends.Healthy() {
-					backends.SetUnhealthy(backend)
+					backends.SetState(backend, false)
 				}
 			})
 
 			It("sets the newly healthy backend as the new active backend", func() {
 				Expect(backends.Active()).To(BeNil())
 				backend := anyBackend(backends)
-				backends.SetHealthy(backend)
+				backends.SetState(backend, true)
 				Expect(backends.Active()).To(Equal(backend))
 			})
 		})
 	})
 
-	Describe("SetUnhealthy", func() {
+	Describe("SetState (unhealthy)", func() {
 		It("sets the backend to be unhealthy", func() {
 			backend := backendChanToSlice(backends.Healthy())[0]
 			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(3))
-			backends.SetUnhealthy(backend)
+			backends.SetState(backend, false)
 			Expect(len(backendChanToSlice(backends.Healthy()))).To(Equal(2))
 		})
 
@@ -167,7 +167,7 @@ var _ = Describe("Backends", func() {
 
 			It("severs all open connections", func() {
 				backend := backends.Active()
-				backends.SetUnhealthy(backend)
+				backends.SetState(backend, false)
 				Expect(backend.(*domainfakes.FakeBackend).SeverConnectionsCallCount()).To(Equal(1))
 			})
 
@@ -175,7 +175,7 @@ var _ = Describe("Backends", func() {
 				numHealthy := len(backendChanToSlice(backends.Healthy()))
 				for _ = range backends.Healthy() {
 					previousActive := backends.Active()
-					backends.SetUnhealthy(previousActive)
+					backends.SetState(previousActive, false)
 					nextActive := backends.Active()
 					Expect(nextActive).ToNot(Equal(previousActive))
 

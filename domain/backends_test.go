@@ -191,7 +191,7 @@ var _ = Describe("Backends", func() {
 	})
 })
 
-func anyBackend(backends domain.Backends) domain.Backend {
+func anyBackend(backends *domain.BackendsRepository) domain.Backend {
 	for backend := range backends.All() {
 		return backend
 	}

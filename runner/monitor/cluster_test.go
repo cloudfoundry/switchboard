@@ -23,7 +23,7 @@ const healthcheckTimeout = time.Second
 
 var _ = Describe("Cluster", func() {
 	var (
-		backends                     *domainfakes.FakeBackends
+		backends                     *monitorfakes.FakeBackends
 		backendSlice                 []*domainfakes.FakeBackend
 		logger                       lager.Logger
 		cluster                      *Cluster
@@ -33,7 +33,7 @@ var _ = Describe("Cluster", func() {
 
 	BeforeEach(func() {
 		fakeArpManager = nil
-		backends = new(domainfakes.FakeBackends)
+		backends = new(monitorfakes.FakeBackends)
 
 		backend1 = new(domainfakes.FakeBackend)
 		backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})

@@ -23,14 +23,21 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 
 var UrlGetterProvider = HttpUrlGetterProvider
 
+//go:generate counterfeiter . Backends
+type Backends interface {
+	All() <-chan domain.Backend
+	SetHealthy(backend domain.Backend)   // Monitor
+	SetUnhealthy(backend domain.Backend) // Monitor
+}
+
 type Cluster struct {
-	backends           domain.Backends
+	backends           Backends
 	logger             lager.Logger
 	healthcheckTimeout time.Duration
 	arpManager         ArpManager
 }
 
-func NewCluster(backends domain.Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
+func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
 	return &Cluster{
 		backends:           backends,
 		logger:             logger,

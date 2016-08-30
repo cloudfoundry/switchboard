@@ -9,13 +9,6 @@ import (
 
 var BackendProvider = NewBackend
 
-//go:generate counterfeiter . Backends
-type Backends interface {
-	All() <-chan Backend
-	SetHealthy(backend Backend)   // Monitor
-	SetUnhealthy(backend Backend) // Monitor
-}
-
 type BackendsRepository struct {
 	mutex  sync.RWMutex
 	all    map[Backend]bool
@@ -65,6 +58,7 @@ func (b *BackendsRepository) All() <-chan Backend {
 }
 
 // Maintains a lock while iterating over healthy backends
+// used only in backends test
 func (b *BackendsRepository) Healthy() <-chan Backend {
 	b.mutex.RLock()
 

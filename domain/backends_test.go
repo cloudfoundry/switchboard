@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("Backends", func() {
 	var (
-		backends domain.Backends
+		backends *domain.BackendsRepository
 	)
 
 	var backendChanToSlice = func(c <-chan domain.Backend) []domain.Backend {
@@ -47,7 +47,7 @@ var _ = Describe("Backends", func() {
 				make(chan interface{}),
 			}
 
-			backend := backends.Any()
+			backend := anyBackend(backends)
 
 			go func() {
 				<-readySetGo
@@ -139,7 +139,7 @@ var _ = Describe("Backends", func() {
 
 			It("sets the newly healthy backend as the new active backend", func() {
 				Expect(backends.Active()).To(BeNil())
-				backend := backends.Any()
+				backend := anyBackend(backends)
 				backends.SetHealthy(backend)
 				Expect(backends.Active()).To(Equal(backend))
 			})
@@ -190,3 +190,10 @@ var _ = Describe("Backends", func() {
 		})
 	})
 })
+
+func anyBackend(backends domain.Backends) domain.Backend {
+	for backend := range backends.All() {
+		return backend
+	}
+	return nil
+}

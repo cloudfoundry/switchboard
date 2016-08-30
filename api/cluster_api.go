@@ -23,6 +23,13 @@ func NewClusterAPI(backends domain.Backends, logger lager.Logger) *ClusterAPI {
 	}
 }
 
+func anyBackend(backends domain.Backends) domain.Backend {
+	for backend := range backends.All() {
+		return backend
+	}
+	return nil
+}
+
 func (c *ClusterAPI) AsJSON() ClusterJSON {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -31,7 +38,8 @@ func (c *ClusterAPI) AsJSON() ClusterJSON {
 		// Traffic is enabled and disabled on all backends collectively
 		// so we only need to read the state of one to get the state of
 		// the system as a whole
-		TrafficEnabled: c.backends.Any().TrafficEnabled(),
+		// Test the nillable
+		TrafficEnabled: anyBackend(c.backends).TrafficEnabled(),
 
 		Message:     c.message,
 		LastUpdated: c.lastUpdated,

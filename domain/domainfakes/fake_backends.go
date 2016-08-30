@@ -14,18 +14,6 @@ type FakeBackends struct {
 	allReturns     struct {
 		result1 <-chan domain.Backend
 	}
-	AnyStub        func() domain.Backend
-	anyMutex       sync.RWMutex
-	anyArgsForCall []struct{}
-	anyReturns     struct {
-		result1 domain.Backend
-	}
-	ActiveStub        func() domain.Backend
-	activeMutex       sync.RWMutex
-	activeArgsForCall []struct{}
-	activeReturns     struct {
-		result1 domain.Backend
-	}
 	SetHealthyStub        func(backend domain.Backend)
 	setHealthyMutex       sync.RWMutex
 	setHealthyArgsForCall []struct {
@@ -35,12 +23,6 @@ type FakeBackends struct {
 	setUnhealthyMutex       sync.RWMutex
 	setUnhealthyArgsForCall []struct {
 		backend domain.Backend
-	}
-	HealthyStub        func() <-chan domain.Backend
-	healthyMutex       sync.RWMutex
-	healthyArgsForCall []struct{}
-	healthyReturns     struct {
-		result1 <-chan domain.Backend
 	}
 	AsJSONStub        func() []domain.BackendJSON
 	asJSONMutex       sync.RWMutex
@@ -74,56 +56,6 @@ func (fake *FakeBackends) AllReturns(result1 <-chan domain.Backend) {
 	fake.AllStub = nil
 	fake.allReturns = struct {
 		result1 <-chan domain.Backend
-	}{result1}
-}
-
-func (fake *FakeBackends) Any() domain.Backend {
-	fake.anyMutex.Lock()
-	fake.anyArgsForCall = append(fake.anyArgsForCall, struct{}{})
-	fake.recordInvocation("Any", []interface{}{})
-	fake.anyMutex.Unlock()
-	if fake.AnyStub != nil {
-		return fake.AnyStub()
-	} else {
-		return fake.anyReturns.result1
-	}
-}
-
-func (fake *FakeBackends) AnyCallCount() int {
-	fake.anyMutex.RLock()
-	defer fake.anyMutex.RUnlock()
-	return len(fake.anyArgsForCall)
-}
-
-func (fake *FakeBackends) AnyReturns(result1 domain.Backend) {
-	fake.AnyStub = nil
-	fake.anyReturns = struct {
-		result1 domain.Backend
-	}{result1}
-}
-
-func (fake *FakeBackends) Active() domain.Backend {
-	fake.activeMutex.Lock()
-	fake.activeArgsForCall = append(fake.activeArgsForCall, struct{}{})
-	fake.recordInvocation("Active", []interface{}{})
-	fake.activeMutex.Unlock()
-	if fake.ActiveStub != nil {
-		return fake.ActiveStub()
-	} else {
-		return fake.activeReturns.result1
-	}
-}
-
-func (fake *FakeBackends) ActiveCallCount() int {
-	fake.activeMutex.RLock()
-	defer fake.activeMutex.RUnlock()
-	return len(fake.activeArgsForCall)
-}
-
-func (fake *FakeBackends) ActiveReturns(result1 domain.Backend) {
-	fake.ActiveStub = nil
-	fake.activeReturns = struct {
-		result1 domain.Backend
 	}{result1}
 }
 
@@ -175,31 +107,6 @@ func (fake *FakeBackends) SetUnhealthyArgsForCall(i int) domain.Backend {
 	return fake.setUnhealthyArgsForCall[i].backend
 }
 
-func (fake *FakeBackends) Healthy() <-chan domain.Backend {
-	fake.healthyMutex.Lock()
-	fake.healthyArgsForCall = append(fake.healthyArgsForCall, struct{}{})
-	fake.recordInvocation("Healthy", []interface{}{})
-	fake.healthyMutex.Unlock()
-	if fake.HealthyStub != nil {
-		return fake.HealthyStub()
-	} else {
-		return fake.healthyReturns.result1
-	}
-}
-
-func (fake *FakeBackends) HealthyCallCount() int {
-	fake.healthyMutex.RLock()
-	defer fake.healthyMutex.RUnlock()
-	return len(fake.healthyArgsForCall)
-}
-
-func (fake *FakeBackends) HealthyReturns(result1 <-chan domain.Backend) {
-	fake.HealthyStub = nil
-	fake.healthyReturns = struct {
-		result1 <-chan domain.Backend
-	}{result1}
-}
-
 func (fake *FakeBackends) AsJSON() []domain.BackendJSON {
 	fake.asJSONMutex.Lock()
 	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
@@ -230,16 +137,10 @@ func (fake *FakeBackends) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.allMutex.RLock()
 	defer fake.allMutex.RUnlock()
-	fake.anyMutex.RLock()
-	defer fake.anyMutex.RUnlock()
-	fake.activeMutex.RLock()
-	defer fake.activeMutex.RUnlock()
 	fake.setHealthyMutex.RLock()
 	defer fake.setHealthyMutex.RUnlock()
 	fake.setUnhealthyMutex.RLock()
 	defer fake.setUnhealthyMutex.RUnlock()
-	fake.healthyMutex.RLock()
-	defer fake.healthyMutex.RUnlock()
 	fake.asJSONMutex.RLock()
 	defer fake.asJSONMutex.RUnlock()
 	return fake.invocations

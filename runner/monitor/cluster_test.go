@@ -52,17 +52,15 @@ var _ = Describe("Cluster", func() {
 		backendSlice = []*domainfakes.FakeBackend{backend1, backend2, backend3}
 
 		backends.AllStub = func() <-chan domain.Backend {
-			c := make(chan domain.Backend)
-			go func() {
-				c <- backend1
-				c <- backend2
-				c <- backend3
-				close(c)
-			}()
+			c := make(chan domain.Backend, 3)
+
+			for _, b := range backendSlice {
+				c <- b
+			}
+			close(c)
+
 			return c
 		}
-
-		backends.AnyReturns(backend1)
 	})
 
 	JustBeforeEach(func() {

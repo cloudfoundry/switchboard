@@ -12,23 +12,21 @@ var BackendProvider = NewBackend
 //go:generate counterfeiter . Backends
 type Backends interface {
 	All() <-chan Backend
-	Any() Backend
-	Active() Backend
-	SetHealthy(backend Backend)
-	SetUnhealthy(backend Backend)
-	Healthy() <-chan Backend
-	AsJSON() []BackendJSON
+	SetHealthy(backend Backend)   // Monitor
+	SetUnhealthy(backend Backend) // Monitor
+
+	AsJSON() []BackendJSON //BackendsIndex
 }
 
-type backends struct {
+type BackendsRepository struct {
 	mutex  sync.RWMutex
 	all    map[Backend]bool
 	active Backend
 	logger lager.Logger
 }
 
-func NewBackends(backendConfigs []config.Backend, logger lager.Logger) Backends {
-	b := &backends{
+func NewBackends(backendConfigs []config.Backend, logger lager.Logger) *BackendsRepository {
+	b := &BackendsRepository{
 		logger: logger,
 		all:    make(map[Backend]bool),
 	}
@@ -52,7 +50,7 @@ func NewBackends(backendConfigs []config.Backend, logger lager.Logger) Backends 
 }
 
 // Maintains a lock while iterating over all backends
-func (b *backends) All() <-chan Backend {
+func (b *BackendsRepository) All() <-chan Backend {
 	b.mutex.RLock()
 
 	ch := make(chan Backend, len(b.all))
@@ -69,7 +67,7 @@ func (b *backends) All() <-chan Backend {
 }
 
 // Maintains a lock while iterating over healthy backends
-func (b *backends) Healthy() <-chan Backend {
+func (b *BackendsRepository) Healthy() <-chan Backend {
 	b.mutex.RLock()
 
 	c := make(chan Backend, len(b.all))
@@ -88,25 +86,14 @@ func (b *backends) Healthy() <-chan Backend {
 	return c
 }
 
-func (b *backends) Any() Backend {
-	b.mutex.RLock()
-	defer b.mutex.RUnlock()
-
-	for backend := range b.all {
-		return backend
-	}
-
-	return nil
-}
-
-func (b *backends) Active() Backend {
+func (b *BackendsRepository) Active() Backend {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
 	return b.active
 }
 
-func (b *backends) SetHealthy(backend Backend) {
+func (b *BackendsRepository) SetHealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
@@ -121,7 +108,7 @@ func (b *backends) SetHealthy(backend Backend) {
 	}
 }
 
-func (b *backends) unsafeSetActive(backend Backend) {
+func (b *BackendsRepository) unsafeSetActive(backend Backend) {
 	b.active = backend
 
 	if b.active == nil {
@@ -131,7 +118,7 @@ func (b *backends) unsafeSetActive(backend Backend) {
 	}
 }
 
-func (b *backends) SetUnhealthy(backend Backend) {
+func (b *BackendsRepository) SetUnhealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
@@ -148,7 +135,7 @@ func (b *backends) SetUnhealthy(backend Backend) {
 	}
 }
 
-func (b *backends) AsJSON() []BackendJSON {
+func (b *BackendsRepository) AsJSON() []BackendJSON {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 
@@ -163,7 +150,7 @@ func (b *backends) AsJSON() []BackendJSON {
 	return backendsJSON
 }
 
-func (b *backends) unsafeNextHealthy() Backend {
+func (b *BackendsRepository) unsafeNextHealthy() Backend {
 	for backend, healthy := range b.all {
 		if healthy {
 			return backend

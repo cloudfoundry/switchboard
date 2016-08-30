@@ -1,4 +1,4 @@
-package domain
+package monitor
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -23,13 +24,13 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 var UrlGetterProvider = HttpUrlGetterProvider
 
 type Cluster struct {
-	backends           Backends
+	backends           domain.Backends
 	logger             lager.Logger
 	healthcheckTimeout time.Duration
 	arpManager         ArpManager
 }
 
-func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
+func NewCluster(backends domain.Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
 	return &Cluster{
 		backends:           backends,
 		logger:             logger,
@@ -42,7 +43,7 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 	client := UrlGetterProvider(c.healthcheckTimeout)
 
 	for b := range c.backends.All() {
-		go func(backend Backend) {
+		go func(backend domain.Backend) {
 			counters := c.setupCounters()
 			for {
 				select {

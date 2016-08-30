@@ -6,11 +6,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
-	"github.com/cloudfoundry-incubator/switchboard/api"
 )
 
 var _ = Describe("ClusterAPI", func() {

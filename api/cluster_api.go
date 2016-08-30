@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pivotal-golang/lager"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
+	"github.com/pivotal-golang/lager"
 )
 
 type ClusterAPI struct {

@@ -1,4 +1,4 @@
-package domain_test
+package monitor_test
 
 import (
 	"errors"
@@ -13,6 +13,8 @@ import (
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
+	. "github.com/cloudfoundry-incubator/switchboard/runner/monitor"
+	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
@@ -24,8 +26,8 @@ var _ = Describe("Cluster", func() {
 		backends                     *domainfakes.FakeBackends
 		backendSlice                 []*domainfakes.FakeBackend
 		logger                       lager.Logger
-		cluster                      *domain.Cluster
-		fakeArpManager               *domainfakes.FakeArpManager
+		cluster                      *Cluster
+		fakeArpManager               *monitorfakes.FakeArpManager
 		backend1, backend2, backend3 *domainfakes.FakeBackend
 	)
 
@@ -65,11 +67,11 @@ var _ = Describe("Cluster", func() {
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("Cluster test")
-		cluster = domain.NewCluster(backends, healthcheckTimeout, logger, fakeArpManager)
+		cluster = NewCluster(backends, healthcheckTimeout, logger, fakeArpManager)
 	})
 
 	Describe("Monitor", func() {
-		var urlGetter *domainfakes.FakeUrlGetter
+		var urlGetter *monitorfakes.FakeUrlGetter
 		var healthyResponse = &http.Response{
 			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 			StatusCode: http.StatusOK,
@@ -77,9 +79,9 @@ var _ = Describe("Cluster", func() {
 		var stopMonitoring chan interface{}
 
 		BeforeEach(func() {
-			urlGetter = new(domainfakes.FakeUrlGetter)
+			urlGetter = new(monitorfakes.FakeUrlGetter)
 			urlGetter := urlGetter
-			domain.UrlGetterProvider = func(time.Duration) domain.UrlGetter {
+			UrlGetterProvider = func(time.Duration) UrlGetter {
 				return urlGetter
 			}
 
@@ -89,7 +91,7 @@ var _ = Describe("Cluster", func() {
 		})
 
 		AfterEach(func() {
-			domain.UrlGetterProvider = domain.HttpUrlGetterProvider
+			UrlGetterProvider = HttpUrlGetterProvider
 			close(stopMonitoring)
 		})
 
@@ -199,7 +201,7 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is healthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = new(domainfakes.FakeArpManager)
+				fakeArpManager = new(monitorfakes.FakeArpManager)
 			})
 
 			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
@@ -212,7 +214,7 @@ var _ = Describe("Cluster", func() {
 		Context("when a backend is unhealthy", func() {
 
 			BeforeEach(func() {
-				fakeArpManager = new(domainfakes.FakeArpManager)
+				fakeArpManager = new(monitorfakes.FakeArpManager)
 				unhealthyResponse := &http.Response{
 					Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 					StatusCode: http.StatusInternalServerError,

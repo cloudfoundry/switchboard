@@ -2,12 +2,12 @@ package bridge
 
 import (
 	"errors"
-	"net"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
+	"net"
 )
 
 //go:generate counterfeiter . ActiveBackendRepository
-type ActiveBackendRepository interface{
+type ActiveBackendRepository interface {
 	Active() domain.Backend
 }
 

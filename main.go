@@ -52,8 +52,8 @@ func main() {
 	}
 
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
-	arpManager := domain.NewArmManager(logger)
-	cluster := domain.NewCluster(
+	arpManager := monitor.NewArmManager(logger)
+	cluster := monitor.NewCluster(
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,

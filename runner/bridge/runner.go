@@ -40,23 +40,22 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 			select {
 			case <-shutdown:
 				return
+
 			default:
-				//continue
-			}
-
-			clientConn, err := listener.Accept()
-			if err != nil {
-				pr.logger.Error("Error accepting client connection", err)
-				continue
-			}
-
-			go func(clientConn net.Conn) {
-				err := pr.router.RouteToBackend(clientConn)
+				clientConn, err := listener.Accept()
 				if err != nil {
-					clientConn.Close()
-					pr.logger.Error("Error routing to backend", err)
+					pr.logger.Error("Error accepting client connection", err)
+					continue
 				}
-			}(clientConn)
+
+				go func(clientConn net.Conn) {
+					err := pr.router.RouteToBackend(clientConn)
+					if err != nil {
+						clientConn.Close()
+						pr.logger.Error("Error routing to backend", err)
+					}
+				}(clientConn)
+			}
 		}
 	}(shutdown)
 

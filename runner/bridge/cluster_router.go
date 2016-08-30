@@ -1,15 +1,21 @@
-package domain
+package bridge
 
 import (
 	"errors"
 	"net"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
-type ClusterRouter struct {
-	backends Backends
+//go:generate counterfeiter . ActiveBackendRepository
+type ActiveBackendRepository interface{
+	Active() domain.Backend
 }
 
-func NewClusterRouter(backends Backends) *ClusterRouter {
+type ClusterRouter struct {
+	backends ActiveBackendRepository
+}
+
+func NewClusterRouter(backends ActiveBackendRepository) *ClusterRouter {
 	return &ClusterRouter{
 		backends: backends,
 	}

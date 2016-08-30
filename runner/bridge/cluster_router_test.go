@@ -1,4 +1,4 @@
-package domain_test
+package bridge_test
 
 import (
 	"net"
@@ -6,25 +6,26 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
+	"github.com/cloudfoundry-incubator/switchboard/runner/bridge"
+	"github.com/cloudfoundry-incubator/switchboard/runner/bridge/bridgefakes"
 )
 
 var _ = Describe("ClusterRouter", func() {
 	var (
-		backends      *domainfakes.FakeBackends
-		clusterRouter *domain.ClusterRouter
 		backend       *domainfakes.FakeBackend
+		backends      *bridgefakes.FakeActiveBackendRepository
+		clusterRouter *bridge.ClusterRouter
 	)
 
 	BeforeEach(func() {
-		backends = new(domainfakes.FakeBackends)
+		backends = new(bridgefakes.FakeActiveBackendRepository)
 
 		backend = new(domainfakes.FakeBackend)
 	})
 
 	JustBeforeEach(func() {
-		clusterRouter = domain.NewClusterRouter(backends)
+		clusterRouter = bridge.NewClusterRouter(backends)
 	})
 
 	Describe("RouteToBackend", func() {

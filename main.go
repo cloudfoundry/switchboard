@@ -14,16 +14,16 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/health"
 	apirunner "github.com/cloudfoundry-incubator/switchboard/runner/api"
 	"github.com/cloudfoundry-incubator/switchboard/runner/bridge"
+	"github.com/cloudfoundry-incubator/switchboard/runner/health"
+	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 
 	"time"
 
-	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 )

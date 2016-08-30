@@ -89,8 +89,8 @@ func (b *BackendsRepository) SetHealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	previouslyHeathly := b.all[backend]
-	if !previouslyHeathly {
+	previouslyHealthy := b.all[backend]
+	if !previouslyHealthy {
 		b.logger.Info("Previously unhealthy backend became healthy.", lager.Data{"backend": backend.AsJSON()})
 	}
 
@@ -114,8 +114,8 @@ func (b *BackendsRepository) SetUnhealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	previouslyHeathly := b.all[backend]
-	if previouslyHeathly {
+	previouslyHealthy := b.all[backend]
+	if previouslyHealthy {
 		b.logger.Info("Previously healthy backend became unhealthy.", lager.Data{"backend": backend.AsJSON()})
 	}
 

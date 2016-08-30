@@ -622,6 +622,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/tjarratt/gcounterfeiter",
+			"repository": "https://github.com/tjarratt/gcounterfeiter",
+			"vcs": "git",
+			"revision": "971e3b5b08ae039775ffb013d6a29efd0f3fecff",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "golang.org/x/sys/unix",
 			"repository": "https://go.googlesource.com/sys",
 			"vcs": "git",

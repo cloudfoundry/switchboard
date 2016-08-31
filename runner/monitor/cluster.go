@@ -26,7 +26,8 @@ var UrlGetterProvider = HttpUrlGetterProvider
 //go:generate counterfeiter . Backends
 type Backends interface {
 	All() <-chan domain.Backend
-	SetState(backend domain.Backend, state bool) // Monitor
+	SetHealthy(backend domain.Backend)   // Monitor
+	SetUnhealthy(backend domain.Backend) // Monitor
 }
 
 type Cluster struct {
@@ -62,14 +63,14 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 					resp, err := client.Get(url)
 
 					if err == nil && resp.StatusCode == http.StatusOK {
-						c.backends.SetState(backend, true)
+						c.backends.SetHealthy(backend)
 						counters.ResetCount("consecutiveUnhealthyChecks")
 
 						if shouldLog {
 							c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
 						}
 					} else {
-						c.backends.SetState(backend, false)
+						c.backends.SetUnhealthy(backend)
 						counters.IncrementCount("consecutiveUnhealthyChecks")
 
 						if shouldLog {

@@ -17,7 +17,6 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
-	. "github.com/tjarratt/gcounterfeiter"
 )
 
 const healthcheckTimeout = time.Second
@@ -91,18 +90,22 @@ var _ = Describe("Cluster", func() {
 
 		AfterEach(func() {
 			UrlGetterProvider = HttpUrlGetterProvider
+			close(stopMonitoring)
 		})
 
 		It("notices when each backend stays healthy", func(done Done) {
 			cluster.Monitor(stopMonitoring)
-			time.Sleep(time.Second)
-			stopMonitoring <- struct{}{}
-			close(stopMonitoring)
 
-			for _, b := range backendSlice {
-				Expect(backends).To(HaveReceived("SetState").With(b).AndWith(true))
-				Expect(backends).ToNot(HaveReceived("SetState").With(b).AndWith(false))
-			}
+			Eventually(func() []interface{} {
+				return getUniqueBackendArgs(
+					backends.SetHealthyArgsForCall,
+					backends.SetHealthyCallCount)
+			}).Should(ConsistOf([]domain.Backend{
+				backend1,
+				backend2,
+				backend3,
+			}))
+			Expect(backends.SetUnhealthyCallCount()).To(BeZero())
 
 			close(done)
 		}, 5)
@@ -123,18 +126,17 @@ var _ = Describe("Cluster", func() {
 
 			cluster.Monitor(stopMonitoring)
 
-			time.Sleep(time.Second)
-			stopMonitoring <- struct{}{}
-			close(stopMonitoring)
+			Eventually(func() []interface{} {
+				return getUniqueBackendArgs(
+					backends.SetHealthyArgsForCall,
+					backends.SetHealthyCallCount)
+			}).Should(ConsistOf([]domain.Backend{
+				backend1,
+				backend3,
+			}))
 
-			Expect(backends).To(HaveReceived("SetState").With(backend1).AndWith(true))
-			Expect(backends).ToNot(HaveReceived("SetState").With(backend1).AndWith(false))
-
-			Expect(backends).To(HaveReceived("SetState").With(backend2).AndWith(false))
-			Expect(backends).ToNot(HaveReceived("SetState").With(backend2).AndWith(true))
-
-			Expect(backends).To(HaveReceived("SetState").With(backend3).AndWith(true))
-			Expect(backends).ToNot(HaveReceived("SetState").With(backend3).AndWith(false))
+			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
+			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
 		})
 
 		It("notices when a healthy backend becomes unresponsive", func() {
@@ -148,18 +150,18 @@ var _ = Describe("Cluster", func() {
 			}
 
 			cluster.Monitor(stopMonitoring)
-			time.Sleep(time.Second)
-			stopMonitoring <- struct{}{}
-			close(stopMonitoring)
 
-			Expect(backends).To(HaveReceived("SetState").With(backend1).AndWith(true))
-			Expect(backends).ToNot(HaveReceived("SetState").With(backend1).AndWith(false))
+			Eventually(func() []interface{} {
+				return getUniqueBackendArgs(
+					backends.SetHealthyArgsForCall,
+					backends.SetHealthyCallCount)
+			}).Should(ConsistOf([]domain.Backend{
+				backend1,
+				backend3,
+			}))
 
-			Expect(backends).To(HaveReceived("SetState").With(backend2).AndWith(false))
-			Expect(backends).ToNot(HaveReceived("SetState").With(backend2).AndWith(true))
-
-			Expect(backends).To(HaveReceived("SetState").With(backend3).AndWith(true))
-			Expect(backends).ToNot(HaveReceived("SetState").With(backend3).AndWith(false))
+			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
+			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
 		})
 
 		It("notices when an unhealthy backend becomes healthy", func() {
@@ -179,18 +181,19 @@ var _ = Describe("Cluster", func() {
 			}
 
 			cluster.Monitor(stopMonitoring)
-			time.Sleep(time.Second)
-			stopMonitoring <- struct{}{}
-			close(stopMonitoring)
 
-			Expect(backends).To(HaveReceived("SetState").With(backend1).AndWith(true))
-			Expect(backends).ToNot(HaveReceived("SetState").With(backend1).AndWith(false))
+			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
+			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
 
-			Expect(backends).To(HaveReceived("SetState").With(backend2).AndWith(true))
-			Expect(backends).To(HaveReceived("SetState").With(backend2).AndWith(false))
-
-			Expect(backends).To(HaveReceived("SetState").With(backend3).AndWith(true))
-			Expect(backends).ToNot(HaveReceived("SetState").With(backend3).AndWith(false))
+			Eventually(func() []interface{} {
+				return getUniqueBackendArgs(
+					backends.SetHealthyArgsForCall,
+					backends.SetHealthyCallCount)
+			}).Should(ConsistOf([]domain.Backend{
+				backend1,
+				backend2,
+				backend3,
+			}))
 		})
 
 		Context("when a backend is healthy", func() {
@@ -260,3 +263,20 @@ var _ = Describe("Cluster", func() {
 		})
 	})
 })
+
+func getUniqueBackendArgs(getArgsForCall func(int) domain.Backend, getCallCount func() int) []interface{} {
+
+	args := []interface{}{}
+	backendMap := make(map[string]bool)
+	callCount := getCallCount()
+	for i := 0; i < callCount; i++ {
+		arg := getArgsForCall(i)
+		host := arg.AsJSON().Host
+		if _, keyExists := backendMap[host]; keyExists == false {
+			args = append(args, arg)
+			backendMap[host] = true
+		}
+	}
+
+	return args
+}

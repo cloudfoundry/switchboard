@@ -85,31 +85,18 @@ func (b *BackendsRepository) Active() Backend {
 	return b.active
 }
 
-func (b *BackendsRepository) SetState(backend Backend, healthy bool) {
+func (b *BackendsRepository) SetHealthy(backend Backend) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
 	previouslyHealthy := b.all[backend]
-	if healthy {
-		if !previouslyHealthy {
-			b.logger.Info("Previously unhealthy backend became healthy.", lager.Data{"backend": backend.AsJSON()})
-		}
+	if !previouslyHealthy {
+		b.logger.Info("Previously unhealthy backend became healthy.", lager.Data{"backend": backend.AsJSON()})
+	}
 
-		b.all[backend] = true
-		if b.active == nil {
-			b.unsafeSetActive(backend)
-		}
-	} else {
-		if previouslyHealthy {
-			b.logger.Info("Previously healthy backend became unhealthy.", lager.Data{"backend": backend.AsJSON()})
-		}
-
-		b.all[backend] = false
-		if b.active == backend {
-			backend.SeverConnections()
-			nextHealthyBackend := b.unsafeNextHealthy()
-			b.unsafeSetActive(nextHealthyBackend)
-		}
+	b.all[backend] = true
+	if b.active == nil {
+		b.unsafeSetActive(backend)
 	}
 }
 
@@ -120,6 +107,23 @@ func (b *BackendsRepository) unsafeSetActive(backend Backend) {
 		b.logger.Info("No active backends.")
 	} else {
 		b.logger.Info("New active backend", lager.Data{"backend": b.active.AsJSON()})
+	}
+}
+
+func (b *BackendsRepository) SetUnhealthy(backend Backend) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	previouslyHealthy := b.all[backend]
+	if previouslyHealthy {
+		b.logger.Info("Previously healthy backend became unhealthy.", lager.Data{"backend": backend.AsJSON()})
+	}
+
+	b.all[backend] = false
+	if b.active == backend {
+		backend.SeverConnections()
+		nextHealthyBackend := b.unsafeNextHealthy()
+		b.unsafeSetActive(nextHealthyBackend)
 	}
 }
 

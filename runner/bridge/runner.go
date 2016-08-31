@@ -17,21 +17,23 @@ type Runner struct {
 	port               uint
 	router             Router
 	trafficEnabledChan <-chan bool
+	activeRepo         ActiveBackendRepository
 }
 
-func NewRunner(router Router, trafficEnabled <-chan bool, port uint, logger lager.Logger) Runner {
+func NewRunner(router Router, activeRepo ActiveBackendRepository, trafficEnabled <-chan bool, port uint, logger lager.Logger) Runner {
 	return Runner{
 		logger:             logger,
+		activeRepo:         activeRepo,
 		trafficEnabledChan: trafficEnabled,
 		port:               port,
 		router:             router,
 	}
 }
 
-func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
-	pr.logger.Info(fmt.Sprintf("Proxy listening on port %d", pr.port))
+func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+	r.logger.Info(fmt.Sprintf("Proxy listening on port %d", r.port))
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", pr.port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", r.port))
 	if err != nil {
 		return err
 	}
@@ -44,7 +46,12 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 			case <-shutdown:
 				return
 
-			case t := <-pr.trafficEnabledChan:
+			case t := <-r.trafficEnabledChan:
+				// ENABLE -> DISABLE
+				if trafficEnabled && !t {
+					r.activeRepo.Active().SeverConnections()
+				}
+
 				trafficEnabled = t
 			default:
 				if !trafficEnabled {
@@ -52,15 +59,15 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				}
 				clientConn, err := listener.Accept()
 				if err != nil {
-					pr.logger.Error("Error accepting client connection", err)
+					r.logger.Error("Error accepting client connection", err)
 					continue
 				}
 
 				go func(clientConn net.Conn) {
-					err := pr.router.RouteToBackend(clientConn)
+					err := r.router.RouteToBackend(clientConn)
 					if err != nil {
 						clientConn.Close()
-						pr.logger.Error("Error routing to backend", err)
+						r.logger.Error("Error routing to backend", err)
 					}
 				}(clientConn)
 			}
@@ -70,10 +77,10 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	close(ready)
 
 	signal := <-signals
-	pr.logger.Info("Received signal", lager.Data{"signal": signal})
+	r.logger.Info("Received signal", lager.Data{"signal": signal})
 	close(shutdown)
 	listener.Close()
 
-	pr.logger.Info("Proxy runner has exited")
+	r.logger.Info("Proxy runner has exited")
 	return nil
 }

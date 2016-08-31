@@ -67,8 +67,8 @@ func main() {
 
 	members := grouper.Members{
 		{
-			Name:   "proxy",
-			Runner: bridge.NewRunner(clusterRouter, nil, rootConfig.Proxy.Port, logger),
+			Name:   "bridge",
+			Runner: bridge.NewRunner(clusterRouter, backends, nil, rootConfig.Proxy.Port, logger),
 		},
 		{
 			Name:   "api",

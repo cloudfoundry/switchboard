@@ -32,18 +32,6 @@ type FakeBackend struct {
 	asJSONReturns               struct {
 		result1 domain.BackendJSON
 	}
-	EnableTrafficStub         func()
-	enableTrafficMutex        sync.RWMutex
-	enableTrafficArgsForCall  []struct{}
-	DisableTrafficStub        func()
-	disableTrafficMutex       sync.RWMutex
-	disableTrafficArgsForCall []struct{}
-	TrafficEnabledStub        func() bool
-	trafficEnabledMutex       sync.RWMutex
-	trafficEnabledArgsForCall []struct{}
-	trafficEnabledReturns     struct {
-		result1 bool
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -147,63 +135,6 @@ func (fake *FakeBackend) AsJSONReturns(result1 domain.BackendJSON) {
 	}{result1}
 }
 
-func (fake *FakeBackend) EnableTraffic() {
-	fake.enableTrafficMutex.Lock()
-	fake.enableTrafficArgsForCall = append(fake.enableTrafficArgsForCall, struct{}{})
-	fake.recordInvocation("EnableTraffic", []interface{}{})
-	fake.enableTrafficMutex.Unlock()
-	if fake.EnableTrafficStub != nil {
-		fake.EnableTrafficStub()
-	}
-}
-
-func (fake *FakeBackend) EnableTrafficCallCount() int {
-	fake.enableTrafficMutex.RLock()
-	defer fake.enableTrafficMutex.RUnlock()
-	return len(fake.enableTrafficArgsForCall)
-}
-
-func (fake *FakeBackend) DisableTraffic() {
-	fake.disableTrafficMutex.Lock()
-	fake.disableTrafficArgsForCall = append(fake.disableTrafficArgsForCall, struct{}{})
-	fake.recordInvocation("DisableTraffic", []interface{}{})
-	fake.disableTrafficMutex.Unlock()
-	if fake.DisableTrafficStub != nil {
-		fake.DisableTrafficStub()
-	}
-}
-
-func (fake *FakeBackend) DisableTrafficCallCount() int {
-	fake.disableTrafficMutex.RLock()
-	defer fake.disableTrafficMutex.RUnlock()
-	return len(fake.disableTrafficArgsForCall)
-}
-
-func (fake *FakeBackend) TrafficEnabled() bool {
-	fake.trafficEnabledMutex.Lock()
-	fake.trafficEnabledArgsForCall = append(fake.trafficEnabledArgsForCall, struct{}{})
-	fake.recordInvocation("TrafficEnabled", []interface{}{})
-	fake.trafficEnabledMutex.Unlock()
-	if fake.TrafficEnabledStub != nil {
-		return fake.TrafficEnabledStub()
-	} else {
-		return fake.trafficEnabledReturns.result1
-	}
-}
-
-func (fake *FakeBackend) TrafficEnabledCallCount() int {
-	fake.trafficEnabledMutex.RLock()
-	defer fake.trafficEnabledMutex.RUnlock()
-	return len(fake.trafficEnabledArgsForCall)
-}
-
-func (fake *FakeBackend) TrafficEnabledReturns(result1 bool) {
-	fake.TrafficEnabledStub = nil
-	fake.trafficEnabledReturns = struct {
-		result1 bool
-	}{result1}
-}
-
 func (fake *FakeBackend) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -215,12 +146,6 @@ func (fake *FakeBackend) Invocations() map[string][][]interface{} {
 	defer fake.severConnectionsMutex.RUnlock()
 	fake.asJSONMutex.RLock()
 	defer fake.asJSONMutex.RUnlock()
-	fake.enableTrafficMutex.RLock()
-	defer fake.enableTrafficMutex.RUnlock()
-	fake.disableTrafficMutex.RLock()
-	defer fake.disableTrafficMutex.RUnlock()
-	fake.trafficEnabledMutex.RLock()
-	defer fake.trafficEnabledMutex.RUnlock()
 	return fake.invocations
 }
 

@@ -40,11 +40,7 @@ func (c *ClusterAPI) AsJSON() ClusterJSON {
 	defer c.mutex.RUnlock()
 
 	return ClusterJSON{
-		// Traffic is enabled and disabled on all backends collectively
-		// so we only need to read the state of one to get the state of
-		// the system as a whole
-		// Test the nillable
-		TrafficEnabled: anyBackend(c.backends).TrafficEnabled(),
+		TrafficEnabled: true,
 
 		Message:     c.message,
 		LastUpdated: c.lastUpdated,
@@ -60,9 +56,6 @@ func (c *ClusterAPI) EnableTraffic(message string) {
 	c.message = message
 	c.lastUpdated = time.Now()
 
-	for backend := range c.backends.All() {
-		backend.EnableTraffic()
-	}
 }
 
 func (c *ClusterAPI) DisableTraffic(message string) {
@@ -73,10 +66,6 @@ func (c *ClusterAPI) DisableTraffic(message string) {
 
 	c.message = message
 	c.lastUpdated = time.Now()
-
-	for backend := range c.backends.All() {
-		backend.DisableTraffic()
-	}
 }
 
 type ClusterJSON struct {

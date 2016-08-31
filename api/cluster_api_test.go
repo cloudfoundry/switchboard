@@ -7,11 +7,11 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
+	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
-	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
 )
 
 var _ = Describe("ClusterAPI", func() {
@@ -33,12 +33,10 @@ var _ = Describe("ClusterAPI", func() {
 		backend2 = new(domainfakes.FakeBackend)
 		backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
 		backend2.HealthcheckUrlReturns("backend2")
-		backend2.TrafficEnabledReturns(true)
 
 		backend3 = new(domainfakes.FakeBackend)
 		backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
 		backend3.HealthcheckUrlReturns("backend3")
-		backend3.TrafficEnabledReturns(true)
 
 		backendSlice = []*domainfakes.FakeBackend{backend1, backend2, backend3}
 
@@ -68,14 +66,6 @@ var _ = Describe("ClusterAPI", func() {
 			message = "some message"
 		})
 
-		It("calls EnableTraffic on all the backends", func() {
-			cluster.EnableTraffic(message)
-
-			for _, backend := range backendSlice {
-				Expect(backend.EnableTrafficCallCount()).To(Equal(1))
-			}
-		})
-
 		It("records the message", func() {
 			cluster.EnableTraffic(message)
 
@@ -103,14 +93,6 @@ var _ = Describe("ClusterAPI", func() {
 
 		BeforeEach(func() {
 			message = "some message"
-		})
-
-		It("calls DisableTraffic on all the backends", func() {
-			cluster.DisableTraffic(message)
-
-			for _, backend := range backendSlice {
-				Expect(backend.DisableTrafficCallCount()).To(Equal(1))
-			}
 		})
 
 		It("records the message", func() {

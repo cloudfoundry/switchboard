@@ -42,12 +42,10 @@ var _ = Describe("Cluster", func() {
 		backend2 = new(domainfakes.FakeBackend)
 		backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
 		backend2.HealthcheckUrlReturns("backend2")
-		backend2.TrafficEnabledReturns(true)
 
 		backend3 = new(domainfakes.FakeBackend)
 		backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
 		backend3.HealthcheckUrlReturns("backend3")
-		backend3.TrafficEnabledReturns(true)
 
 		backendSlice = []*domainfakes.FakeBackend{backend1, backend2, backend3}
 

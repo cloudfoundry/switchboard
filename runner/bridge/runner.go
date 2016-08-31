@@ -13,16 +13,18 @@ type Router interface {
 }
 
 type Runner struct {
-	logger lager.Logger
-	port   uint
-	router Router
+	logger             lager.Logger
+	port               uint
+	router             Router
+	trafficEnabledChan <-chan bool
 }
 
-func NewRunner(router Router, port uint, logger lager.Logger) Runner {
+func NewRunner(router Router, trafficEnabled <-chan bool, port uint, logger lager.Logger) Runner {
 	return Runner{
-		logger: logger,
-		port:   port,
-		router: router,
+		logger:             logger,
+		trafficEnabledChan: trafficEnabled,
+		port:               port,
+		router:             router,
 	}
 }
 
@@ -36,12 +38,18 @@ func (pr Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 	shutdown := make(chan interface{})
 	go func(shutdown <-chan interface{}) {
+		trafficEnabled := true
 		for {
 			select {
 			case <-shutdown:
 				return
 
+			case t := <-pr.trafficEnabledChan:
+				trafficEnabled = t
 			default:
+				if !trafficEnabled {
+					continue
+				}
 				clientConn, err := listener.Accept()
 				if err != nil {
 					pr.logger.Error("Error accepting client connection", err)

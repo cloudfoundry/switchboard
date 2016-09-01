@@ -9,21 +9,17 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-type ActiveBackendRepository interface {
-	Active() domain.Backend
-}
-
 type Runner struct {
 	logger             lager.Logger
 	port               uint
 	trafficEnabledChan <-chan bool
-	activeRepo         ActiveBackendRepository
+	activeBackendChan  <-chan domain.Backend
 }
 
-func NewRunner(activeRepo ActiveBackendRepository, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
+func NewRunner(activeBackendChan <-chan domain.Backend, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
 	return Runner{
 		logger:             logger,
-		activeRepo:         activeRepo,
+		activeBackendChan:  activeBackendChan,
 		trafficEnabledChan: trafficEnabledChan,
 		port:               port,
 	}
@@ -40,6 +36,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	shutdown := make(chan interface{})
 	go func(shutdown <-chan interface{}, listener net.Listener) {
 		trafficEnabled := true
+		var activeBackend domain.Backend
 		for {
 
 			e := make(chan error)
@@ -52,7 +49,9 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 			case t := <-r.trafficEnabledChan:
 				// ENABLED -> DISABLED
 				if trafficEnabled && !t {
-					r.activeRepo.Active().SeverConnections()
+					if activeBackend != nil {
+						activeBackend.SeverConnections()
+					}
 				}
 
 				trafficEnabled = t
@@ -65,8 +64,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 					continue
 				}
 
-				go func(clientConn net.Conn) {
-					activeBackend := r.activeRepo.Active()
+				go func(clientConn net.Conn, activeBackend domain.Backend) {
 					if activeBackend == nil {
 						clientConn.Close()
 						r.logger.Error("No active backend", err)
@@ -78,7 +76,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 						clientConn.Close()
 						r.logger.Error("Error routing to backend", err)
 					}
-				}(clientConn)
+				}(clientConn, activeBackend)
 			case err := <-e:
 				if err != nil {
 					r.logger.Error("Error accepting client connection", err)

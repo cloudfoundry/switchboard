@@ -62,7 +62,6 @@ func main() {
 
 	trafficEnabledChan := make(chan bool)
 	bridgeTrafficEnabledChan := make(chan bool)
-
 	domain.BroadcastBool(trafficEnabledChan, []chan<- bool {
 		bridgeTrafficEnabledChan,
 	})
@@ -74,7 +73,7 @@ func main() {
 	members := grouper.Members{
 		{
 			Name:   "bridge",
-			Runner: bridge.NewRunner(backends, bridgeTrafficEnabledChan, rootConfig.Proxy.Port, logger),
+			Runner: bridge.NewRunner(nil, bridgeTrafficEnabledChan, rootConfig.Proxy.Port, logger),
 		},
 		{
 			Name:   "api",

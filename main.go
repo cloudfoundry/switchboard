@@ -59,7 +59,9 @@ func main() {
 		logger,
 		arpManager,
 	)
-	clusterApi := api.NewClusterAPI(backends, logger)
+
+	trafficEnabledChan := make(chan bool)
+	clusterApi := api.NewClusterAPI(backends, trafficEnabledChan, logger)
 
 	clusterRouter := bridge.NewClusterRouter(backends)
 
@@ -68,7 +70,7 @@ func main() {
 	members := grouper.Members{
 		{
 			Name:   "bridge",
-			Runner: bridge.NewRunner(clusterRouter, backends, nil, rootConfig.Proxy.Port, logger),
+			Runner: bridge.NewRunner(clusterRouter, backends, trafficEnabledChan, rootConfig.Proxy.Port, logger),
 		},
 		{
 			Name:   "api",

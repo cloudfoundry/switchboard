@@ -332,9 +332,6 @@ var _ = Describe("Switchboard", func() {
 
 							Expect(len(returnedBackends)).To(Equal(2))
 
-							Expect(returnedBackends[0]["trafficEnabled"]).To(BeTrue())
-							Expect(returnedBackends[1]["trafficEnabled"]).To(BeTrue())
-
 							Expect(returnedBackends[0]["host"]).To(Equal("localhost"))
 							Expect(returnedBackends[0]["healthy"]).To(BeTrue(), "Expected backends[0] to be healthy")
 
@@ -643,15 +640,18 @@ var _ = Describe("Switchboard", func() {
 						}, healthcheckWaitDuration).Should(matchConnectionDisconnect())
 					})
 
-					It("rejects new connections", func() {
+					It("severs new connections", func(done Done) {
+						defer close(done)
+						allowTraffic(false)
 						Eventually(func() error {
-							allowTraffic(false)
 
 							conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+
 							if err != nil {
 								return err
 							}
 							_, err = sendData(conn, "write that should fail")
+
 							return err
 						}, healthcheckWaitDuration, 200*time.Millisecond).Should(matchConnectionDisconnect())
 					})

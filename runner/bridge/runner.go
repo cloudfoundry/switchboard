@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 
 	"github.com/pivotal-golang/lager"
 )
@@ -20,11 +21,11 @@ type Runner struct {
 	activeRepo         ActiveBackendRepository
 }
 
-func NewRunner(router Router, activeRepo ActiveBackendRepository, trafficEnabled <-chan bool, port uint, logger lager.Logger) Runner {
+func NewRunner(router Router, activeRepo ActiveBackendRepository, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
 	return Runner{
 		logger:             logger,
 		activeRepo:         activeRepo,
-		trafficEnabledChan: trafficEnabled,
+		trafficEnabledChan: trafficEnabledChan,
 		port:               port,
 		router:             router,
 	}
@@ -39,29 +40,50 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	}
 
 	shutdown := make(chan interface{})
+	trafficEnabled := true
+	var m sync.RWMutex
+
 	go func(shutdown <-chan interface{}) {
-		trafficEnabled := true
 		for {
 			select {
 			case <-shutdown:
 				return
 
 			case t := <-r.trafficEnabledChan:
-				// ENABLE -> DISABLE
+				m.RLock()
 				if trafficEnabled && !t {
 					r.activeRepo.Active().SeverConnections()
 				}
+				m.RUnlock()
 
+				m.Lock()
 				trafficEnabled = t
+				m.Unlock()
+			}
+		}
+
+	}(shutdown)
+
+	go func(shutdown <-chan interface{}) {
+		for {
+			select {
+			case <-shutdown:
+				return
+
 			default:
-				if !trafficEnabled {
-					continue
-				}
 				clientConn, err := listener.Accept()
 				if err != nil {
 					r.logger.Error("Error accepting client connection", err)
 					continue
 				}
+
+				m.RLock()
+				if !trafficEnabled {
+					m.RUnlock()
+					clientConn.Close()
+					continue
+				}
+				m.RUnlock()
 
 				go func(clientConn net.Conn) {
 					err := r.router.RouteToBackend(clientConn)

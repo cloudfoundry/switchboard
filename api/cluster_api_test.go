@@ -21,9 +21,11 @@ var _ = Describe("ClusterAPI", func() {
 		logger                       lager.Logger
 		cluster                      *api.ClusterAPI
 		backend1, backend2, backend3 *domainfakes.FakeBackend
+		trafficEnabledChan           chan bool
 	)
 
 	BeforeEach(func() {
+		trafficEnabledChan = make(chan bool, 10)
 		backends = new(apifakes.FakeBackends)
 
 		backend1 = new(domainfakes.FakeBackend)
@@ -54,7 +56,7 @@ var _ = Describe("ClusterAPI", func() {
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("Cluster test")
-		cluster = api.NewClusterAPI(backends, logger)
+		cluster = api.NewClusterAPI(backends, trafficEnabledChan, logger)
 	})
 
 	Describe("EnableTraffic", func() {
@@ -83,6 +85,20 @@ var _ = Describe("ClusterAPI", func() {
 
 			Expect(clusterJSON.LastUpdated.After(beforeTime)).To(BeTrue())
 			Expect(clusterJSON.LastUpdated.Before(afterTime)).To(BeTrue())
+		})
+
+		It("records that traffic is enabled", func() {
+			cluster.EnableTraffic(message)
+
+			clusterJSON := cluster.AsJSON()
+
+			Expect(clusterJSON.TrafficEnabled).To(BeTrue())
+		})
+
+		It("publishes that traffic is enabled", func() {
+			cluster.EnableTraffic(message)
+
+			Eventually(trafficEnabledChan).Should(Receive(BeTrue()))
 		})
 	})
 

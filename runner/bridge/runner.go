@@ -58,6 +58,16 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				close(e)
 				close(c)
 				continue
+			case a := <- r.activeBackendChan:
+				// NEW ACTIVE BACKEND
+				if activeBackend != nil {
+					activeBackend.SeverConnections()
+				}
+
+				activeBackend = a
+				close(e)
+				close(c)
+				continue
 			case clientConn := <-c:
 				if !trafficEnabled {
 					clientConn.Close()
@@ -82,7 +92,6 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 					r.logger.Error("Error accepting client connection", err)
 					continue
 				}
-
 			}
 		}
 	}(shutdown, listener)

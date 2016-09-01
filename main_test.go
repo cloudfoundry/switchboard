@@ -640,20 +640,21 @@ var _ = Describe("Switchboard", func() {
 						}, healthcheckWaitDuration).Should(matchConnectionDisconnect())
 					})
 
-					It("severs new connections", func(done Done) {
-						defer close(done)
+					It("severs new connections", func() {
 						allowTraffic(false)
 						Eventually(func() error {
 
 							conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
 
 							if err != nil {
+
+								fmt.Printf("net/dial %v\n", err)
 								return err
 							}
 							_, err = sendData(conn, "write that should fail")
 
 							return err
-						}, healthcheckWaitDuration, 200*time.Millisecond).Should(matchConnectionDisconnect())
+						}).Should(matchConnectionDisconnect())
 					})
 
 					It("permits new connections again after re-enabling traffic", func() {

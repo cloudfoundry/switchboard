@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"sync"
 
 	"github.com/pivotal-golang/lager"
 )
@@ -40,50 +39,32 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	}
 
 	shutdown := make(chan interface{})
-	trafficEnabled := true
-	var m sync.RWMutex
-
 	go func(shutdown <-chan interface{}) {
+		trafficEnabled := true
 		for {
+
+			e := make(chan error)
+			c := make(chan net.Conn)
+
+			go nonBlockingAccept(listener, c, e)
 			select {
 			case <-shutdown:
 				return
-
 			case t := <-r.trafficEnabledChan:
-				m.RLock()
+				// ENABLED -> DISABLED
 				if trafficEnabled && !t {
 					r.activeRepo.Active().SeverConnections()
 				}
-				m.RUnlock()
 
-				m.Lock()
 				trafficEnabled = t
-				m.Unlock()
-			}
-		}
-
-	}(shutdown)
-
-	go func(shutdown <-chan interface{}) {
-		for {
-			select {
-			case <-shutdown:
-				return
-
-			default:
-				clientConn, err := listener.Accept()
-				if err != nil {
-					r.logger.Error("Error accepting client connection", err)
-					continue
-				}
-
-				m.RLock()
+				close(e)
+				close(c)
+				continue
+			case clientConn := <-c:
 				if !trafficEnabled {
-					m.RUnlock()
 					clientConn.Close()
 					continue
 				}
-				m.RUnlock()
 
 				go func(clientConn net.Conn) {
 					err := r.router.RouteToBackend(clientConn)
@@ -92,6 +73,12 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 						r.logger.Error("Error routing to backend", err)
 					}
 				}(clientConn)
+			case err := <-e:
+				if err != nil {
+					r.logger.Error("Error accepting client connection", err)
+					continue
+				}
+
 			}
 		}
 	}(shutdown)
@@ -105,4 +92,13 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 	r.logger.Info("Proxy runner has exited")
 	return nil
+}
+
+func nonBlockingAccept(l net.Listener, c chan<- net.Conn, e chan<- error) {
+	clientConn, err := l.Accept()
+
+	if err != nil {
+		e <- err
+	}
+	c <- clientConn
 }

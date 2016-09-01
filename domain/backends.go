@@ -135,7 +135,6 @@ func (b *BackendsRepository) AsJSON() []BackendJSON {
 	for backend, healthy := range b.all {
 		backendJSON := backend.AsJSON()
 		backendJSON.Healthy = healthy
-		backendJSON.Active = (b.active == backend)
 		backendsJSON = append(backendsJSON, backendJSON)
 	}
 

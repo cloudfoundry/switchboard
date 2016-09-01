@@ -46,7 +46,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 			e := make(chan error)
 			c := make(chan net.Conn)
 
-			go nonBlockingAccept(listener, c, e)
+			go blockingAccept(listener, c, e)
 			select {
 			case <-shutdown:
 				return
@@ -94,11 +94,12 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	return nil
 }
 
-func nonBlockingAccept(l net.Listener, c chan<- net.Conn, e chan<- error) {
+func blockingAccept(l net.Listener, c chan<- net.Conn, e chan<- error) {
 	clientConn, err := l.Accept()
 
 	if err != nil {
 		e <- err
+		return
 	}
 	c <- clientConn
 }

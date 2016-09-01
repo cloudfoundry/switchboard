@@ -53,18 +53,18 @@ func main() {
 
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
 	arpManager := monitor.NewArmManager(logger)
+
+	activeBackendChan := make(chan domain.Backend)
+
 	cluster := monitor.NewCluster(
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
 		arpManager,
+		activeBackendChan,
 	)
 
 	trafficEnabledChan := make(chan bool)
-	bridgeTrafficEnabledChan := make(chan bool)
-	domain.BroadcastBool(trafficEnabledChan, []chan<- bool {
-		bridgeTrafficEnabledChan,
-	})
 
 	clusterApi := api.NewClusterAPI(backends, trafficEnabledChan, logger)
 
@@ -73,7 +73,7 @@ func main() {
 	members := grouper.Members{
 		{
 			Name:   "bridge",
-			Runner: bridge.NewRunner(nil, bridgeTrafficEnabledChan, rootConfig.Proxy.Port, logger),
+			Runner: bridge.NewRunner(activeBackendChan, trafficEnabledChan, rootConfig.Proxy.Port, logger),
 		},
 		{
 			Name:   "api",

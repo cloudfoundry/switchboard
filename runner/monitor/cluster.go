@@ -35,14 +35,16 @@ type Cluster struct {
 	logger             lager.Logger
 	healthcheckTimeout time.Duration
 	arpManager         ArpManager
+	activeBackendChan  chan<- domain.Backend
 }
 
-func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager) *Cluster {
+func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager, activeBackendChan chan<- domain.Backend) *Cluster {
 	return &Cluster{
 		backends:           backends,
 		logger:             logger,
 		healthcheckTimeout: healthcheckTimeout,
 		arpManager:         arpManager,
+		activeBackendChan:  activeBackendChan,
 	}
 }
 

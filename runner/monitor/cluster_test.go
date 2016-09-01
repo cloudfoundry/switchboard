@@ -63,7 +63,7 @@ var _ = Describe("Cluster", func() {
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("Cluster test")
-		cluster = NewCluster(backends, healthcheckTimeout, logger, fakeArpManager)
+		cluster = NewCluster(backends, healthcheckTimeout, logger, fakeArpManager, nil)
 	})
 
 	Describe("Monitor", func() {

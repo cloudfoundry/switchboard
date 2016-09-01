@@ -5,28 +5,27 @@ import (
 	"net"
 	"os"
 
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
-type Router interface {
-	RouteToBackend(clientConn net.Conn) error
+type ActiveBackendRepository interface {
+	Active() domain.Backend
 }
 
 type Runner struct {
 	logger             lager.Logger
 	port               uint
-	router             Router
 	trafficEnabledChan <-chan bool
 	activeRepo         ActiveBackendRepository
 }
 
-func NewRunner(router Router, activeRepo ActiveBackendRepository, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
+func NewRunner(activeRepo ActiveBackendRepository, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
 	return Runner{
 		logger:             logger,
 		activeRepo:         activeRepo,
 		trafficEnabledChan: trafficEnabledChan,
 		port:               port,
-		router:             router,
 	}
 }
 
@@ -39,7 +38,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	}
 
 	shutdown := make(chan interface{})
-	go func(shutdown <-chan interface{}) {
+	go func(shutdown <-chan interface{}, listener net.Listener) {
 		trafficEnabled := true
 		for {
 
@@ -67,7 +66,14 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				}
 
 				go func(clientConn net.Conn) {
-					err := r.router.RouteToBackend(clientConn)
+					activeBackend := r.activeRepo.Active()
+					if activeBackend == nil {
+						clientConn.Close()
+						r.logger.Error("No active backend", err)
+						return
+					}
+
+					err := activeBackend.Bridge(clientConn)
 					if err != nil {
 						clientConn.Close()
 						r.logger.Error("Error routing to backend", err)
@@ -81,7 +87,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 			}
 		}
-	}(shutdown)
+	}(shutdown, listener)
 
 	close(ready)
 

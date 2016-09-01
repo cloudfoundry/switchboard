@@ -69,14 +69,12 @@ func main() {
 
 	clusterApi := api.NewClusterAPI(backends, trafficEnabledChan, logger)
 
-	clusterRouter := bridge.NewClusterRouter(backends)
-
 	handler := api.NewHandler(clusterApi, backends, logger, rootConfig.API, rootConfig.StaticDir)
 
 	members := grouper.Members{
 		{
 			Name:   "bridge",
-			Runner: bridge.NewRunner(clusterRouter, backends, bridgeTrafficEnabledChan, rootConfig.Proxy.Port, logger),
+			Runner: bridge.NewRunner(backends, bridgeTrafficEnabledChan, rootConfig.Proxy.Port, logger),
 		},
 		{
 			Name:   "api",

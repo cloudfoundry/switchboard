@@ -17,7 +17,7 @@ var _ = Describe("Bridge Runner", func() {
 		proxyPort := 10000 + GinkgoParallelNode()
 		logger := lagertest.NewTestLogger("ProxyRunner test")
 
-		proxyRunner := bridge.NewRunner(nil, nil, nil, uint(proxyPort), logger)
+		proxyRunner := bridge.NewRunner(nil, nil, uint(proxyPort), logger)
 		proxyProcess := ifrit.Invoke(proxyRunner)
 		proxyProcess.Signal(os.Kill)
 		Eventually(proxyProcess.Wait()).Should(Receive())

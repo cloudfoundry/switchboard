@@ -4,13 +4,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
 type ClusterAPI struct {
 	mutex              sync.RWMutex
-	backends           Backends
 	logger             lager.Logger
 	message            string
 	lastUpdated        time.Time
@@ -18,14 +16,8 @@ type ClusterAPI struct {
 	trafficEnabledChan chan<- bool
 }
 
-//go:generate counterfeiter . Backends
-type Backends interface {
-	All() <-chan domain.Backend
-}
-
-func NewClusterAPI(backends Backends, trafficEnabledChan chan<- bool, logger lager.Logger) *ClusterAPI {
+func NewClusterAPI(trafficEnabledChan chan<- bool, logger lager.Logger) *ClusterAPI {
 	return &ClusterAPI{
-		backends:           backends,
 		logger:             logger,
 		trafficEnabled:     true,
 		trafficEnabledChan: trafficEnabledChan,

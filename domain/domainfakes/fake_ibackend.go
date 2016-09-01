@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
-type FakeBackend struct {
+type FakeIBackend struct {
 	HealthcheckUrlStub        func() string
 	healthcheckUrlMutex       sync.RWMutex
 	healthcheckUrlArgsForCall []struct{}
@@ -36,7 +36,7 @@ type FakeBackend struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBackend) HealthcheckUrl() string {
+func (fake *FakeIBackend) HealthcheckUrl() string {
 	fake.healthcheckUrlMutex.Lock()
 	fake.healthcheckUrlArgsForCall = append(fake.healthcheckUrlArgsForCall, struct{}{})
 	fake.recordInvocation("HealthcheckUrl", []interface{}{})
@@ -48,20 +48,20 @@ func (fake *FakeBackend) HealthcheckUrl() string {
 	}
 }
 
-func (fake *FakeBackend) HealthcheckUrlCallCount() int {
+func (fake *FakeIBackend) HealthcheckUrlCallCount() int {
 	fake.healthcheckUrlMutex.RLock()
 	defer fake.healthcheckUrlMutex.RUnlock()
 	return len(fake.healthcheckUrlArgsForCall)
 }
 
-func (fake *FakeBackend) HealthcheckUrlReturns(result1 string) {
+func (fake *FakeIBackend) HealthcheckUrlReturns(result1 string) {
 	fake.HealthcheckUrlStub = nil
 	fake.healthcheckUrlReturns = struct {
 		result1 string
 	}{result1}
 }
 
-func (fake *FakeBackend) Bridge(clientConn net.Conn) error {
+func (fake *FakeIBackend) Bridge(clientConn net.Conn) error {
 	fake.bridgeMutex.Lock()
 	fake.bridgeArgsForCall = append(fake.bridgeArgsForCall, struct {
 		clientConn net.Conn
@@ -75,26 +75,26 @@ func (fake *FakeBackend) Bridge(clientConn net.Conn) error {
 	}
 }
 
-func (fake *FakeBackend) BridgeCallCount() int {
+func (fake *FakeIBackend) BridgeCallCount() int {
 	fake.bridgeMutex.RLock()
 	defer fake.bridgeMutex.RUnlock()
 	return len(fake.bridgeArgsForCall)
 }
 
-func (fake *FakeBackend) BridgeArgsForCall(i int) net.Conn {
+func (fake *FakeIBackend) BridgeArgsForCall(i int) net.Conn {
 	fake.bridgeMutex.RLock()
 	defer fake.bridgeMutex.RUnlock()
 	return fake.bridgeArgsForCall[i].clientConn
 }
 
-func (fake *FakeBackend) BridgeReturns(result1 error) {
+func (fake *FakeIBackend) BridgeReturns(result1 error) {
 	fake.BridgeStub = nil
 	fake.bridgeReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeBackend) SeverConnections() {
+func (fake *FakeIBackend) SeverConnections() {
 	fake.severConnectionsMutex.Lock()
 	fake.severConnectionsArgsForCall = append(fake.severConnectionsArgsForCall, struct{}{})
 	fake.recordInvocation("SeverConnections", []interface{}{})
@@ -104,13 +104,13 @@ func (fake *FakeBackend) SeverConnections() {
 	}
 }
 
-func (fake *FakeBackend) SeverConnectionsCallCount() int {
+func (fake *FakeIBackend) SeverConnectionsCallCount() int {
 	fake.severConnectionsMutex.RLock()
 	defer fake.severConnectionsMutex.RUnlock()
 	return len(fake.severConnectionsArgsForCall)
 }
 
-func (fake *FakeBackend) AsJSON() domain.BackendJSON {
+func (fake *FakeIBackend) AsJSON() domain.BackendJSON {
 	fake.asJSONMutex.Lock()
 	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
 	fake.recordInvocation("AsJSON", []interface{}{})
@@ -122,20 +122,20 @@ func (fake *FakeBackend) AsJSON() domain.BackendJSON {
 	}
 }
 
-func (fake *FakeBackend) AsJSONCallCount() int {
+func (fake *FakeIBackend) AsJSONCallCount() int {
 	fake.asJSONMutex.RLock()
 	defer fake.asJSONMutex.RUnlock()
 	return len(fake.asJSONArgsForCall)
 }
 
-func (fake *FakeBackend) AsJSONReturns(result1 domain.BackendJSON) {
+func (fake *FakeIBackend) AsJSONReturns(result1 domain.BackendJSON) {
 	fake.AsJSONStub = nil
 	fake.asJSONReturns = struct {
 		result1 domain.BackendJSON
 	}{result1}
 }
 
-func (fake *FakeBackend) Invocations() map[string][][]interface{} {
+func (fake *FakeIBackend) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.healthcheckUrlMutex.RLock()
@@ -149,7 +149,7 @@ func (fake *FakeBackend) Invocations() map[string][][]interface{} {
 	return fake.invocations
 }
 
-func (fake *FakeBackend) recordInvocation(key string, args []interface{}) {
+func (fake *FakeIBackend) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -161,4 +161,4 @@ func (fake *FakeBackend) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ domain.Backend = new(FakeBackend)
+var _ domain.IBackend = new(FakeIBackend)

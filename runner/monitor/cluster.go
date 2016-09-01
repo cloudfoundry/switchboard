@@ -23,22 +23,21 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 
 var UrlGetterProvider = HttpUrlGetterProvider
 
-//go:generate counterfeiter . Backends
-type Backends interface {
-	All() <-chan domain.Backend
-	SetHealthy(backend domain.Backend)   // Monitor
-	SetUnhealthy(backend domain.Backend) // Monitor
+type backendMonitor struct {
+	backend  *domain.Backend
+	healthy  bool
+	counters *DecisionCounters
 }
 
 type Cluster struct {
-	backends           Backends
+	backends           []*domain.Backend
 	logger             lager.Logger
 	healthcheckTimeout time.Duration
 	arpManager         ArpManager
-	activeBackendChan  chan<- domain.Backend
+	activeBackendChan  chan<- domain.IBackend
 }
 
-func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager, activeBackendChan chan<- domain.Backend) *Cluster {
+func NewCluster(backends []*domain.Backend, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager, activeBackendChan chan<- domain.IBackend) *Cluster {
 	return &Cluster{
 		backends:           backends,
 		logger:             logger,
@@ -51,29 +50,43 @@ func NewCluster(backends Backends, healthcheckTimeout time.Duration, logger lage
 func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 	client := UrlGetterProvider(c.healthcheckTimeout)
 
-	for b := range c.backends.All() {
-		go func(backend domain.Backend) {
-			counters := c.setupCounters()
-			for {
-				select {
-				case <-time.After(c.healthcheckTimeout / 5):
+	var backendHealth []*backendMonitor
 
-					counters.IncrementCount("dial")
-					shouldLog := counters.Should("log")
+	for _, backend := range c.backends {
+		backendHealth = append(backendHealth,
+			&backendMonitor{
+				backend:  backend,
+				counters: c.setupCounters(),
+			})
+	}
+
+	go func() {
+		var activeBackend domain.IBackend
+		for {
+
+			select {
+			case <-time.After(c.healthcheckTimeout / 5):
+				for _, healthMonitor := range backendHealth {
+					backend := healthMonitor.backend
+
+					healthMonitor.counters.IncrementCount("dial")
+					shouldLog := healthMonitor.counters.Should("log")
 
 					url := backend.HealthcheckUrl()
 					resp, err := client.Get(url)
 
 					if err == nil && resp.StatusCode == http.StatusOK {
-						c.backends.SetHealthy(backend)
-						counters.ResetCount("consecutiveUnhealthyChecks")
+						backend.SetHealthy()
+						healthMonitor.healthy = true
+						healthMonitor.counters.ResetCount("consecutiveUnhealthyChecks")
 
 						if shouldLog {
 							c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
 						}
 					} else {
-						c.backends.SetUnhealthy(backend)
-						counters.IncrementCount("consecutiveUnhealthyChecks")
+						backend.SetUnhealthy()
+						healthMonitor.healthy = false
+						healthMonitor.counters.IncrementCount("consecutiveUnhealthyChecks")
 
 						if shouldLog {
 							c.logger.Error(
@@ -89,7 +102,7 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 						}
 					}
 
-					if counters.Should("clearArp") {
+					if healthMonitor.counters.Should("clearArp") {
 						backendHost := backend.AsJSON().Host
 
 						if c.arpManager.IsCached(backendHost) {
@@ -99,12 +112,41 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 							}
 						}
 					}
-				case <-stopChan:
-					return
 				}
+
+				var anyHealthy bool
+				for _, healthMonitor := range backendHealth {
+					backend := healthMonitor.backend
+
+					if healthMonitor.healthy {
+						anyHealthy = true
+					}
+
+					if healthMonitor.healthy && activeBackend == backend {
+						break
+					}
+
+					if healthMonitor.healthy && activeBackend != backend {
+						c.logger.Info("New active backend", lager.Data{"backend": backend.AsJSON()})
+						activeBackend = backend
+						c.activeBackendChan <- activeBackend
+						break
+					}
+				}
+
+				if !anyHealthy {
+					c.logger.Info("No active backends.")
+					c.activeBackendChan <- nil
+				}
+
+			case <-stopChan:
+				return
 			}
-		}(b)
-	}
+
+		}
+
+	}()
+
 }
 
 func (c *Cluster) setupCounters() *DecisionCounters {

@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("Backend", func() {
-	var backend domain.Backend
+	var backend domain.IBackend
 	var bridges *domainfakes.FakeBridges
 
 	BeforeEach(func() {

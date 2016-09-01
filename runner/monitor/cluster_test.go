@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/domain/domainfakes"
 	. "github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
 	"github.com/pivotal-golang/lager"
@@ -23,47 +22,59 @@ const healthcheckTimeout = time.Second
 
 var _ = Describe("Cluster", func() {
 	var (
-		backends                     *monitorfakes.FakeBackends
-		backendSlice                 []*domainfakes.FakeBackend
+		backends                     []*domain.Backend
 		logger                       lager.Logger
 		cluster                      *Cluster
 		fakeArpManager               *monitorfakes.FakeArpManager
-		backend1, backend2, backend3 *domainfakes.FakeBackend
+		backend1, backend2, backend3 *domain.Backend
+		activeBackendChan            chan domain.IBackend
 	)
 
 	BeforeEach(func() {
+		logger = lagertest.NewTestLogger("Cluster test")
 		fakeArpManager = nil
-		backends = new(monitorfakes.FakeBackends)
 
-		backend1 = new(domainfakes.FakeBackend)
-		backend1.AsJSONReturns(domain.BackendJSON{Host: "10.10.1.2"})
-		backend1.HealthcheckUrlReturns("backend1")
+		backend1 = domain.NewBackend(
+			"backend-1",
+			"10.10.1.2",
+			1337,
+			1338,
+			"healthcheck",
+			logger,
+		)
 
-		backend2 = new(domainfakes.FakeBackend)
-		backend2.AsJSONReturns(domain.BackendJSON{Host: "10.10.2.2"})
-		backend2.HealthcheckUrlReturns("backend2")
+		backend2 = domain.NewBackend(
+			"backend-2",
+			"10.10.2.2",
+			1337,
+			1338,
+			"healthcheck",
+			logger,
+		)
+		backend3 = domain.NewBackend(
+			"backend-3",
+			"10.10.3.2",
+			1337,
+			1338,
+			"healthcheck",
+			logger,
+		)
 
-		backend3 = new(domainfakes.FakeBackend)
-		backend3.AsJSONReturns(domain.BackendJSON{Host: "10.10.3.2"})
-		backend3.HealthcheckUrlReturns("backend3")
-
-		backendSlice = []*domainfakes.FakeBackend{backend1, backend2, backend3}
-
-		backends.AllStub = func() <-chan domain.Backend {
-			c := make(chan domain.Backend, 3)
-
-			for _, b := range backendSlice {
-				c <- b
-			}
-			close(c)
-
-			return c
+		backends = []*domain.Backend{
+			backend1,
+			backend2,
+			backend3,
 		}
+
+		activeBackendChan = make(chan domain.IBackend, 100)
+
+		backend1.SetHealthy()
+		backend2.SetHealthy()
+		backend3.SetHealthy()
 	})
 
 	JustBeforeEach(func() {
-		logger = lagertest.NewTestLogger("Cluster test")
-		cluster = NewCluster(backends, healthcheckTimeout, logger, fakeArpManager, nil)
+		cluster = NewCluster(backends, healthcheckTimeout, logger, fakeArpManager, activeBackendChan)
 	})
 
 	Describe("Monitor", func() {
@@ -72,7 +83,6 @@ var _ = Describe("Cluster", func() {
 			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 			StatusCode: http.StatusOK,
 		}
-		var stopMonitoring chan interface{}
 
 		BeforeEach(func() {
 			urlGetter = new(monitorfakes.FakeUrlGetter)
@@ -82,28 +92,26 @@ var _ = Describe("Cluster", func() {
 			}
 
 			urlGetter.GetReturns(healthyResponse, nil)
-
-			stopMonitoring = make(chan interface{})
 		})
 
 		AfterEach(func() {
 			UrlGetterProvider = HttpUrlGetterProvider
-			close(stopMonitoring)
 		})
 
 		It("notices when each backend stays healthy", func(done Done) {
-			cluster.Monitor(stopMonitoring)
+			backend1.SetUnhealthy()
+			backend2.SetUnhealthy()
+			backend3.SetUnhealthy()
 
-			Eventually(func() []interface{} {
-				return getUniqueBackendArgs(
-					backends.SetHealthyArgsForCall,
-					backends.SetHealthyCallCount)
-			}).Should(ConsistOf([]domain.Backend{
-				backend1,
-				backend2,
-				backend3,
-			}))
-			Expect(backends.SetUnhealthyCallCount()).To(BeZero())
+			Expect(backend1.Healthy()).To(BeFalse())
+			Expect(backend2.Healthy()).To(BeFalse())
+			Expect(backend3.Healthy()).To(BeFalse())
+
+			cluster.Monitor(nil)
+
+			Eventually(backend1.Healthy).Should(BeTrue())
+			Eventually(backend2.Healthy).Should(BeTrue())
+			Eventually(backend3.Healthy).Should(BeTrue())
 
 			close(done)
 		}, 5)
@@ -115,54 +123,48 @@ var _ = Describe("Cluster", func() {
 			}
 
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
-				if url == "backend2" {
+				if url == backend2.HealthcheckUrl() {
 					return unhealthyResponse, nil
 				} else {
 					return healthyResponse, nil
 				}
 			}
 
-			cluster.Monitor(stopMonitoring)
+			Expect(backend1.Healthy()).To(BeTrue())
+			Expect(backend2.Healthy()).To(BeTrue())
+			Expect(backend3.Healthy()).To(BeTrue())
 
-			Eventually(func() []interface{} {
-				return getUniqueBackendArgs(
-					backends.SetHealthyArgsForCall,
-					backends.SetHealthyCallCount)
-			}).Should(ConsistOf([]domain.Backend{
-				backend1,
-				backend3,
-			}))
+			cluster.Monitor(nil)
 
-			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
-			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
+			Eventually(backend2.Healthy).Should(BeFalse())
+			Consistently(backend1.Healthy).Should(BeTrue())
+			Consistently(backend3.Healthy).Should(BeTrue())
 		})
 
 		It("notices when a healthy backend becomes unresponsive", func() {
 
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
-				if url == "backend2" {
+				if url == backend2.HealthcheckUrl() {
 					return nil, errors.New("some error")
 				} else {
 					return healthyResponse, nil
 				}
 			}
 
-			cluster.Monitor(stopMonitoring)
+			Expect(backend1.Healthy()).To(BeTrue())
+			Expect(backend2.Healthy()).To(BeTrue())
+			Expect(backend3.Healthy()).To(BeTrue())
 
-			Eventually(func() []interface{} {
-				return getUniqueBackendArgs(
-					backends.SetHealthyArgsForCall,
-					backends.SetHealthyCallCount)
-			}).Should(ConsistOf([]domain.Backend{
-				backend1,
-				backend3,
-			}))
+			cluster.Monitor(nil)
 
-			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
-			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
+			Eventually(backend2.Healthy).Should(BeFalse())
+			Consistently(backend1.Healthy).Should(BeTrue())
+			Consistently(backend3.Healthy).Should(BeTrue())
 		})
 
 		It("notices when an unhealthy backend becomes healthy", func() {
+			backend2.SetUnhealthy()
+
 			unhealthyResponse := &http.Response{
 				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 				StatusCode: http.StatusInternalServerError,
@@ -170,7 +172,7 @@ var _ = Describe("Cluster", func() {
 
 			isUnhealthy := true
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
-				if url == "backend2" && isUnhealthy {
+				if url == backend2.HealthcheckUrl() && isUnhealthy {
 					isUnhealthy = false
 					return unhealthyResponse, nil
 				} else {
@@ -178,30 +180,24 @@ var _ = Describe("Cluster", func() {
 				}
 			}
 
-			cluster.Monitor(stopMonitoring)
+			Expect(backend1.Healthy()).To(BeTrue())
+			Expect(backend2.Healthy()).To(BeFalse())
+			Expect(backend3.Healthy()).To(BeTrue())
 
-			Eventually(backends.SetUnhealthyCallCount).Should(BeNumerically(">=", 1))
-			Expect(backends.SetUnhealthyArgsForCall(0)).To(Equal(backend2))
+			cluster.Monitor(nil)
 
-			Eventually(func() []interface{} {
-				return getUniqueBackendArgs(
-					backends.SetHealthyArgsForCall,
-					backends.SetHealthyCallCount)
-			}).Should(ConsistOf([]domain.Backend{
-				backend1,
-				backend2,
-				backend3,
-			}))
+			Eventually(backend2.Healthy).Should(BeTrue())
+			Consistently(backend1.Healthy).Should(BeTrue())
+			Consistently(backend3.Healthy).Should(BeTrue())
 		})
 
 		Context("when a backend is healthy", func() {
-
 			BeforeEach(func() {
 				fakeArpManager = new(monitorfakes.FakeArpManager)
 			})
 
 			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
-				cluster.Monitor(stopMonitoring)
+				cluster.Monitor(nil)
 
 				Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
 			})
@@ -217,7 +213,7 @@ var _ = Describe("Cluster", func() {
 				}
 
 				urlGetter.GetStub = func(url string) (*http.Response, error) {
-					if url == "backend2" {
+					if url == backend2.HealthcheckUrl() {
 						return unhealthyResponse, nil
 					} else {
 						return healthyResponse, nil
@@ -239,7 +235,7 @@ var _ = Describe("Cluster", func() {
 
 				It("clears the arp cache after ArpFlushInterval has elapsed", func() {
 
-					cluster.Monitor(stopMonitoring)
+					cluster.Monitor(nil)
 
 					Eventually(fakeArpManager.ClearCacheCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
 					Expect(fakeArpManager.ClearCacheArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
@@ -253,7 +249,7 @@ var _ = Describe("Cluster", func() {
 				})
 
 				It("does not clear arp cache", func() {
-					cluster.Monitor(stopMonitoring)
+					cluster.Monitor(nil)
 
 					Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
 				})
@@ -261,20 +257,3 @@ var _ = Describe("Cluster", func() {
 		})
 	})
 })
-
-func getUniqueBackendArgs(getArgsForCall func(int) domain.Backend, getCallCount func() int) []interface{} {
-
-	args := []interface{}{}
-	backendMap := make(map[string]bool)
-	callCount := getCallCount()
-	for i := 0; i < callCount; i++ {
-		arg := getArgsForCall(i)
-		host := arg.AsJSON().Host
-		if _, keyExists := backendMap[host]; keyExists == false {
-			args = append(args, arg)
-			backendMap[host] = true
-		}
-	}
-
-	return args
-}

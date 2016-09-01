@@ -54,7 +54,7 @@ func main() {
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
 	arpManager := monitor.NewArmManager(logger)
 
-	activeBackendChan := make(chan domain.Backend)
+	activeBackendChan := make(chan domain.IBackend)
 
 	cluster := monitor.NewCluster(
 		backends,
@@ -66,7 +66,7 @@ func main() {
 
 	trafficEnabledChan := make(chan bool)
 
-	clusterApi := api.NewClusterAPI(backends, trafficEnabledChan, logger)
+	clusterApi := api.NewClusterAPI(trafficEnabledChan, logger)
 
 	handler := api.NewHandler(clusterApi, backends, logger, rootConfig.API, rootConfig.StaticDir)
 
@@ -142,6 +142,7 @@ func main() {
 		writePid(logger, rootConfig.PidFile)
 	}
 
+	activeBackendChan <- backends[0]
 	err = <-process.Wait()
 	if err != nil {
 		logger.Fatal("Switchboard exited unexpectedly", err, lager.Data{"proxyConfig": rootConfig.Proxy})

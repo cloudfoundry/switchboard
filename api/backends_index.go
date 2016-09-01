@@ -2,18 +2,14 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"net/http"
+
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
-//go:generate counterfeiter . JSONableBackends
-type JSONableBackends interface {
-	AsJSON() []domain.BackendJSON
-}
-
-var BackendsIndex = func(backends JSONableBackends) http.Handler {
+var BackendsIndex = func(backends []*domain.Backend) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		backendsJSON, err := json.Marshal(backends.AsJSON())
+		backendsJSON, err := json.Marshal(Backends(backends).AsJSON())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -26,4 +22,14 @@ var BackendsIndex = func(backends JSONableBackends) http.Handler {
 			return
 		}
 	})
+}
+
+type Backends []*domain.Backend
+
+func (bs Backends) AsJSON() (json []domain.BackendJSON) {
+	for _, b := range bs {
+		json = append(json, b.AsJSON())
+	}
+
+	return json
 }

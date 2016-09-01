@@ -13,10 +13,10 @@ type Runner struct {
 	logger             lager.Logger
 	port               uint
 	trafficEnabledChan <-chan bool
-	activeBackendChan  <-chan domain.Backend
+	activeBackendChan  <-chan domain.IBackend
 }
 
-func NewRunner(activeBackendChan <-chan domain.Backend, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
+func NewRunner(activeBackendChan <-chan domain.IBackend, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
 	return Runner{
 		logger:             logger,
 		activeBackendChan:  activeBackendChan,
@@ -36,12 +36,11 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	shutdown := make(chan interface{})
 	go func(shutdown <-chan interface{}, listener net.Listener) {
 		trafficEnabled := true
-		var activeBackend domain.Backend
+		var activeBackend domain.IBackend
+		e := make(chan error)
+		c := make(chan net.Conn)
+
 		for {
-
-			e := make(chan error)
-			c := make(chan net.Conn)
-
 			go blockingAccept(listener, c, e)
 			select {
 			case <-shutdown:
@@ -55,26 +54,22 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				}
 
 				trafficEnabled = t
-				close(e)
-				close(c)
-				continue
-			case a := <- r.activeBackendChan:
+
+			case a := <-r.activeBackendChan:
 				// NEW ACTIVE BACKEND
 				if activeBackend != nil {
 					activeBackend.SeverConnections()
 				}
 
 				activeBackend = a
-				close(e)
-				close(c)
-				continue
+
 			case clientConn := <-c:
 				if !trafficEnabled {
 					clientConn.Close()
 					continue
 				}
 
-				go func(clientConn net.Conn, activeBackend domain.Backend) {
+				go func(clientConn net.Conn, activeBackend domain.IBackend) {
 					if activeBackend == nil {
 						clientConn.Close()
 						r.logger.Error("No active backend", err)
@@ -114,5 +109,6 @@ func blockingAccept(l net.Listener, c chan<- net.Conn, e chan<- error) {
 		e <- err
 		return
 	}
+
 	c <- clientConn
 }

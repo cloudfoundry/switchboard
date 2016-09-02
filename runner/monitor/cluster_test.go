@@ -27,7 +27,7 @@ var _ = Describe("Cluster", func() {
 		cluster                      *Cluster
 		fakeArpManager               *monitorfakes.FakeArpManager
 		backend1, backend2, backend3 *domain.Backend
-		activeBackendChan            chan domain.IBackend
+		activeBackendChan            chan *domain.Backend
 	)
 
 	BeforeEach(func() {
@@ -66,7 +66,7 @@ var _ = Describe("Cluster", func() {
 			backend3,
 		}
 
-		activeBackendChan = make(chan domain.IBackend, 100)
+		activeBackendChan = make(chan *domain.Backend, 100)
 
 		backend1.SetHealthy()
 		backend2.SetHealthy()

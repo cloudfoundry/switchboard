@@ -35,10 +35,10 @@ type Cluster struct {
 	logger             lager.Logger
 	healthcheckTimeout time.Duration
 	arpManager         ArpManager
-	activeBackendChan  chan<- domain.IBackend
+	activeBackendChan  chan<- *domain.Backend
 }
 
-func NewCluster(backends []*domain.Backend, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager, activeBackendChan chan<- domain.IBackend) *Cluster {
+func NewCluster(backends []*domain.Backend, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager, activeBackendChan chan<- *domain.Backend) *Cluster {
 	return &Cluster{
 		backends:           backends,
 		logger:             logger,
@@ -62,7 +62,7 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 	}
 
 	go func() {
-		var activeBackend domain.IBackend
+		var activeBackend *domain.Backend
 
 		for {
 

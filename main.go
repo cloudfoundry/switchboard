@@ -54,7 +54,7 @@ func main() {
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
 	arpManager := monitor.NewArmManager(logger)
 
-	activeBackendChan := make(chan domain.IBackend)
+	activeBackendChan := make(chan *domain.Backend)
 
 	cluster := monitor.NewCluster(
 		backends,

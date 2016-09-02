@@ -19,7 +19,7 @@ echo -e "\nTesting packages..."
 
 # due to the high amount of concurrency in these tests, tests will often fail
 # with timeouts if run in parallel on systems with fewer than 4 cores
-GINKGO_FLAGS="-r -failOnPending -randomizeAllSpecs -slowSpecThreshold=20 -race"
+GINKGO_FLAGS="-r -failOnPending -randomizeAllSpecs -slowSpecThreshold=20 -race -keepGoing"
 if [ "$(get_cpu_count)" -ge "4" ]; then
   GINKGO_FLAGS="${GINKGO_FLAGS} -p"
 fi

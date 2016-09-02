@@ -13,15 +13,6 @@ import (
 var BridgesProvider = NewBridges
 var Dialer = net.Dial
 
-//go:generate counterfeiter -o domainfakes/fake_net_conn.go /usr/local/opt/go/libexec/src/net/net.go Conn
-//go:generate counterfeiter . IBackend
-type IBackend interface {
-	HealthcheckUrl() string
-	Bridge(clientConn net.Conn) error
-	SeverConnections()
-	AsJSON() BackendJSON
-}
-
 type Backend struct {
 	mutex          sync.RWMutex
 	host           string

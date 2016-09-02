@@ -13,10 +13,10 @@ type Runner struct {
 	logger             lager.Logger
 	port               uint
 	trafficEnabledChan <-chan bool
-	activeBackendChan  <-chan domain.IBackend
+	activeBackendChan  <-chan *domain.Backend
 }
 
-func NewRunner(activeBackendChan <-chan domain.IBackend, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
+func NewRunner(activeBackendChan <-chan *domain.Backend, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
 	return Runner{
 		logger:             logger,
 		activeBackendChan:  activeBackendChan,
@@ -36,7 +36,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	shutdown := make(chan interface{})
 	go func(shutdown <-chan interface{}, listener net.Listener) {
 		trafficEnabled := true
-		var activeBackend domain.IBackend
+		var activeBackend *domain.Backend
 		e := make(chan error)
 		c := make(chan net.Conn)
 
@@ -69,7 +69,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 					continue
 				}
 
-				go func(clientConn net.Conn, activeBackend domain.IBackend) {
+				go func(clientConn net.Conn, activeBackend *domain.Backend) {
 					if activeBackend == nil {
 						clientConn.Close()
 						r.logger.Error("No active backend", err)

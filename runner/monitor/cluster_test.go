@@ -256,4 +256,109 @@ var _ = Describe("Cluster", func() {
 			})
 		})
 	})
+
+	Describe("ChooseActiveBackend", func() {
+		var (
+			statuses                     map[*domain.Backend]*BackendStatus
+			backend1, backend2, backend3 *domain.Backend
+		)
+
+		BeforeEach(func() {
+			statuses = make(map[*domain.Backend]*BackendStatus)
+			backend1 = domain.NewBackend(
+				"backend-1",
+				"10.10.1.2",
+				1337,
+				1338,
+				"healthcheck",
+				logger,
+			)
+
+			backend2 = domain.NewBackend(
+				"backend-2",
+				"10.10.2.2",
+				1337,
+				1338,
+				"healthcheck",
+				logger,
+			)
+			backend3 = domain.NewBackend(
+				"backend-3",
+				"10.10.3.2",
+				1337,
+				1338,
+				"healthcheck",
+				logger,
+			)
+		})
+
+		Context("When there are no backends", func() {
+			It("returns nil", func() {
+				Expect(ChooseActiveBackend(statuses)).To(BeNil())
+			})
+		})
+		Context("If none of the backends are healthy", func() {
+			It("returns nil", func() {
+				statuses[backend1] = &BackendStatus{
+					Healthy: false,
+					Index:   0,
+				}
+
+				statuses[backend2] = &BackendStatus{
+					Healthy: false,
+					Index:   1,
+				}
+
+				statuses[backend3] = &BackendStatus{
+					Healthy: false,
+					Index:   2,
+				}
+
+				Expect(ChooseActiveBackend(statuses)).To(BeNil())
+			})
+		})
+
+		Context("If only one of the backends is healthy", func() {
+			It("chooses the only healthy one", func() {
+				statuses[backend1] = &BackendStatus{
+					Healthy: false,
+					Index:   0,
+				}
+
+				statuses[backend2] = &BackendStatus{
+					Healthy: false,
+					Index:   1,
+				}
+
+				statuses[backend3] = &BackendStatus{
+					Healthy: true,
+					Index:   2,
+				}
+
+				Expect(ChooseActiveBackend(statuses)).To(Equal(backend3))
+			})
+		})
+
+		Context("If multiple backends are healthy", func() {
+			It("chooses the healthy one with the lowest index", func() {
+				statuses[backend2] = &BackendStatus{
+					Healthy: true,
+					Index:   2,
+				}
+
+				statuses[backend3] = &BackendStatus{
+					Healthy: true,
+					Index:   1,
+				}
+
+				statuses[backend1] = &BackendStatus{
+					Healthy: false,
+					Index:   0,
+				}
+
+				Expect(ChooseActiveBackend(statuses)).To(Equal(backend3))
+			})
+		})
+
+	})
 })

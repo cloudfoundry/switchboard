@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
+	"math"
 )
 
 //go:generate counterfeiter . UrlGetter
@@ -25,9 +26,9 @@ func HttpUrlGetterProvider(healthcheckTimeout time.Duration) UrlGetter {
 
 var UrlGetterProvider = HttpUrlGetterProvider
 
-type backendMonitor struct {
-	backend  *domain.Backend
-	healthy  bool
+type BackendStatus struct {
+	Index    int
+	Healthy  bool
 	counters *DecisionCounters
 }
 
@@ -52,14 +53,13 @@ func NewCluster(backends []*domain.Backend, healthcheckTimeout time.Duration, lo
 func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 	client := UrlGetterProvider(c.healthcheckTimeout)
 
-	var backendHealth []*backendMonitor
+	backendHealthMap := make(map[*domain.Backend]*BackendStatus)
 
-	for _, backend := range c.backends {
-		backendHealth = append(backendHealth,
-			&backendMonitor{
-				backend:  backend,
-				counters: c.setupCounters(),
-			})
+	for i, backend := range c.backends {
+		backendHealthMap[backend] = &BackendStatus{
+			Index:    i,
+			counters: c.setupCounters(),
+		}
 	}
 
 	go func() {
@@ -71,12 +71,10 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 			case <-time.After(c.healthcheckTimeout / 5):
 				var wg sync.WaitGroup
 
-				for _, healthMonitor := range backendHealth {
+				for backend, healthStatus := range backendHealthMap {
 					wg.Add(1)
-					go func(healthMonitor *backendMonitor) {
+					go func(backend *domain.Backend, healthMonitor *BackendStatus) {
 						defer wg.Done()
-
-						backend := healthMonitor.backend
 
 						healthMonitor.counters.IncrementCount("dial")
 						shouldLog := healthMonitor.counters.Should("log")
@@ -86,7 +84,7 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 
 						if err == nil && resp.StatusCode == http.StatusOK {
 							backend.SetHealthy()
-							healthMonitor.healthy = true
+							healthMonitor.Healthy = true
 							healthMonitor.counters.ResetCount("consecutiveUnhealthyChecks")
 
 							if shouldLog {
@@ -94,7 +92,7 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 							}
 						} else {
 							backend.SetUnhealthy()
-							healthMonitor.healthy = false
+							healthMonitor.Healthy = false
 							healthMonitor.counters.IncrementCount("consecutiveUnhealthyChecks")
 
 							if shouldLog {
@@ -121,13 +119,13 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 								}
 							}
 						}
-					}(healthMonitor)
+					}(backend, healthStatus)
 
 				}
 
 				wg.Wait()
 
-				newActiveBackend := c.ChooseActiveBackend(backendHealth, activeBackend)
+				newActiveBackend := ChooseActiveBackend(backendHealthMap)
 
 				if newActiveBackend != activeBackend {
 					activeBackend = newActiveBackend
@@ -137,7 +135,6 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 				if newActiveBackend != nil {
 					c.logger.Info("New active backend", lager.Data{"backend": newActiveBackend.AsJSON()})
 				}
-
 
 			case <-stopChan:
 				return
@@ -173,14 +170,18 @@ func (c *Cluster) setupCounters() *DecisionCounters {
 	return counters
 }
 
-func (c *Cluster) ChooseActiveBackend(backendHealths []*backendMonitor, currentActiveBackend *domain.Backend) *domain.Backend {
-	for _, backendHealth := range backendHealths {
-		if !backendHealth.healthy {
+func ChooseActiveBackend(backendHealths map[*domain.Backend]*BackendStatus) *domain.Backend {
+	var lowestIndexedHealthyDomain *domain.Backend
+	lowestHealthyIndex := math.MaxUint32
+
+	for backend, backendStatus := range backendHealths {
+		if !backendStatus.Healthy || lowestHealthyIndex <= backendStatus.Index {
 			continue
 		}
 
-		return backendHealth.backend
+		lowestHealthyIndex = backendStatus.Index
+		lowestIndexedHealthyDomain = backend
 	}
 
-	return nil
+	return lowestIndexedHealthyDomain
 }

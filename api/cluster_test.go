@@ -7,7 +7,6 @@ import (
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
@@ -50,10 +49,9 @@ var _ = Describe("Cluster", func() {
 		It("contains expected fields", func() {
 			updateTime := time.Now()
 
-			expectedClusterJSON := domain.ClusterJSON{
-				TrafficEnabled:      true,
-				CurrentBackendIndex: 2,
-				LastUpdated:         updateTime,
+			expectedClusterJSON := api.ClusterJSON{
+				TrafficEnabled: true,
+				LastUpdated:    updateTime,
 			}
 			fakeCluster.AsJSONReturns(expectedClusterJSON)
 
@@ -64,13 +62,12 @@ var _ = Describe("Cluster", func() {
 			resp, err := client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 
-			var returnedCluster domain.ClusterJSON
+			var returnedCluster api.ClusterJSON
 			decoder := json.NewDecoder(resp.Body)
 			err = decoder.Decode(&returnedCluster)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(returnedCluster.TrafficEnabled).To(BeTrue())
-			Expect(returnedCluster.CurrentBackendIndex).To(BeNumerically("==", 2))
 			Expect(returnedCluster.LastUpdated.Second()).To(Equal(updateTime.Second()))
 		})
 	})
@@ -96,10 +93,9 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("contains expected fields", func() {
-			expectedClusterJSON := domain.ClusterJSON{
-				TrafficEnabled:      true,
-				CurrentBackendIndex: 2,
-				Message:             "some reason",
+			expectedClusterJSON := api.ClusterJSON{
+				TrafficEnabled: true,
+				Message:        "some reason",
 			}
 			fakeCluster.AsJSONReturns(expectedClusterJSON)
 
@@ -110,13 +106,12 @@ var _ = Describe("Cluster", func() {
 			resp, err := client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 
-			var returnedCluster domain.ClusterJSON
+			var returnedCluster api.ClusterJSON
 			decoder := json.NewDecoder(resp.Body)
 			err = decoder.Decode(&returnedCluster)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(returnedCluster.TrafficEnabled).To(BeTrue())
-			Expect(returnedCluster.CurrentBackendIndex).To(BeNumerically("==", 2))
 			Expect(returnedCluster.Message).To(Equal("some reason"))
 		})
 

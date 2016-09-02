@@ -14,8 +14,10 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/cloudfoundry-incubator/switchboard/health"
-	"github.com/cloudfoundry-incubator/switchboard/proxy"
+	apirunner "github.com/cloudfoundry-incubator/switchboard/runner/api"
+	"github.com/cloudfoundry-incubator/switchboard/runner/bridge"
+	"github.com/cloudfoundry-incubator/switchboard/runner/health"
+	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
@@ -50,24 +52,36 @@ func main() {
 	}
 
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
-	arpManager := domain.NewArmManager(logger)
-	cluster := domain.NewCluster(
+	arpManager := monitor.NewArmManager(logger)
+
+	activeBackendChan := make(chan *domain.Backend)
+
+	cluster := monitor.NewCluster(
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
 		arpManager,
+		activeBackendChan,
 	)
 
-	handler := api.NewHandler(cluster, backends, logger, rootConfig.API, rootConfig.StaticDir)
+	trafficEnabledChan := make(chan bool)
+
+	clusterApi := api.NewClusterAPI(trafficEnabledChan, logger)
+
+	handler := api.NewHandler(clusterApi, backends, logger, rootConfig.API, rootConfig.StaticDir)
 
 	members := grouper.Members{
 		{
-			Name:   "proxy",
-			Runner: proxy.NewRunner(cluster, rootConfig.Proxy.Port, logger),
+			Name:   "bridge",
+			Runner: bridge.NewRunner(activeBackendChan, trafficEnabledChan, rootConfig.Proxy.Port, logger),
 		},
 		{
 			Name:   "api",
-			Runner: api.NewRunner(rootConfig.API.Port, handler, logger),
+			Runner: apirunner.NewRunner(rootConfig.API.Port, handler, logger),
+		},
+		{
+			Name:   "monitor",
+			Runner: monitor.NewRunner(cluster, logger),
 		},
 	}
 
@@ -128,6 +142,7 @@ func main() {
 		writePid(logger, rootConfig.PidFile)
 	}
 
+	activeBackendChan <- backends[0]
 	err = <-process.Wait()
 	if err != nil {
 		logger.Fatal("Switchboard exited unexpectedly", err, lager.Data{"proxyConfig": rootConfig.Proxy})

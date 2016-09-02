@@ -12,7 +12,7 @@ import (
 //go:generate counterfeiter -o apifakes/fake_response_writer.go /usr/local/opt/go/libexec/src/net/http/server.go ResponseWriter
 func NewHandler(
 	cluster ClusterManager,
-	backends domain.Backends,
+	backends []*domain.Backend,
 	logger lager.Logger,
 	apiConfig config.API,
 	staticDir string,

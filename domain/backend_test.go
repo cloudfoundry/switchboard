@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("Backend", func() {
-	var backend domain.Backend
+	var backend *domain.Backend
 	var bridges *domainfakes.FakeBridges
 
 	BeforeEach(func() {
@@ -89,19 +89,25 @@ var _ = Describe("Backend", func() {
 			defer close(done)
 			defer close(disconnectChan)
 
-			err := backend.Bridge(clientConn)
-			Expect(err).NotTo(HaveOccurred())
+			go func() {
+				err := backend.Bridge(clientConn)
+				Expect(err).NotTo(HaveOccurred())
+			}()
 
-			Expect(dialedProtocol).To(Equal("tcp"))
-			Expect(dialedAddress).To(Equal("1.2.3.4:3306"))
+			<-connectReadyChan
+
+			Eventually(dialedProtocol).Should(Equal("tcp"))
+			Eventually(dialedAddress).Should(Equal("1.2.3.4:3306"))
 		}, 5)
 
 		It("asynchronously creates and connects to a bridge", func(done Done) {
 			defer close(done)
 			defer close(disconnectChan)
 
-			err := backend.Bridge(clientConn)
-			Expect(err).NotTo(HaveOccurred())
+			go func() {
+				err := backend.Bridge(clientConn)
+				Expect(err).NotTo(HaveOccurred())
+			}()
 
 			<-connectReadyChan
 
@@ -117,8 +123,10 @@ var _ = Describe("Backend", func() {
 			It("removes the bridge", func(done Done) {
 				defer close(done)
 
-				err := backend.Bridge(clientConn)
-				Expect(err).NotTo(HaveOccurred())
+				go func() {
+					err := backend.Bridge(clientConn)
+					Expect(err).NotTo(HaveOccurred())
+				}()
 
 				<-connectReadyChan
 

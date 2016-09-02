@@ -332,9 +332,6 @@ var _ = Describe("Switchboard", func() {
 
 							Expect(len(returnedBackends)).To(Equal(2))
 
-							Expect(returnedBackends[0]["trafficEnabled"]).To(BeTrue())
-							Expect(returnedBackends[1]["trafficEnabled"]).To(BeTrue())
-
 							Expect(returnedBackends[0]["host"]).To(Equal("localhost"))
 							Expect(returnedBackends[0]["healthy"]).To(BeTrue(), "Expected backends[0] to be healthy")
 
@@ -357,7 +354,7 @@ var _ = Describe("Switchboard", func() {
 							}
 						})
 
-						It("returns session count for active and inactive backends", func() {
+						It("returns session count for backends", func() {
 							var err error
 							var conn net.Conn
 							Eventually(func() error {
@@ -376,18 +373,8 @@ var _ = Describe("Switchboard", func() {
 
 							returnedBackends := getBackendsFromApi(req)
 
-							var activeBackend, inactiveBackend map[string]interface{}
-							if returnedBackends[0]["active"].(bool) {
-								activeBackend = returnedBackends[0]
-								inactiveBackend = returnedBackends[1]
-							} else {
-								activeBackend = returnedBackends[1]
-								inactiveBackend = returnedBackends[0]
-							}
-
-							Expect(activeBackend["currentSessionCount"]).To(BeNumerically("==", 1), "Expected active backend to have SessionCount == 1")
-							Expect(inactiveBackend["currentSessionCount"]).To(BeNumerically("==", 0), "Expected inactive backend to have SessionCount == 0")
-							Expect(inactiveBackend["active"]).To(BeFalse(), "Expected inactive backend to not be active")
+							Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 1), "Expected active backend to have SessionCount == 1")
+							Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 0), "Expected inactive backend to have SessionCount == 0")
 						})
 					})
 				})
@@ -403,7 +390,6 @@ var _ = Describe("Switchboard", func() {
 
 						returnedCluster := getClusterFromAPI(req)
 
-						Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
 						Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
 					})
 				})
@@ -417,7 +403,6 @@ var _ = Describe("Switchboard", func() {
 
 						returnedCluster := getClusterFromAPI(req)
 
-						Expect(returnedCluster["currentBackendIndex"]).To(BeNumerically("==", 0))
 						Expect(returnedCluster["trafficEnabled"]).To(BeTrue())
 						Expect(returnedCluster["lastUpdated"]).NotTo(BeEmpty())
 					})
@@ -645,17 +630,19 @@ var _ = Describe("Switchboard", func() {
 						}, healthcheckWaitDuration).Should(matchConnectionDisconnect())
 					})
 
-					It("rejects new connections", func() {
+					It("severs new connections", func() {
+						allowTraffic(false)
 						Eventually(func() error {
-							allowTraffic(false)
 
 							conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+
 							if err != nil {
 								return err
 							}
 							_, err = sendData(conn, "write that should fail")
+
 							return err
-						}, healthcheckWaitDuration, 200*time.Millisecond).Should(matchConnectionDisconnect())
+						}).Should(matchConnectionDisconnect())
 					})
 
 					It("permits new connections again after re-enabling traffic", func() {

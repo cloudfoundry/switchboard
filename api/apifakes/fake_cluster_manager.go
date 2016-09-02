@@ -2,33 +2,17 @@
 package apifakes
 
 import (
-	"net"
 	"sync"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
-	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
 type FakeClusterManager struct {
-	MonitorStub        func() chan<- interface{}
-	monitorMutex       sync.RWMutex
-	monitorArgsForCall []struct{}
-	monitorReturns     struct {
-		result1 chan<- interface{}
-	}
-	RouteToBackendStub        func(net.Conn) error
-	routeToBackendMutex       sync.RWMutex
-	routeToBackendArgsForCall []struct {
-		arg1 net.Conn
-	}
-	routeToBackendReturns struct {
-		result1 error
-	}
-	AsJSONStub        func() domain.ClusterJSON
+	AsJSONStub        func() api.ClusterJSON
 	asJSONMutex       sync.RWMutex
 	asJSONArgsForCall []struct{}
 	asJSONReturns     struct {
-		result1 domain.ClusterJSON
+		result1 api.ClusterJSON
 	}
 	EnableTrafficStub        func(string)
 	enableTrafficMutex       sync.RWMutex
@@ -44,65 +28,7 @@ type FakeClusterManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeClusterManager) Monitor() chan<- interface{} {
-	fake.monitorMutex.Lock()
-	fake.monitorArgsForCall = append(fake.monitorArgsForCall, struct{}{})
-	fake.recordInvocation("Monitor", []interface{}{})
-	fake.monitorMutex.Unlock()
-	if fake.MonitorStub != nil {
-		return fake.MonitorStub()
-	} else {
-		return fake.monitorReturns.result1
-	}
-}
-
-func (fake *FakeClusterManager) MonitorCallCount() int {
-	fake.monitorMutex.RLock()
-	defer fake.monitorMutex.RUnlock()
-	return len(fake.monitorArgsForCall)
-}
-
-func (fake *FakeClusterManager) MonitorReturns(result1 chan<- interface{}) {
-	fake.MonitorStub = nil
-	fake.monitorReturns = struct {
-		result1 chan<- interface{}
-	}{result1}
-}
-
-func (fake *FakeClusterManager) RouteToBackend(arg1 net.Conn) error {
-	fake.routeToBackendMutex.Lock()
-	fake.routeToBackendArgsForCall = append(fake.routeToBackendArgsForCall, struct {
-		arg1 net.Conn
-	}{arg1})
-	fake.recordInvocation("RouteToBackend", []interface{}{arg1})
-	fake.routeToBackendMutex.Unlock()
-	if fake.RouteToBackendStub != nil {
-		return fake.RouteToBackendStub(arg1)
-	} else {
-		return fake.routeToBackendReturns.result1
-	}
-}
-
-func (fake *FakeClusterManager) RouteToBackendCallCount() int {
-	fake.routeToBackendMutex.RLock()
-	defer fake.routeToBackendMutex.RUnlock()
-	return len(fake.routeToBackendArgsForCall)
-}
-
-func (fake *FakeClusterManager) RouteToBackendArgsForCall(i int) net.Conn {
-	fake.routeToBackendMutex.RLock()
-	defer fake.routeToBackendMutex.RUnlock()
-	return fake.routeToBackendArgsForCall[i].arg1
-}
-
-func (fake *FakeClusterManager) RouteToBackendReturns(result1 error) {
-	fake.RouteToBackendStub = nil
-	fake.routeToBackendReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeClusterManager) AsJSON() domain.ClusterJSON {
+func (fake *FakeClusterManager) AsJSON() api.ClusterJSON {
 	fake.asJSONMutex.Lock()
 	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
 	fake.recordInvocation("AsJSON", []interface{}{})
@@ -120,10 +46,10 @@ func (fake *FakeClusterManager) AsJSONCallCount() int {
 	return len(fake.asJSONArgsForCall)
 }
 
-func (fake *FakeClusterManager) AsJSONReturns(result1 domain.ClusterJSON) {
+func (fake *FakeClusterManager) AsJSONReturns(result1 api.ClusterJSON) {
 	fake.AsJSONStub = nil
 	fake.asJSONReturns = struct {
-		result1 domain.ClusterJSON
+		result1 api.ClusterJSON
 	}{result1}
 }
 
@@ -178,10 +104,6 @@ func (fake *FakeClusterManager) DisableTrafficArgsForCall(i int) string {
 func (fake *FakeClusterManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.monitorMutex.RLock()
-	defer fake.monitorMutex.RUnlock()
-	fake.routeToBackendMutex.RLock()
-	defer fake.routeToBackendMutex.RUnlock()
 	fake.asJSONMutex.RLock()
 	defer fake.asJSONMutex.RUnlock()
 	fake.enableTrafficMutex.RLock()

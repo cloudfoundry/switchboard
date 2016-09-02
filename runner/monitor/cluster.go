@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
+	"sync"
 )
 
 //go:generate counterfeiter . UrlGetter
@@ -62,58 +63,68 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 
 	go func() {
 		var activeBackend domain.IBackend
+
 		for {
 
 			select {
 			case <-time.After(c.healthcheckTimeout / 5):
+				var wg sync.WaitGroup
+
 				for _, healthMonitor := range backendHealth {
-					backend := healthMonitor.backend
+					wg.Add(1)
+					go func(healthMonitor *backendMonitor) {
+						defer wg.Done()
 
-					healthMonitor.counters.IncrementCount("dial")
-					shouldLog := healthMonitor.counters.Should("log")
+						backend := healthMonitor.backend
 
-					url := backend.HealthcheckUrl()
-					resp, err := client.Get(url)
+						healthMonitor.counters.IncrementCount("dial")
+						shouldLog := healthMonitor.counters.Should("log")
 
-					if err == nil && resp.StatusCode == http.StatusOK {
-						backend.SetHealthy()
-						healthMonitor.healthy = true
-						healthMonitor.counters.ResetCount("consecutiveUnhealthyChecks")
+						url := backend.HealthcheckUrl()
+						resp, err := client.Get(url)
 
-						if shouldLog {
-							c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
-						}
-					} else {
-						backend.SetUnhealthy()
-						healthMonitor.healthy = false
-						healthMonitor.counters.IncrementCount("consecutiveUnhealthyChecks")
+						if err == nil && resp.StatusCode == http.StatusOK {
+							backend.SetHealthy()
+							healthMonitor.healthy = true
+							healthMonitor.counters.ResetCount("consecutiveUnhealthyChecks")
 
-						if shouldLog {
-							c.logger.Error(
-								"Healthcheck failed on backend",
-								fmt.Errorf("Non-200 status code from healthcheck"),
-								lager.Data{
-									"backend":  backend.AsJSON(),
-									"endpoint": url,
-									"resp":     fmt.Sprintf("%#v", resp),
-									"err":      err,
-								},
-							)
-						}
-					}
+							if shouldLog {
+								c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
+							}
+						} else {
+							backend.SetUnhealthy()
+							healthMonitor.healthy = false
+							healthMonitor.counters.IncrementCount("consecutiveUnhealthyChecks")
 
-					if healthMonitor.counters.Should("clearArp") {
-						backendHost := backend.AsJSON().Host
-
-						if c.arpManager.IsCached(backendHost) {
-							err = c.arpManager.ClearCache(backendHost)
-							if err != nil {
-								c.logger.Error("Failed to clear arp cache", err)
+							if shouldLog {
+								c.logger.Error(
+									"Healthcheck failed on backend",
+									fmt.Errorf("Non-200 status code from healthcheck"),
+									lager.Data{
+										"backend":  backend.AsJSON(),
+										"endpoint": url,
+										"resp":     fmt.Sprintf("%#v", resp),
+										"err":      err,
+									},
+								)
 							}
 						}
-					}
+
+						if healthMonitor.counters.Should("clearArp") {
+							backendHost := backend.AsJSON().Host
+
+							if c.arpManager.IsCached(backendHost) {
+								err = c.arpManager.ClearCache(backendHost)
+								if err != nil {
+									c.logger.Error("Failed to clear arp cache", err)
+								}
+							}
+						}
+					}(healthMonitor)
+
 				}
 
+				wg.Wait()
 				var anyHealthy bool
 				for _, healthMonitor := range backendHealth {
 					backend := healthMonitor.backend

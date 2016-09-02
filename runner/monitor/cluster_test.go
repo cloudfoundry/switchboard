@@ -11,6 +11,8 @@ import (
 	"bytes"
 	"io/ioutil"
 
+	"sync"
+
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	. "github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
@@ -28,6 +30,8 @@ var _ = Describe("Cluster", func() {
 		fakeArpManager               *monitorfakes.FakeArpManager
 		backend1, backend2, backend3 *domain.Backend
 		activeBackendChan            chan *domain.Backend
+
+		m                 sync.RWMutex
 	)
 
 	BeforeEach(func() {
@@ -43,6 +47,7 @@ var _ = Describe("Cluster", func() {
 			logger,
 		)
 
+		m.Lock()
 		backend2 = domain.NewBackend(
 			"backend-2",
 			"10.10.2.2",
@@ -51,6 +56,8 @@ var _ = Describe("Cluster", func() {
 			"healthcheck",
 			logger,
 		)
+		m.Unlock()
+
 		backend3 = domain.NewBackend(
 			"backend-3",
 			"10.10.3.2",
@@ -86,7 +93,6 @@ var _ = Describe("Cluster", func() {
 
 		BeforeEach(func() {
 			urlGetter = new(monitorfakes.FakeUrlGetter)
-			urlGetter := urlGetter
 			UrlGetterProvider = func(time.Duration) UrlGetter {
 				return urlGetter
 			}
@@ -123,7 +129,10 @@ var _ = Describe("Cluster", func() {
 			}
 
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
+				m.RLock()
+				defer m.RUnlock()
 				if url == backend2.HealthcheckUrl() {
+
 					return unhealthyResponse, nil
 				} else {
 					return healthyResponse, nil
@@ -144,6 +153,8 @@ var _ = Describe("Cluster", func() {
 		It("notices when a healthy backend becomes unresponsive", func() {
 
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
+				m.RLock()
+				defer m.RUnlock()
 				if url == backend2.HealthcheckUrl() {
 					return nil, errors.New("some error")
 				} else {
@@ -172,6 +183,8 @@ var _ = Describe("Cluster", func() {
 
 			isUnhealthy := true
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
+				m.RLock()
+				defer m.RUnlock()
 				if url == backend2.HealthcheckUrl() && isUnhealthy {
 					isUnhealthy = false
 					return unhealthyResponse, nil
@@ -213,6 +226,8 @@ var _ = Describe("Cluster", func() {
 				}
 
 				urlGetter.GetStub = func(url string) (*http.Response, error) {
+					m.RLock()
+					defer m.RUnlock()
 					if url == backend2.HealthcheckUrl() {
 						return unhealthyResponse, nil
 					} else {

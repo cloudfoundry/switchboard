@@ -6,9 +6,10 @@ import (
 	"reflect"
 	"time"
 
+	"sync"
+
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
-	"sync"
 )
 
 //go:generate counterfeiter . UrlGetter
@@ -125,30 +126,18 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 				}
 
 				wg.Wait()
-				var anyHealthy bool
-				for _, healthMonitor := range backendHealth {
-					backend := healthMonitor.backend
 
-					if healthMonitor.healthy {
-						anyHealthy = true
-					}
+				newActiveBackend := c.ChooseActiveBackend(backendHealth, activeBackend)
 
-					if healthMonitor.healthy && activeBackend == backend {
-						break
-					}
-
-					if healthMonitor.healthy && activeBackend != backend {
-						c.logger.Info("New active backend", lager.Data{"backend": backend.AsJSON()})
-						activeBackend = backend
-						c.activeBackendChan <- activeBackend
-						break
-					}
+				if newActiveBackend != activeBackend {
+					activeBackend = newActiveBackend
+					c.activeBackendChan <- activeBackend
 				}
 
-				if !anyHealthy {
-					c.logger.Info("No active backends.")
-					c.activeBackendChan <- nil
+				if newActiveBackend != nil {
+					c.logger.Info("New active backend", lager.Data{"backend": newActiveBackend.AsJSON()})
 				}
+
 
 			case <-stopChan:
 				return
@@ -182,4 +171,16 @@ func (c *Cluster) setupCounters() *DecisionCounters {
 	})
 
 	return counters
+}
+
+func (c *Cluster) ChooseActiveBackend(backendHealths []*backendMonitor, currentActiveBackend *domain.Backend) *domain.Backend {
+	for _, backendHealth := range backendHealths {
+		if !backendHealth.healthy {
+			continue
+		}
+
+		return backendHealth.backend
+	}
+
+	return nil
 }

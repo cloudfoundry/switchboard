@@ -31,7 +31,7 @@ var _ = Describe("Cluster", func() {
 		backend1, backend2, backend3 *domain.Backend
 		activeBackendChan            chan *domain.Backend
 
-		m                 sync.RWMutex
+		m sync.RWMutex
 	)
 
 	BeforeEach(func() {

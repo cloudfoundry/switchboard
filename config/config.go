@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"gopkg.in/validator.v2"
+
 	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-cf-experimental/service-config"
 	"github.com/pivotal-golang/lager"
-	"gopkg.in/validator.v2"
 )
 
 type Config struct {

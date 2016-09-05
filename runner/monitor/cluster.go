@@ -8,9 +8,10 @@ import (
 
 	"sync"
 
+	"math"
+
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
-	"math"
 )
 
 //go:generate counterfeiter . UrlGetter

@@ -54,14 +54,17 @@ func main() {
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
 	arpManager := monitor.NewArmManager(logger)
 
-	activeBackendChan := make(chan *domain.Backend)
+	bridgeActiveBackendChan := make(chan *domain.Backend)
+	activeBackendSubscribers := []chan<- *domain.Backend{
+		bridgeActiveBackendChan,
+	}
 
 	cluster := monitor.NewCluster(
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
 		arpManager,
-		activeBackendChan,
+		activeBackendSubscribers,
 	)
 
 	trafficEnabledChan := make(chan bool)
@@ -73,7 +76,7 @@ func main() {
 	members := grouper.Members{
 		{
 			Name:   "bridge",
-			Runner: bridge.NewRunner(activeBackendChan, trafficEnabledChan, rootConfig.Proxy.Port, logger),
+			Runner: bridge.NewRunner(bridgeActiveBackendChan, trafficEnabledChan, rootConfig.Proxy.Port, logger),
 		},
 		{
 			Name:   "api",
@@ -142,7 +145,9 @@ func main() {
 		writePid(logger, rootConfig.PidFile)
 	}
 
-	activeBackendChan <- backends[0]
+	for _, ch := range activeBackendSubscribers {
+		ch <- backends[0]
+	}
 	err = <-process.Wait()
 	if err != nil {
 		logger.Fatal("Switchboard exited unexpectedly", err, lager.Data{"proxyConfig": rootConfig.Proxy})

@@ -34,20 +34,20 @@ type BackendStatus struct {
 }
 
 type Cluster struct {
-	backends           []*domain.Backend
-	logger             lager.Logger
-	healthcheckTimeout time.Duration
-	arpManager         ArpManager
-	activeBackendChan  chan<- *domain.Backend
+	backends                 []*domain.Backend
+	logger                   lager.Logger
+	healthcheckTimeout       time.Duration
+	arpManager               ArpManager
+	activeBackendSubscribers []chan<- *domain.Backend
 }
 
-func NewCluster(backends []*domain.Backend, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager, activeBackendChan chan<- *domain.Backend) *Cluster {
+func NewCluster(backends []*domain.Backend, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager, activeBackendSubscribers []chan<- *domain.Backend) *Cluster {
 	return &Cluster{
-		backends:           backends,
-		logger:             logger,
-		healthcheckTimeout: healthcheckTimeout,
-		arpManager:         arpManager,
-		activeBackendChan:  activeBackendChan,
+		backends:                 backends,
+		logger:                   logger,
+		healthcheckTimeout:       healthcheckTimeout,
+		arpManager:               arpManager,
+		activeBackendSubscribers: activeBackendSubscribers,
 	}
 }
 
@@ -130,7 +130,9 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 
 				if newActiveBackend != activeBackend {
 					activeBackend = newActiveBackend
-					c.activeBackendChan <- activeBackend
+					for _, s := range c.activeBackendSubscribers {
+						s <- activeBackend
+					}
 				}
 
 				if newActiveBackend != nil {

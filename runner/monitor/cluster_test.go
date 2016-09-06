@@ -29,7 +29,9 @@ var _ = Describe("Cluster", func() {
 		cluster                      *Cluster
 		fakeArpManager               *monitorfakes.FakeArpManager
 		backend1, backend2, backend3 *domain.Backend
-		activeBackendChan            chan *domain.Backend
+		subscriberA                  chan *domain.Backend
+		subscriberB                  chan *domain.Backend
+		activeBackendSubscribers     []chan<- *domain.Backend
 
 		m sync.RWMutex
 	)
@@ -73,7 +75,12 @@ var _ = Describe("Cluster", func() {
 			backend3,
 		}
 
-		activeBackendChan = make(chan *domain.Backend, 100)
+		subscriberA = make(chan *domain.Backend, 100)
+		subscriberB = make(chan *domain.Backend, 100)
+		activeBackendSubscribers = []chan<- *domain.Backend{
+			subscriberA,
+			subscriberB,
+		}
 
 		backend1.SetHealthy()
 		backend2.SetHealthy()
@@ -81,7 +88,7 @@ var _ = Describe("Cluster", func() {
 	})
 
 	JustBeforeEach(func() {
-		cluster = NewCluster(backends, healthcheckTimeout, logger, fakeArpManager, activeBackendChan)
+		cluster = NewCluster(backends, healthcheckTimeout, logger, fakeArpManager, activeBackendSubscribers)
 	})
 
 	Describe("Monitor", func() {
@@ -208,7 +215,8 @@ var _ = Describe("Cluster", func() {
 			It("publishes the new backend", func() {
 				cluster.Monitor(nil)
 				var firstActive *domain.Backend
-				Eventually(activeBackendChan).Should(Receive(&firstActive))
+				Eventually(subscriberA).Should(Receive(&firstActive))
+				Eventually(subscriberB).Should(Receive(&firstActive))
 
 				urlGetter.GetStub = func(url string) (*http.Response, error) {
 					m.RLock()
@@ -220,7 +228,8 @@ var _ = Describe("Cluster", func() {
 					}
 				}
 
-				Eventually(activeBackendChan).Should(Receive(Not(Equal(firstActive))))
+				Eventually(subscriberA).Should(Receive(Not(Equal(firstActive))))
+				Eventually(subscriberB).Should(Receive(Not(Equal(firstActive))))
 			})
 		})
 

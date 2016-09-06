@@ -148,9 +148,6 @@ func main() {
 		writePid(logger, rootConfig.PidFile)
 	}
 
-	for _, ch := range activeBackendSubscribers {
-		ch <- backends[0]
-	}
 	err = <-process.Wait()
 	if err != nil {
 		logger.Fatal("Switchboard exited unexpectedly", err, lager.Data{"proxyConfig": rootConfig.Proxy})

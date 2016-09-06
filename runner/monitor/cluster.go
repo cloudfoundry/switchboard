@@ -67,61 +67,16 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 		var activeBackend *domain.Backend
 
 		for {
-
 			select {
 			case <-time.After(c.healthcheckTimeout / 5):
 				var wg sync.WaitGroup
 
 				for backend, healthStatus := range backendHealthMap {
 					wg.Add(1)
-					go func(backend *domain.Backend, healthMonitor *BackendStatus) {
+					go func(backend *domain.Backend, healthStatus *BackendStatus) {
 						defer wg.Done()
-
-						healthMonitor.counters.IncrementCount("dial")
-						shouldLog := healthMonitor.counters.Should("log")
-
-						url := backend.HealthcheckUrl()
-						resp, err := client.Get(url)
-
-						if err == nil && resp.StatusCode == http.StatusOK {
-							backend.SetHealthy()
-							healthMonitor.Healthy = true
-							healthMonitor.counters.ResetCount("consecutiveUnhealthyChecks")
-
-							if shouldLog {
-								c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
-							}
-						} else {
-							backend.SetUnhealthy()
-							healthMonitor.Healthy = false
-							healthMonitor.counters.IncrementCount("consecutiveUnhealthyChecks")
-
-							if shouldLog {
-								c.logger.Error(
-									"Healthcheck failed on backend",
-									fmt.Errorf("Non-200 status code from healthcheck"),
-									lager.Data{
-										"backend":  backend.AsJSON(),
-										"endpoint": url,
-										"resp":     fmt.Sprintf("%#v", resp),
-										"err":      err,
-									},
-								)
-							}
-						}
-
-						if healthMonitor.counters.Should("clearArp") {
-							backendHost := backend.AsJSON().Host
-
-							if c.arpManager.IsCached(backendHost) {
-								err = c.arpManager.ClearCache(backendHost)
-								if err != nil {
-									c.logger.Error("Failed to clear arp cache", err)
-								}
-							}
-						}
+						c.QueryBackendHealth(backend, healthStatus, client)
 					}(backend, healthStatus)
-
 				}
 
 				wg.Wait()
@@ -187,4 +142,50 @@ func ChooseActiveBackend(backendHealths map[*domain.Backend]*BackendStatus) *dom
 	}
 
 	return lowestIndexedHealthyDomain
+}
+
+func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *BackendStatus, client UrlGetter) {
+	healthMonitor.counters.IncrementCount("dial")
+	shouldLog := healthMonitor.counters.Should("log")
+
+	url := backend.HealthcheckUrl()
+	resp, err := client.Get(url)
+
+	if err != nil || resp.StatusCode != http.StatusOK {
+		backend.SetUnhealthy()
+		healthMonitor.Healthy = false
+		healthMonitor.counters.IncrementCount("consecutiveUnhealthyChecks")
+
+		if shouldLog {
+			c.logger.Error(
+				"Healthcheck failed on backend",
+				fmt.Errorf("Non-200 status code from healthcheck"),
+				lager.Data{
+					"backend":  backend.AsJSON(),
+					"endpoint": url,
+					"resp":     fmt.Sprintf("%#v", resp),
+					"err":      err,
+				},
+			)
+		}
+	} else {
+		backend.SetHealthy()
+		healthMonitor.Healthy = true
+		healthMonitor.counters.ResetCount("consecutiveUnhealthyChecks")
+
+		if shouldLog {
+			c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
+		}
+	}
+
+	if healthMonitor.counters.Should("clearArp") {
+		backendHost := backend.AsJSON().Host
+
+		if c.arpManager.IsCached(backendHost) {
+			err = c.arpManager.ClearCache(backendHost)
+			if err != nil {
+				c.logger.Error("Failed to clear arp cache", err)
+			}
+		}
+	}
 }

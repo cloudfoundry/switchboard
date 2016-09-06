@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -14,13 +15,37 @@ type ClusterAPI struct {
 	lastUpdated        time.Time
 	trafficEnabled     bool
 	trafficEnabledChan chan<- bool
+	activeBackendChan  <-chan *domain.Backend
+	activeBackend      *BackendJSON
 }
 
-func NewClusterAPI(trafficEnabledChan chan<- bool, logger lager.Logger) *ClusterAPI {
+func NewClusterAPI(
+	trafficEnabledChan chan<- bool,
+	activeBackendChan <-chan *domain.Backend,
+	logger lager.Logger) *ClusterAPI {
 	return &ClusterAPI{
 		logger:             logger,
 		trafficEnabled:     true,
 		trafficEnabledChan: trafficEnabledChan,
+		activeBackendChan:  activeBackendChan,
+	}
+}
+
+func (c *ClusterAPI) ListenForActiveBackend() {
+	for b := range c.activeBackendChan {
+		c.mutex.Lock()
+
+		if b == nil {
+			c.activeBackend = nil
+		} else {
+			j := b.AsJSON()
+			c.activeBackend = &BackendJSON{
+				Host: j.Host,
+				Port: j.Port,
+				Name: j.Name,
+			}
+		}
+		c.mutex.Unlock()
 	}
 }
 
@@ -32,6 +57,7 @@ func (c *ClusterAPI) AsJSON() ClusterJSON {
 		TrafficEnabled: c.trafficEnabled,
 		Message:        c.message,
 		LastUpdated:    c.lastUpdated,
+		ActiveBackend:  c.activeBackend,
 	}
 }
 
@@ -62,7 +88,14 @@ func (c *ClusterAPI) DisableTraffic(message string) {
 }
 
 type ClusterJSON struct {
-	TrafficEnabled bool      `json:"trafficEnabled"`
-	Message        string    `json:"message"`
-	LastUpdated    time.Time `json:"lastUpdated"`
+	ActiveBackend  *BackendJSON `json:"activeBackend"`
+	TrafficEnabled bool         `json:"trafficEnabled"`
+	Message        string       `json:"message"`
+	LastUpdated    time.Time    `json:"lastUpdated"`
+}
+
+type BackendJSON struct {
+	Host string `json:"host"`
+	Port uint   `json:"port"`
+	Name string `json:"name"`
 }

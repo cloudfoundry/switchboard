@@ -55,8 +55,10 @@ func main() {
 	arpManager := monitor.NewArmManager(logger)
 
 	bridgeActiveBackendChan := make(chan *domain.Backend)
+	clusterAPIActiveBackendChan := make(chan *domain.Backend)
 	activeBackendSubscribers := []chan<- *domain.Backend{
 		bridgeActiveBackendChan,
+		clusterAPIActiveBackendChan,
 	}
 
 	cluster := monitor.NewCluster(
@@ -69,9 +71,10 @@ func main() {
 
 	trafficEnabledChan := make(chan bool)
 
-	clusterApi := api.NewClusterAPI(trafficEnabledChan, logger)
+	clusterAPI := api.NewClusterAPI(trafficEnabledChan, clusterAPIActiveBackendChan, logger)
+	go clusterAPI.ListenForActiveBackend()
 
-	handler := api.NewHandler(clusterApi, backends, logger, rootConfig.API, rootConfig.StaticDir)
+	handler := api.NewHandler(clusterAPI, backends, logger, rootConfig.API, rootConfig.StaticDir)
 
 	members := grouper.Members{
 		{

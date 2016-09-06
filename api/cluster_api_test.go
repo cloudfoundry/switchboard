@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
+	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
@@ -16,15 +17,58 @@ var _ = Describe("ClusterAPI", func() {
 		logger             lager.Logger
 		cluster            *api.ClusterAPI
 		trafficEnabledChan chan bool
+		activeBackendChan  chan *domain.Backend
 	)
 
 	BeforeEach(func() {
 		trafficEnabledChan = make(chan bool, 10)
+		activeBackendChan = make(chan *domain.Backend)
 	})
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("Cluster test")
-		cluster = api.NewClusterAPI(trafficEnabledChan, logger)
+		cluster = api.NewClusterAPI(
+			trafficEnabledChan,
+			activeBackendChan,
+			logger,
+		)
+	})
+
+	Describe("Active Backends", func() {
+		Context("when there is not yet an active backend", func() {
+			It("returns nil", func() {
+				clusterJSON := cluster.AsJSON()
+				Expect(clusterJSON.ActiveBackend).To(BeNil())
+			})
+		})
+		Context("when there is an active backend", func() {
+			It("returns the backend", func() {
+				go cluster.ListenForActiveBackend()
+				activeBackendChan <- domain.NewBackend(
+					"backend-0",
+					"192.0.2.10",
+					3306,
+					9292,
+					"",
+					logger)
+
+				Expect(cluster.AsJSON().ActiveBackend).To(Equal(
+					&api.BackendJSON{
+						Host: "192.0.2.10",
+						Port: 3306,
+						Name: "backend-0",
+					},
+				))
+			})
+		})
+		Context("when there are no available active backends", func() {
+			It("returns nil", func() {
+				go cluster.ListenForActiveBackend()
+				activeBackendChan <- nil
+				Expect(cluster.AsJSON().ActiveBackend).To(BeNil())
+			})
+		})
+
 	})
 
 	Describe("EnableTraffic", func() {

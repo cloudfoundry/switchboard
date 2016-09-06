@@ -204,6 +204,26 @@ var _ = Describe("Cluster", func() {
 			Consistently(backend3.Healthy).Should(BeTrue())
 		})
 
+		Context("when the active backend changes", func() {
+			It("publishes the new backend", func() {
+				cluster.Monitor(nil)
+				var firstActive *domain.Backend
+				Eventually(activeBackendChan).Should(Receive(&firstActive))
+
+				urlGetter.GetStub = func(url string) (*http.Response, error) {
+					m.RLock()
+					defer m.RUnlock()
+					if url == firstActive.HealthcheckUrl() {
+						return nil, errors.New("some error")
+					} else {
+						return healthyResponse, nil
+					}
+				}
+
+				Eventually(activeBackendChan).Should(Receive(Not(Equal(firstActive))))
+			})
+		})
+
 		Context("when a backend is healthy", func() {
 			BeforeEach(func() {
 				fakeArpManager = new(monitorfakes.FakeArpManager)

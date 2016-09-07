@@ -21,7 +21,7 @@ func NewHandler(
 
 	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
 
-	mux.Handle("/v0/backends", BackendsIndex(backends))
+	mux.Handle("/v0/backends", BackendsIndex(backends, cluster))
 	mux.Handle("/v0/cluster", Cluster(cluster, logger))
 
 	return middleware.Chain{

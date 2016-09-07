@@ -39,7 +39,7 @@ var _ = Describe("Handler", func() {
 
 	Context("when a request panics", func() {
 		var (
-			realBackendsIndex func(backends []*domain.Backend) http.Handler
+			realBackendsIndex func([]*domain.Backend, api.ClusterManager) http.Handler
 			responseWriter    *apifakes.FakeResponseWriter
 			request           *http.Request
 		)
@@ -51,7 +51,7 @@ var _ = Describe("Handler", func() {
 				Password:   "bar",
 			}
 			realBackendsIndex = api.BackendsIndex
-			api.BackendsIndex = func([]*domain.Backend) http.Handler {
+			api.BackendsIndex = func([]*domain.Backend, api.ClusterManager) http.Handler {
 				return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 					panic("fake request panic")
 				})

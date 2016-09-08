@@ -39,8 +39,11 @@ var _ = Describe("Cluster", func() {
 	)
 
 	BeforeEach(func() {
+		cluster = nil
+
 		logger = lagertest.NewTestLogger("Cluster test")
-		fakeArpManager = nil
+		fakeArpManager = new(monitorfakes.FakeArpManager)
+		fakeArpManager.ClearCacheReturns(nil)
 
 		backend1 = domain.NewBackend(
 			"backend-1",
@@ -90,20 +93,30 @@ var _ = Describe("Cluster", func() {
 	})
 
 	JustBeforeEach(func() {
-		cluster = NewCluster(backends, healthcheckTimeout, logger, fakeArpManager, activeBackendSubscribers)
+		cluster = NewCluster(
+			backends,
+			healthcheckTimeout,
+			logger,
+			fakeArpManager,
+			activeBackendSubscribers,
+		)
 	})
 
 	Describe("Monitor", func() {
-		var urlGetter *monitorfakes.FakeUrlGetter
-		var healthyResponse = &http.Response{
-			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
-			StatusCode: http.StatusOK,
-		}
+		var (
+			urlGetter       *monitorfakes.FakeUrlGetter
+			healthyResponse *http.Response
+		)
 
 		BeforeEach(func() {
 			urlGetter = new(monitorfakes.FakeUrlGetter)
 			UrlGetterProvider = func(time.Duration) UrlGetter {
 				return urlGetter
+			}
+
+			healthyResponse = &http.Response{
+				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
+				StatusCode: http.StatusOK,
 			}
 
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
@@ -170,7 +183,6 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("notices when a healthy backend becomes unresponsive", func() {
-
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
@@ -269,7 +281,6 @@ var _ = Describe("Cluster", func() {
 		})
 
 		Context("when a backend is unhealthy", func() {
-
 			BeforeEach(func() {
 				fakeArpManager = new(monitorfakes.FakeArpManager)
 				unhealthyResponse := &http.Response{
@@ -294,7 +305,6 @@ var _ = Describe("Cluster", func() {
 			})
 
 			Context("and the IP is in the ARP cache", func() {
-
 				BeforeEach(func() {
 					fakeArpManager.IsCachedStub = func(ip string) bool {
 						if ip == backend2.AsJSON().Host {
@@ -306,7 +316,6 @@ var _ = Describe("Cluster", func() {
 				})
 
 				It("clears the arp cache after ArpFlushInterval has elapsed", func() {
-
 					cluster.Monitor(nil)
 
 					Eventually(fakeArpManager.ClearCacheCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
@@ -315,7 +324,6 @@ var _ = Describe("Cluster", func() {
 			})
 
 			Context("and the IP is not in the ARP cache", func() {
-
 				BeforeEach(func() {
 					fakeArpManager.IsCachedReturns(false)
 				})
@@ -325,6 +333,154 @@ var _ = Describe("Cluster", func() {
 
 					Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
 				})
+			})
+		})
+	})
+
+	Describe("QueryBackendHealth", func() {
+		var (
+			urlGetter     *monitorfakes.FakeUrlGetter
+			backend       *domain.Backend
+			backendStatus *BackendStatus
+
+			v0Err        error
+			v0StatusCode int
+			v0Response   *http.Response
+
+			v1Err        error
+			v1StatusCode int
+			v1Response   *http.Response
+		)
+
+		BeforeEach(func() {
+			v0Err = nil
+			v1Err = nil
+
+			v0StatusCode = http.StatusOK
+			v1StatusCode = http.StatusOK
+
+			urlGetter = new(monitorfakes.FakeUrlGetter)
+			UrlGetterProvider = func(time.Duration) UrlGetter {
+				return urlGetter
+			}
+
+			backend = domain.NewBackend(
+				"backend-0",
+				"192.0.2.10",
+				3306,
+				9292,
+				"",
+				logger)
+		})
+
+		JustBeforeEach(func() {
+			v0Response = &http.Response{
+				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
+				StatusCode: v0StatusCode,
+			}
+
+			v1Response = &http.Response{
+				Body:       ioutil.NopCloser(strings.NewReader(`{"healthy": true, "wsrep_local_index": 0}`)),
+				StatusCode: v1StatusCode,
+			}
+
+			urlGetter.GetStub = func(url string) (*http.Response, error) {
+				m.RLock()
+				defer m.RUnlock()
+
+				if strings.Contains(url, "api/v1/") {
+					return v1Response, v1Err
+				}
+				return v0Response, v0Err
+			}
+
+			backendStatus = &BackendStatus{
+				Index:    2,
+				Counters: cluster.SetupCounters(),
+				Healthy:  false,
+			}
+		})
+
+		AfterEach(func() {
+			UrlGetterProvider = HttpUrlGetterProvider
+		})
+
+		It("changes the backend health and index", func() {
+			Expect(backendStatus.Healthy).To(BeFalse())
+			Expect(backendStatus.Index).To(Equal(2))
+
+			cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
+			Expect(urlGetter.GetCallCount()).To(Equal(1))
+
+			Expect(backendStatus.Healthy).To(BeTrue())
+			Expect(backendStatus.Index).To(Equal(0))
+		})
+
+		Context("when GETting the v1 API returns an error", func() {
+			BeforeEach(func() {
+				v1Err = errors.New("v1 api not available")
+			})
+
+			It("uses the previous API to set the health to true, resetting the index", func() {
+				Expect(backendStatus.Healthy).To(BeFalse())
+				Expect(backendStatus.Index).To(Equal(2))
+
+				cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
+				Expect(urlGetter.GetCallCount()).To(Equal(2))
+
+				Expect(backendStatus.Healthy).To(BeTrue())
+				Expect(backendStatus.Index).To(Equal(0)) // reset
+			})
+
+			Context("when GETting the v0 API returns an error", func() {
+				BeforeEach(func() {
+					v0Err = errors.New("v0 api not available")
+				})
+
+				It("uses the previous API to set the health to false, resetting the index", func() {
+					Expect(backendStatus.Healthy).To(BeFalse())
+					Expect(backendStatus.Index).To(Equal(2))
+
+					cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
+					Expect(urlGetter.GetCallCount()).To(Equal(2))
+
+					Expect(backendStatus.Healthy).To(BeFalse())
+					Expect(backendStatus.Index).To(Equal(0)) // reset
+				})
+
+				Context("when GETting the v0 API returns a bad status code", func() {
+					BeforeEach(func() {
+						v0StatusCode = http.StatusTeapot
+					})
+
+					It("uses the previous API to set the health to false, resetting the index", func() {
+						Expect(backendStatus.Healthy).To(BeFalse())
+						Expect(backendStatus.Index).To(Equal(2))
+
+						cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
+						Expect(urlGetter.GetCallCount()).To(Equal(2))
+
+						Expect(backendStatus.Healthy).To(BeFalse())
+						Expect(backendStatus.Index).To(Equal(0)) // reset
+					})
+				})
+			})
+		})
+
+		Context("when GETting the v1 API returns a bad status code", func() {
+			BeforeEach(func() {
+				v1StatusCode = http.StatusTeapot
+			})
+
+			It("uses the previous API to set the health, resetting the index", func() {
+				Expect(backendStatus.Healthy).To(BeFalse())
+				Expect(backendStatus.Index).To(Equal(2))
+
+				cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
+				Expect(urlGetter.GetCallCount()).To(Equal(2))
+
+				Expect(backendStatus.Healthy).To(BeTrue())
+				Expect(backendStatus.Index).To(Equal(0)) // reset
 			})
 		})
 	})
@@ -431,6 +587,5 @@ var _ = Describe("Cluster", func() {
 				Expect(ChooseActiveBackend(statuses)).To(Equal(backend3))
 			})
 		})
-
 	})
 })

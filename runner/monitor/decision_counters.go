@@ -29,5 +29,11 @@ func (c *DecisionCounters) AddCondition(taskName string, predicate func() bool) 
 }
 
 func (c *DecisionCounters) Should(taskName string) bool {
-	return c.conditionals[taskName]()
+	f, ok := c.conditionals[taskName]
+
+	if !ok {
+		return false
+	}
+
+	return f()
 }

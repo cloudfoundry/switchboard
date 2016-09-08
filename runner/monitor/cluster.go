@@ -33,7 +33,7 @@ var UrlGetterProvider = HttpUrlGetterProvider
 type BackendStatus struct {
 	Index    int
 	Healthy  bool
-	counters *DecisionCounters
+	Counters *DecisionCounters
 }
 
 type Cluster struct {
@@ -44,7 +44,13 @@ type Cluster struct {
 	activeBackendSubscribers []chan<- *domain.Backend
 }
 
-func NewCluster(backends []*domain.Backend, healthcheckTimeout time.Duration, logger lager.Logger, arpManager ArpManager, activeBackendSubscribers []chan<- *domain.Backend) *Cluster {
+func NewCluster(
+	backends []*domain.Backend,
+	healthcheckTimeout time.Duration,
+	logger lager.Logger,
+	arpManager ArpManager,
+	activeBackendSubscribers []chan<- *domain.Backend,
+) *Cluster {
 	return &Cluster{
 		backends:                 backends,
 		logger:                   logger,
@@ -62,7 +68,7 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 	for i, backend := range c.backends {
 		backendHealthMap[backend] = &BackendStatus{
 			Index:    i,
-			counters: c.setupCounters(),
+			Counters: c.SetupCounters(),
 		}
 	}
 
@@ -107,7 +113,7 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 
 }
 
-func (c *Cluster) setupCounters() *DecisionCounters {
+func (c *Cluster) SetupCounters() *DecisionCounters {
 	counters := NewDecisionCounters()
 	logFreq := uint64(5)
 	clearArpFreq := uint64(5)
@@ -147,10 +153,7 @@ func ChooseActiveBackend(backendHealths map[*domain.Backend]*BackendStatus) *dom
 	return lowestIndexedHealthyDomain
 }
 
-func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *BackendStatus, client UrlGetter) {
-	healthMonitor.counters.IncrementCount("dial")
-	shouldLog := healthMonitor.counters.Should("log")
-
+func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlGetter, shouldLog bool) (bool, int) {
 	j := backend.AsJSON()
 
 	url := fmt.Sprintf("http://%s:%s/api/v1/status", j.Host, j.Port)
@@ -160,6 +163,7 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 	// Determine health from either the v1 status endpoint
 	// or fallback to the v0 status endpoint
 	var healthy bool
+	var index int
 
 	goodResponse := func(resp *http.Response, err error) bool {
 		return err == nil && resp.StatusCode == http.StatusOK
@@ -171,28 +175,19 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 		err = json.NewDecoder(resp.Body).Decode(&v1StatusResponse)
 
 		healthy = v1StatusResponse.Healthy
-		healthMonitor.Index = int(v1StatusResponse.WsrepLocalIndex)
+		index = int(v1StatusResponse.WsrepLocalIndex)
 	} else {
 		url = backend.HealthcheckUrl()
 		resp, err = client.Get(url)
 
 		healthy = goodResponse(resp, err)
 	}
-	//
 
 	if healthy {
-		backend.SetHealthy()
-		healthMonitor.Healthy = true
-		healthMonitor.counters.ResetCount("consecutiveUnhealthyChecks")
-
 		if shouldLog {
 			c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
 		}
 	} else {
-		backend.SetUnhealthy()
-		healthMonitor.Healthy = false
-		healthMonitor.counters.IncrementCount("consecutiveUnhealthyChecks")
-
 		if shouldLog {
 			c.logger.Error(
 				"Healthcheck failed on backend",
@@ -207,11 +202,33 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 		}
 	}
 
-	if healthMonitor.counters.Should("clearArp") {
+	return healthy, index
+}
+
+func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *BackendStatus, client UrlGetter) {
+	healthMonitor.Counters.IncrementCount("dial")
+	shouldLog := healthMonitor.Counters.Should("log")
+
+	healthy, index := c.determineStateFromBackend(backend, client, shouldLog)
+
+	healthMonitor.Index = index
+
+	if healthy {
+		backend.SetHealthy()
+		healthMonitor.Healthy = true
+		healthMonitor.Counters.ResetCount("consecutiveUnhealthyChecks")
+	} else {
+		backend.SetUnhealthy()
+		healthMonitor.Healthy = false
+		healthMonitor.Counters.IncrementCount("consecutiveUnhealthyChecks")
+
+	}
+
+	if healthMonitor.Counters.Should("clearArp") {
 		backendHost := backend.AsJSON().Host
 
 		if c.arpManager.IsCached(backendHost) {
-			err = c.arpManager.ClearCache(backendHost)
+			err := c.arpManager.ClearCache(backendHost)
 			if err != nil {
 				c.logger.Error("Failed to clear arp cache", err)
 			}

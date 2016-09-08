@@ -10,6 +10,9 @@ import (
 
 	"math"
 
+	"encoding/json"
+
+	"github.com/cloudfoundry-incubator/galera-healthcheck/api"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	"github.com/pivotal-golang/lager"
 )
@@ -148,10 +151,44 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 	healthMonitor.counters.IncrementCount("dial")
 	shouldLog := healthMonitor.counters.Should("log")
 
-	url := backend.HealthcheckUrl()
+	j := backend.AsJSON()
+
+	url := fmt.Sprintf("http://%s:%s/api/v1/status", j.Host, j.Port)
 	resp, err := client.Get(url)
 
-	if err != nil || resp.StatusCode != http.StatusOK {
+	/////////////////
+	// Determine health from either the v1 status endpoint
+	// or fallback to the v0 status endpoint
+	var healthy bool
+
+	goodResponse := func(resp *http.Response, err error) bool {
+		return err == nil && resp.StatusCode == http.StatusOK
+	}
+
+	if goodResponse(resp, err) {
+		var v1StatusResponse api.V1StatusResponse
+
+		err = json.NewDecoder(resp.Body).Decode(&v1StatusResponse)
+
+		healthy = v1StatusResponse.Healthy
+		healthMonitor.Index = int(v1StatusResponse.WsrepLocalIndex)
+	} else {
+		url = backend.HealthcheckUrl()
+		resp, err = client.Get(url)
+
+		healthy = goodResponse(resp, err)
+	}
+	//
+
+	if healthy {
+		backend.SetHealthy()
+		healthMonitor.Healthy = true
+		healthMonitor.counters.ResetCount("consecutiveUnhealthyChecks")
+
+		if shouldLog {
+			c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
+		}
+	} else {
 		backend.SetUnhealthy()
 		healthMonitor.Healthy = false
 		healthMonitor.counters.IncrementCount("consecutiveUnhealthyChecks")
@@ -167,14 +204,6 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 					"err":      err,
 				},
 			)
-		}
-	} else {
-		backend.SetHealthy()
-		healthMonitor.Healthy = true
-		healthMonitor.counters.ResetCount("consecutiveUnhealthyChecks")
-
-		if shouldLog {
-			c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
 		}
 	}
 

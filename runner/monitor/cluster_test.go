@@ -13,6 +13,8 @@ import (
 
 	"sync"
 
+	"strings"
+
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	. "github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
@@ -104,7 +106,14 @@ var _ = Describe("Cluster", func() {
 				return urlGetter
 			}
 
-			urlGetter.GetReturns(healthyResponse, nil)
+			urlGetter.GetStub = func(url string) (*http.Response, error) {
+				m.RLock()
+				defer m.RUnlock()
+				if strings.HasSuffix(url, "api/v1/status") {
+					return nil, errors.New("v1 api not available")
+				}
+				return healthyResponse, nil
+			}
 		})
 
 		AfterEach(func() {
@@ -138,6 +147,9 @@ var _ = Describe("Cluster", func() {
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
+				if strings.HasSuffix(url, "api/v1/status") {
+					return nil, errors.New("v1 api not available")
+				}
 				if url == backend2.HealthcheckUrl() {
 
 					return unhealthyResponse, nil
@@ -162,6 +174,9 @@ var _ = Describe("Cluster", func() {
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
+				if strings.HasSuffix(url, "api/v1/status") {
+					return nil, errors.New("v1 api not available")
+				}
 				if url == backend2.HealthcheckUrl() {
 					return nil, errors.New("some error")
 				} else {
@@ -192,6 +207,9 @@ var _ = Describe("Cluster", func() {
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
+				if strings.HasSuffix(url, "api/v1/status") {
+					return nil, errors.New("v1 api not available")
+				}
 				if url == backend2.HealthcheckUrl() && isUnhealthy {
 					isUnhealthy = false
 					return unhealthyResponse, nil
@@ -221,6 +239,11 @@ var _ = Describe("Cluster", func() {
 				urlGetter.GetStub = func(url string) (*http.Response, error) {
 					m.RLock()
 					defer m.RUnlock()
+
+					if strings.HasSuffix(url, "api/v1/status") {
+						return nil, errors.New("v1 api not available")
+					}
+
 					if url == firstActive.HealthcheckUrl() {
 						return nil, errors.New("some error")
 					} else {
@@ -257,6 +280,11 @@ var _ = Describe("Cluster", func() {
 				urlGetter.GetStub = func(url string) (*http.Response, error) {
 					m.RLock()
 					defer m.RUnlock()
+
+					if strings.HasSuffix(url, "api/v1/status") {
+						return nil, errors.New("v1 api not available")
+					}
+
 					if url == backend2.HealthcheckUrl() {
 						return unhealthyResponse, nil
 					} else {

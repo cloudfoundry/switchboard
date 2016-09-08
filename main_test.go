@@ -338,6 +338,12 @@ var _ = Describe("Switchboard", func() {
 							Expect(returnedBackends[1]["host"]).To(Equal("localhost"))
 							Expect(returnedBackends[1]["healthy"]).To(BeTrue(), "Expected backends[1] to be healthy")
 
+							if returnedBackends[0]["active"] == true {
+								Expect(returnedBackends[1]["active"]).To(BeFalse())
+							} else {
+								Expect(returnedBackends[1]["active"]).To(BeTrue())
+							}
+
 							switch returnedBackends[0]["name"] {
 
 							case backends[0].Name:

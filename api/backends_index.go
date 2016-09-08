@@ -50,7 +50,7 @@ func (bs Backends) AsV0JSON(cluster ClusterManager) (json []V0BackendResponse) {
 			Healthy:             j.Healthy,
 			Name:                j.Name,
 			CurrentSessionCount: j.CurrentSessionCount,
-			Active:              activeBackend != nil && j.Host == activeBackend.Host,
+			Active:              activeBackend != nil && j.Name == activeBackend.Name,
 			TrafficEnabled:      cj.TrafficEnabled,
 		})
 	}

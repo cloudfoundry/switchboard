@@ -427,7 +427,7 @@ var _ = Describe("Cluster", func() {
 				v1Err = errors.New("v1 api not available")
 			})
 
-			It("uses the previous API to set the health to true, resetting the index", func() {
+			It("uses the previous API to set the health to true, ignoring the index", func() {
 				Expect(backendStatus.Healthy).To(BeFalse())
 				Expect(backendStatus.Index).To(Equal(2))
 
@@ -435,7 +435,7 @@ var _ = Describe("Cluster", func() {
 				Expect(urlGetter.GetCallCount()).To(Equal(2))
 
 				Expect(backendStatus.Healthy).To(BeTrue())
-				Expect(backendStatus.Index).To(Equal(0)) // reset
+				Expect(backendStatus.Index).To(Equal(2)) // unchanged
 			})
 
 			Context("when GETting the v0 API returns an error", func() {
@@ -443,7 +443,7 @@ var _ = Describe("Cluster", func() {
 					v0Err = errors.New("v0 api not available")
 				})
 
-				It("uses the previous API to set the health to false, resetting the index", func() {
+				It("uses the previous API to set the health to false, ignoring the index", func() {
 					Expect(backendStatus.Healthy).To(BeFalse())
 					Expect(backendStatus.Index).To(Equal(2))
 
@@ -451,7 +451,7 @@ var _ = Describe("Cluster", func() {
 					Expect(urlGetter.GetCallCount()).To(Equal(2))
 
 					Expect(backendStatus.Healthy).To(BeFalse())
-					Expect(backendStatus.Index).To(Equal(0)) // reset
+					Expect(backendStatus.Index).To(Equal(2)) // unchanged
 				})
 
 				Context("when GETting the v0 API returns a bad status code", func() {
@@ -459,7 +459,7 @@ var _ = Describe("Cluster", func() {
 						v0StatusCode = http.StatusTeapot
 					})
 
-					It("uses the previous API to set the health to false, resetting the index", func() {
+					It("uses the previous API to set the health to false, ignoring the index", func() {
 						Expect(backendStatus.Healthy).To(BeFalse())
 						Expect(backendStatus.Index).To(Equal(2))
 
@@ -467,7 +467,7 @@ var _ = Describe("Cluster", func() {
 						Expect(urlGetter.GetCallCount()).To(Equal(2))
 
 						Expect(backendStatus.Healthy).To(BeFalse())
-						Expect(backendStatus.Index).To(Equal(0)) // reset
+						Expect(backendStatus.Index).To(Equal(2)) // unchanged
 					})
 				})
 			})
@@ -478,7 +478,7 @@ var _ = Describe("Cluster", func() {
 				v1StatusCode = http.StatusTeapot
 			})
 
-			It("uses the previous API to set the health, resetting the index", func() {
+			It("uses the previous API to set the health, ignoring the index", func() {
 				Expect(backendStatus.Healthy).To(BeFalse())
 				Expect(backendStatus.Index).To(Equal(2))
 
@@ -486,7 +486,7 @@ var _ = Describe("Cluster", func() {
 				Expect(urlGetter.GetCallCount()).To(Equal(2))
 
 				Expect(backendStatus.Healthy).To(BeTrue())
-				Expect(backendStatus.Index).To(Equal(0)) // reset
+				Expect(backendStatus.Index).To(Equal(2)) // unchanged
 			})
 		})
 	})

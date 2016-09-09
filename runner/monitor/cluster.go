@@ -153,7 +153,7 @@ func ChooseActiveBackend(backendHealths map[*domain.Backend]*BackendStatus) *dom
 	return lowestIndexedHealthyDomain
 }
 
-func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlGetter, shouldLog bool) (bool, int) {
+func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlGetter, shouldLog bool) (bool, *int) {
 	j := backend.AsJSON()
 
 	url := fmt.Sprintf("http://%s:%d/api/v1/status", j.Host, j.Port)
@@ -163,7 +163,7 @@ func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlG
 	// Determine health from either the v1 status endpoint
 	// or fallback to the v0 status endpoint
 	var healthy bool
-	var index int
+	var index *int
 
 	goodResponse := func(resp *http.Response, err error) bool {
 		return err == nil && resp.StatusCode == http.StatusOK
@@ -175,7 +175,8 @@ func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlG
 		err = json.NewDecoder(resp.Body).Decode(&v1StatusResponse)
 
 		healthy = v1StatusResponse.Healthy
-		index = int(v1StatusResponse.WsrepLocalIndex)
+		indexVal := int(v1StatusResponse.WsrepLocalIndex)
+		index = &indexVal
 	} else {
 		url = backend.HealthcheckUrl()
 		resp, err = client.Get(url)
@@ -211,7 +212,9 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 
 	healthy, index := c.determineStateFromBackend(backend, client, shouldLog)
 
-	healthMonitor.Index = index
+	if index != nil {
+		healthMonitor.Index = *index
+	}
 
 	if healthy {
 		backend.SetHealthy()

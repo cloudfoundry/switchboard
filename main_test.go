@@ -184,7 +184,7 @@ var _ = Describe("Switchboard", func() {
 				var err error
 				var conn net.Conn
 				Eventually(func() error {
-					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 					return err
 				}, startupTimeout).Should(Succeed())
 				defer conn.Close()
@@ -364,7 +364,7 @@ var _ = Describe("Switchboard", func() {
 							var err error
 							var conn net.Conn
 							Eventually(func() error {
-								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 								if err != nil {
 									return err
 								}
@@ -436,11 +436,8 @@ var _ = Describe("Switchboard", func() {
 			})
 
 			Describe("proxy", func() {
-
 				Context("when there are multiple concurrent clients", func() {
-
 					It("proxies all the connections to the backend", func() {
-
 						var doneArray = make([]chan interface{}, 3)
 						var dataMessages = make([]string, 3)
 
@@ -454,7 +451,7 @@ var _ = Describe("Switchboard", func() {
 								var conn net.Conn
 
 								Eventually(func() error {
-									conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+									conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 									return err
 								}, startupTimeout).ShouldNot(HaveOccurred())
 
@@ -481,13 +478,13 @@ var _ = Describe("Switchboard", func() {
 					It("maintains a long-lived connection when other clients disconnect", func() {
 						Eventually(func() error {
 							var err error
-							conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 							return err
 						}, startupTimeout).Should(Succeed())
 
 						Eventually(func() error {
 							var err error
-							connToDisconnect, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							connToDisconnect, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 							return err
 						}, "5s").Should(Succeed())
 
@@ -508,7 +505,7 @@ var _ = Describe("Switchboard", func() {
 						var client net.Conn
 						Eventually(func() error {
 							var err error
-							client, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							client, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 							return err
 						}, startupTimeout).Should(Succeed())
 
@@ -529,7 +526,7 @@ var _ = Describe("Switchboard", func() {
 							var conn net.Conn
 							Eventually(func() error {
 								var err error
-								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 								return err
 							}, startupTimeout).Should(Succeed())
 
@@ -556,7 +553,7 @@ var _ = Describe("Switchboard", func() {
 
 						JustBeforeEach(func() {
 							Eventually(func() (err error) {
-								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 								return err
 							}, startupTimeout).Should(Succeed())
 
@@ -581,7 +578,7 @@ var _ = Describe("Switchboard", func() {
 						It("proxies new connections to another backend", func() {
 							var err error
 							Eventually(func() (uint, error) {
-								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+								conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 								if err != nil {
 									return 0, err
 								}
@@ -604,7 +601,7 @@ var _ = Describe("Switchboard", func() {
 						It("rejects any new connections that are attempted", func() {
 
 							Eventually(func() error {
-								conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+								conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 								if err != nil {
 									return err
 								}
@@ -620,7 +617,7 @@ var _ = Describe("Switchboard", func() {
 						var conn net.Conn
 						Eventually(func() error {
 							var err error
-							conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 							return err
 						}, startupTimeout).Should(Succeed())
 
@@ -640,7 +637,7 @@ var _ = Describe("Switchboard", func() {
 						allowTraffic(false)
 						Eventually(func() error {
 
-							conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 
 							if err != nil {
 								return err
@@ -657,7 +654,7 @@ var _ = Describe("Switchboard", func() {
 
 						Eventually(func() error {
 							var err error
-							_, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+							_, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 							return err
 						}, "5s").Should(Succeed())
 					})
@@ -718,7 +715,7 @@ var _ = Describe("Switchboard", func() {
 		Context("the switchboard acquires the lock", func() {
 			It("starts up", func() {
 				Eventually(func() error {
-					_, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					_, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 					return err
 				}, startupTimeout).Should(Succeed())
 			})
@@ -731,7 +728,7 @@ var _ = Describe("Switchboard", func() {
 					&api.AgentService{
 						Service: "test_mysql",
 						ID:      "test_mysql",
-						Port:    int(switchboardPort),
+						Port:    int(proxyPort),
 					}))
 			})
 
@@ -762,7 +759,7 @@ var _ = Describe("Switchboard", func() {
 
 			It("waits for the lock to become available", func() {
 				Consistently(func() error {
-					_, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", switchboardPort))
+					_, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 					return err
 				}).Should(HaveOccurred())
 			})

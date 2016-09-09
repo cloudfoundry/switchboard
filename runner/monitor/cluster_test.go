@@ -106,9 +106,13 @@ var _ = Describe("Cluster", func() {
 		var (
 			urlGetter       *monitorfakes.FakeUrlGetter
 			healthyResponse *http.Response
+
+			stopMonitoringChan chan interface{}
 		)
 
 		BeforeEach(func() {
+			stopMonitoringChan = make(chan interface{})
+
 			urlGetter = new(monitorfakes.FakeUrlGetter)
 			UrlGetterProvider = func(time.Duration) UrlGetter {
 				return urlGetter
@@ -131,6 +135,8 @@ var _ = Describe("Cluster", func() {
 
 		AfterEach(func() {
 			UrlGetterProvider = HttpUrlGetterProvider
+
+			close(stopMonitoringChan)
 		})
 
 		It("notices when each backend stays healthy", func(done Done) {
@@ -142,7 +148,7 @@ var _ = Describe("Cluster", func() {
 			Expect(backend2.Healthy()).To(BeFalse())
 			Expect(backend3.Healthy()).To(BeFalse())
 
-			cluster.Monitor(nil)
+			cluster.Monitor(stopMonitoringChan)
 
 			Eventually(backend1.Healthy).Should(BeTrue())
 			Eventually(backend2.Healthy).Should(BeTrue())
@@ -151,7 +157,7 @@ var _ = Describe("Cluster", func() {
 			close(done)
 		}, 5)
 
-		It("notices when a healthy backend becomes unhealthy", func() {
+		It("notices when a healthy backend becomes unhealthy", func(done Done) {
 			unhealthyResponse := &http.Response{
 				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 				StatusCode: http.StatusInternalServerError,
@@ -164,7 +170,6 @@ var _ = Describe("Cluster", func() {
 					return nil, errors.New("v1 api not available")
 				}
 				if url == backend2.HealthcheckUrl() {
-
 					return unhealthyResponse, nil
 				} else {
 					return healthyResponse, nil
@@ -175,12 +180,13 @@ var _ = Describe("Cluster", func() {
 			Expect(backend2.Healthy()).To(BeTrue())
 			Expect(backend3.Healthy()).To(BeTrue())
 
-			cluster.Monitor(nil)
+			cluster.Monitor(stopMonitoringChan)
 
 			Eventually(backend2.Healthy).Should(BeFalse())
 			Consistently(backend1.Healthy).Should(BeTrue())
 			Consistently(backend3.Healthy).Should(BeTrue())
-		})
+			close(done)
+		}, 5)
 
 		It("notices when a healthy backend becomes unresponsive", func() {
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
@@ -200,7 +206,7 @@ var _ = Describe("Cluster", func() {
 			Expect(backend2.Healthy()).To(BeTrue())
 			Expect(backend3.Healthy()).To(BeTrue())
 
-			cluster.Monitor(nil)
+			cluster.Monitor(stopMonitoringChan)
 
 			Eventually(backend2.Healthy).Should(BeFalse())
 			Consistently(backend1.Healthy).Should(BeTrue())
@@ -234,7 +240,7 @@ var _ = Describe("Cluster", func() {
 			Expect(backend2.Healthy()).To(BeFalse())
 			Expect(backend3.Healthy()).To(BeTrue())
 
-			cluster.Monitor(nil)
+			cluster.Monitor(stopMonitoringChan)
 
 			Eventually(backend2.Healthy).Should(BeTrue())
 			Consistently(backend1.Healthy).Should(BeTrue())
@@ -243,7 +249,7 @@ var _ = Describe("Cluster", func() {
 
 		Context("when the active backend changes", func() {
 			It("publishes the new backend", func() {
-				cluster.Monitor(nil)
+				cluster.Monitor(stopMonitoringChan)
 				var firstActive *domain.Backend
 				Eventually(subscriberA).Should(Receive(&firstActive))
 				Eventually(subscriberB).Should(Receive(&firstActive))
@@ -274,7 +280,7 @@ var _ = Describe("Cluster", func() {
 			})
 
 			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
-				cluster.Monitor(nil)
+				cluster.Monitor(stopMonitoringChan)
 
 				Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
 			})
@@ -316,7 +322,7 @@ var _ = Describe("Cluster", func() {
 				})
 
 				It("clears the arp cache after ArpFlushInterval has elapsed", func() {
-					cluster.Monitor(nil)
+					cluster.Monitor(stopMonitoringChan)
 
 					Eventually(fakeArpManager.ClearCacheCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
 					Expect(fakeArpManager.ClearCacheArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
@@ -329,7 +335,7 @@ var _ = Describe("Cluster", func() {
 				})
 
 				It("does not clear arp cache", func() {
-					cluster.Monitor(nil)
+					cluster.Monitor(stopMonitoringChan)
 
 					Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
 				})

@@ -26,7 +26,7 @@ func TestSwitchboard(t *testing.T) {
 }
 
 var switchboardBinPath string
-var switchboardPort uint
+var proxyPort uint
 var switchboardAPIPort uint
 var switchboardProfilerPort uint
 var switchboardHealthPort uint
@@ -59,7 +59,7 @@ func initConfig() {
 	pidFile = pidFileFile.Name()
 	os.Remove(pidFile)
 
-	switchboardPort = uint(39900 + GinkgoParallelNode())
+	proxyPort = uint(39900 + GinkgoParallelNode())
 	switchboardAPIPort = uint(39000 + GinkgoParallelNode())
 	switchboardProfilerPort = uint(6060 + GinkgoParallelNode())
 	switchboardHealthPort = uint(6160 + GinkgoParallelNode())
@@ -85,7 +85,7 @@ func initConfig() {
 	proxyConfig = config.Proxy{
 		Backends:                 backends,
 		HealthcheckTimeoutMillis: 500,
-		Port: switchboardPort,
+		Port: proxyPort,
 	}
 	apiConfig = config.API{
 		Port:     switchboardAPIPort,

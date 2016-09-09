@@ -156,7 +156,7 @@ func ChooseActiveBackend(backendHealths map[*domain.Backend]*BackendStatus) *dom
 func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlGetter, shouldLog bool) (bool, int) {
 	j := backend.AsJSON()
 
-	url := fmt.Sprintf("http://%s:%s/api/v1/status", j.Host, j.Port)
+	url := fmt.Sprintf("http://%s:%d/api/v1/status", j.Host, j.Port)
 	resp, err := client.Get(url)
 
 	/////////////////

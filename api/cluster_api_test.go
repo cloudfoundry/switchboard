@@ -41,6 +41,7 @@ var _ = Describe("ClusterAPI", func() {
 				Expect(clusterJSON.ActiveBackend).To(BeNil())
 			})
 		})
+
 		Context("when there is an active backend", func() {
 			It("returns the backend", func() {
 				go cluster.ListenForActiveBackend()
@@ -50,9 +51,12 @@ var _ = Describe("ClusterAPI", func() {
 					3306,
 					9292,
 					"",
-					logger)
+					logger,
+				)
 
-				Expect(cluster.AsJSON().ActiveBackend).To(Equal(
+				Eventually(func() *api.BackendJSON {
+					return cluster.AsJSON().ActiveBackend
+				}).Should(Equal(
 					&api.BackendJSON{
 						Host: "192.0.2.10",
 						Port: 3306,
@@ -61,6 +65,7 @@ var _ = Describe("ClusterAPI", func() {
 				))
 			})
 		})
+
 		Context("when there are no available active backends", func() {
 			It("returns nil", func() {
 				go cluster.ListenForActiveBackend()
@@ -68,7 +73,6 @@ var _ = Describe("ClusterAPI", func() {
 				Expect(cluster.AsJSON().ActiveBackend).To(BeNil())
 			})
 		})
-
 	})
 
 	Describe("EnableTraffic", func() {

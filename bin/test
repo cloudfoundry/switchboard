@@ -2,7 +2,7 @@
 
 result=0
 
-MY_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+my_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 function get_cpu_count() {
   if [[ "$(uname)" = "Darwin" ]]; then
@@ -13,7 +13,7 @@ function get_cpu_count() {
 }
 
 echo -e "\nVetting packages for potential issues..."
-$MY_DIR/govet
+"${my_dir}/govet"
 
 echo -e "\nTesting packages..."
 
@@ -24,8 +24,12 @@ if [ "$(get_cpu_count)" -ge "4" ]; then
   GINKGO_FLAGS="${GINKGO_FLAGS} -p"
 fi
 
-ginkgo ${GINKGO_FLAGS} "$@" $MY_DIR/..
-let "result+=$?"
+pushd "${my_dir}/.." > /dev/null
+  # shellcheck disable=SC2086
+  ginkgo ${GINKGO_FLAGS} "$@"
 
-echo -e "\nExit Code: $result"
-exit $result
+  let "result+=$?"
+
+  echo -e "\nExit Code: $result"
+  exit $result
+popd > /dev/null

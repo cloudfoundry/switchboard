@@ -28,6 +28,7 @@ type Backend struct {
 type BackendJSON struct {
 	Host                string `json:"host"`
 	Port                uint   `json:"port"`
+	StatusPort          uint   `json:"status_port"`
 	Healthy             bool   `json:"healthy"`
 	Name                string `json:"name"`
 	CurrentSessionCount uint   `json:"currentSessionCount"`
@@ -112,6 +113,7 @@ func (b *Backend) AsJSON() BackendJSON {
 	return BackendJSON{
 		Host:                b.host,
 		Port:                b.port,
+		StatusPort:          b.statusPort,
 		Name:                b.name,
 		Healthy:             b.healthy,
 		CurrentSessionCount: b.bridges.Size(),

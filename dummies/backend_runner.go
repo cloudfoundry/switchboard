@@ -67,11 +67,12 @@ func (fb *BackendRunner) handleRequest(conn net.Conn) {
 		for {
 			data := make([]byte, 1024)
 			n, err := conn.Read(data)
-			fmt.Fprintln(ginkgo.GinkgoWriter, "Dummy backend received on connection: "+string(data))
 			if err != nil {
+				fmt.Fprintln(ginkgo.GinkgoWriter, fmt.Sprintf("Dummy backend received error on connection: %v", err))
 				eCh <- err
 				return
 			}
+			fmt.Fprintln(ginkgo.GinkgoWriter, "Dummy backend received on connection: "+string(data))
 			ch <- data[:n]
 		}
 	}(dataCh, errCh)

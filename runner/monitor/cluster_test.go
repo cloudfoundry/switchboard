@@ -2,6 +2,7 @@ package monitor_test
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -34,6 +35,7 @@ var _ = Describe("Cluster", func() {
 		subscriberA                  chan *domain.Backend
 		subscriberB                  chan *domain.Backend
 		activeBackendSubscribers     []chan<- *domain.Backend
+		notFoundResponse             *http.Response
 
 		m sync.RWMutex
 	)
@@ -90,6 +92,11 @@ var _ = Describe("Cluster", func() {
 		backend1.SetHealthy()
 		backend2.SetHealthy()
 		backend3.SetHealthy()
+
+		notFoundResponse = &http.Response{
+			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
+			StatusCode: http.StatusNotFound,
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -127,7 +134,7 @@ var _ = Describe("Cluster", func() {
 				m.RLock()
 				defer m.RUnlock()
 				if strings.HasSuffix(url, "api/v1/status") {
-					return nil, errors.New("v1 api not available")
+					return notFoundResponse, nil
 				}
 				return healthyResponse, nil
 			}
@@ -167,7 +174,7 @@ var _ = Describe("Cluster", func() {
 				m.RLock()
 				defer m.RUnlock()
 				if strings.HasSuffix(url, "api/v1/status") {
-					return nil, errors.New("v1 api not available")
+					return notFoundResponse, nil
 				}
 				if url == backend2.HealthcheckUrl() {
 					return unhealthyResponse, nil
@@ -193,7 +200,7 @@ var _ = Describe("Cluster", func() {
 				m.RLock()
 				defer m.RUnlock()
 				if strings.HasSuffix(url, "api/v1/status") {
-					return nil, errors.New("v1 api not available")
+					return notFoundResponse, nil
 				}
 				if url == backend2.HealthcheckUrl() {
 					return nil, errors.New("some error")
@@ -226,7 +233,7 @@ var _ = Describe("Cluster", func() {
 				m.RLock()
 				defer m.RUnlock()
 				if strings.HasSuffix(url, "api/v1/status") {
-					return nil, errors.New("v1 api not available")
+					return notFoundResponse, nil
 				}
 				if url == backend2.HealthcheckUrl() && isUnhealthy {
 					isUnhealthy = false
@@ -259,7 +266,7 @@ var _ = Describe("Cluster", func() {
 					defer m.RUnlock()
 
 					if strings.HasSuffix(url, "api/v1/status") {
-						return nil, errors.New("v1 api not available")
+						return notFoundResponse, nil
 					}
 
 					if url == firstActive.HealthcheckUrl() {
@@ -299,7 +306,7 @@ var _ = Describe("Cluster", func() {
 					defer m.RUnlock()
 
 					if strings.HasSuffix(url, "api/v1/status") {
-						return nil, errors.New("v1 api not available")
+						return notFoundResponse, nil
 					}
 
 					if url == backend2.HealthcheckUrl() {
@@ -349,6 +356,9 @@ var _ = Describe("Cluster", func() {
 			backend       *domain.Backend
 			backendStatus *BackendStatus
 
+			backendStatusPort uint
+			backendHost       string
+
 			v0Err        error
 			v0StatusCode int
 			v0Response   *http.Response
@@ -370,13 +380,17 @@ var _ = Describe("Cluster", func() {
 				return urlGetter
 			}
 
+			backendStatusPort = 9292
+			backendHost = "192.0.2.10"
+
 			backend = domain.NewBackend(
 				"backend-0",
-				"192.0.2.10",
+				backendHost,
 				3306,
-				9292,
+				backendStatusPort,
 				"",
-				logger)
+				logger,
+			)
 		})
 
 		JustBeforeEach(func() {
@@ -418,6 +432,13 @@ var _ = Describe("Cluster", func() {
 			cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
 			Expect(urlGetter.GetCallCount()).To(Equal(1))
 
+			expectedURL := fmt.Sprintf(
+				"http://%s:%d/api/v1/status",
+				backendHost,
+				backendStatusPort,
+			)
+			Expect(urlGetter.GetArgsForCall(0)).To(Equal(expectedURL))
+
 			Expect(backendStatus.Healthy).To(BeTrue())
 			Expect(backendStatus.Index).To(Equal(0))
 		})
@@ -425,6 +446,21 @@ var _ = Describe("Cluster", func() {
 		Context("when GETting the v1 API returns an error", func() {
 			BeforeEach(func() {
 				v1Err = errors.New("v1 api not available")
+			})
+
+			It("marks the backend as unhealthy", func() {
+				backend.SetHealthy()
+
+				cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
+				Expect(urlGetter.GetCallCount()).To(Equal(1))
+
+				Expect(backendStatus.Healthy).To(BeFalse())
+			})
+		})
+
+		Context("when GETting the v1 API returns a 404", func() {
+			BeforeEach(func() {
+				v1StatusCode = http.StatusNotFound
 			})
 
 			It("uses the previous API to set the health to true, ignoring the index", func() {
@@ -478,15 +514,13 @@ var _ = Describe("Cluster", func() {
 				v1StatusCode = http.StatusTeapot
 			})
 
-			It("uses the previous API to set the health, ignoring the index", func() {
-				Expect(backendStatus.Healthy).To(BeFalse())
-				Expect(backendStatus.Index).To(Equal(2))
+			It("marks the backend as unhealthy", func() {
+				backend.SetHealthy()
 
 				cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
-				Expect(urlGetter.GetCallCount()).To(Equal(2))
+				Expect(urlGetter.GetCallCount()).To(Equal(1))
 
-				Expect(backendStatus.Healthy).To(BeTrue())
-				Expect(backendStatus.Index).To(Equal(2)) // unchanged
+				Expect(backendStatus.Healthy).To(BeFalse())
 			})
 		})
 	})

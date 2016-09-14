@@ -156,7 +156,7 @@ func ChooseActiveBackend(backendHealths map[*domain.Backend]*BackendStatus) *dom
 func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlGetter, shouldLog bool) (bool, *int) {
 	j := backend.AsJSON()
 
-	url := fmt.Sprintf("http://%s:%d/api/v1/status", j.Host, j.Port)
+	url := fmt.Sprintf("http://%s:%d/api/v1/status", j.Host, j.StatusPort)
 	resp, err := client.Get(url)
 
 	/////////////////
@@ -165,34 +165,40 @@ func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlG
 	var healthy bool
 	var index *int
 
-	goodResponse := func(resp *http.Response, err error) bool {
-		return err == nil && resp.StatusCode == http.StatusOK
-	}
+	if err == nil {
+		if resp.StatusCode == http.StatusOK {
+			var v1StatusResponse api.V1StatusResponse
 
-	if goodResponse(resp, err) {
-		var v1StatusResponse api.V1StatusResponse
+			_ = json.NewDecoder(resp.Body).Decode(&v1StatusResponse)
 
-		err = json.NewDecoder(resp.Body).Decode(&v1StatusResponse)
+			healthy = v1StatusResponse.Healthy
+			indexVal := int(v1StatusResponse.WsrepLocalIndex)
+			index = &indexVal
+		} else if resp.StatusCode == http.StatusNotFound {
+			url = backend.HealthcheckUrl()
+			resp, err = client.Get(url)
 
-		healthy = v1StatusResponse.Healthy
-		indexVal := int(v1StatusResponse.WsrepLocalIndex)
-		index = &indexVal
-	} else {
-		url = backend.HealthcheckUrl()
-		resp, err = client.Get(url)
-
-		healthy = goodResponse(resp, err)
-	}
-
-	if healthy {
-		if shouldLog {
-			c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
+			healthy = (err == nil && resp.StatusCode == http.StatusOK)
 		}
-	} else {
-		if shouldLog {
+	}
+
+	if shouldLog {
+		if !healthy && err == nil {
 			c.logger.Error(
 				"Healthcheck failed on backend",
-				fmt.Errorf("Non-200 status code from healthcheck"),
+				fmt.Errorf("Backend reported as unhealthy"),
+				lager.Data{
+					"backend":  backend.AsJSON(),
+					"endpoint": url,
+					"resp":     fmt.Sprintf("%#v", resp),
+				},
+			)
+		}
+
+		if err != nil {
+			c.logger.Error(
+				"Healthcheck failed on backend",
+				fmt.Errorf("Error during healthcheck http get"),
 				lager.Data{
 					"backend":  backend.AsJSON(),
 					"endpoint": url,
@@ -200,6 +206,10 @@ func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlG
 					"err":      err,
 				},
 			)
+		}
+
+		if healthy {
+			c.logger.Debug("Healthcheck succeeded", lager.Data{"endpoint": url})
 		}
 	}
 

@@ -25,19 +25,21 @@ func TestSwitchboard(t *testing.T) {
 	RunSpecs(t, "Switchboard Executable Suite")
 }
 
-var switchboardBinPath string
-var proxyPort uint
-var switchboardAPIPort uint
-var switchboardProfilerPort uint
-var switchboardHealthPort uint
-var backends []config.Backend
-var configPath string
-var rootConfig config.Config
-var proxyConfig config.Proxy
-var apiConfig config.API
-var pidFile string
-var tempDir string
-var staticDir string
+var (
+	switchboardBinPath      string
+	proxyPort               uint
+	switchboardAPIPort      uint
+	switchboardProfilerPort uint
+	switchboardHealthPort   uint
+	backends                []config.Backend
+	configPath              string
+	rootConfig              config.Config
+	proxyConfig             config.Proxy
+	apiConfig               config.API
+	pidFile                 string
+	tempDir                 string
+	staticDir               string
+)
 
 var _ = BeforeSuite(func() {
 	var err error

@@ -79,6 +79,7 @@ func getClusterFromAPI(req *http.Request) map[string]interface{} {
 
 func sendData(conn net.Conn, data string) (Response, error) {
 	conn.Write([]byte(data))
+
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
 	if err != nil {
@@ -87,7 +88,7 @@ func sendData(conn net.Conn, data string) (Response, error) {
 		response := Response{}
 		err := json.Unmarshal(buffer[:n], &response)
 		if err != nil {
-			return Response{}, err.(error)
+			return Response{}, err
 		}
 		return response, nil
 	}
@@ -132,12 +133,15 @@ func matchConnectionDisconnect() types.GomegaMatcher {
 	)
 }
 
+const startupTimeout = 10 * time.Second
+
 var _ = Describe("Switchboard", func() {
-	var process ifrit.Process
-	var initialActiveBackend, initialInactiveBackend config.Backend
-	var healthcheckRunners []*dummies.HealthcheckRunner
-	var healthcheckWaitDuration time.Duration
-	const startupTimeout = 10 * time.Second
+	var (
+		process                                      ifrit.Process
+		initialActiveBackend, initialInactiveBackend config.Backend
+		healthcheckRunners                           []*dummies.HealthcheckRunner
+		healthcheckWaitDuration                      time.Duration
+	)
 
 	BeforeEach(func() {
 		initConfig()
@@ -181,8 +185,11 @@ var _ = Describe("Switchboard", func() {
 	Context("When consul is not configured", func() {
 		Context("and switchboard starts successfully", func() {
 			JustBeforeEach(func() {
-				var err error
-				var conn net.Conn
+				var (
+					err  error
+					conn net.Conn
+				)
+
 				Eventually(func() error {
 					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 					return err
@@ -327,7 +334,6 @@ var _ = Describe("Switchboard", func() {
 						})
 
 						It("returns valid JSON in body", func() {
-
 							returnedBackends := getBackendsFromApi(req)
 
 							Expect(len(returnedBackends)).To(Equal(2))

@@ -93,14 +93,14 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 				newActiveBackend := ChooseActiveBackend(backendHealthMap)
 
 				if newActiveBackend != activeBackend {
+					if newActiveBackend != nil {
+						c.logger.Info("New active backend", lager.Data{"backend": newActiveBackend.AsJSON()})
+					}
+
 					activeBackend = newActiveBackend
 					for _, s := range c.activeBackendSubscribers {
 						s <- activeBackend
 					}
-				}
-
-				if newActiveBackend != nil {
-					c.logger.Info("New active backend", lager.Data{"backend": newActiveBackend.AsJSON()})
 				}
 
 			case <-stopChan:

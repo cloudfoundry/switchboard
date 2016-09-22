@@ -83,7 +83,7 @@ func main() {
 		},
 		{
 			Name:   "api",
-			Runner: apirunner.NewRunner(rootConfig.API.Port, handler, logger),
+			Runner: apirunner.NewRunner(rootConfig.API.Port, handler),
 		},
 		{
 			Name:   "monitor",

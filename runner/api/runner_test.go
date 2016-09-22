@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/cloudfoundry-incubator/switchboard/runner/api"
-	"github.com/pivotal-golang/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,8 +15,7 @@ import (
 var _ = Describe("APIRunner", func() {
 	It("shuts down gracefully when signalled", func() {
 		apiPort := 10000 + GinkgoParallelNode()
-		logger := lagertest.NewTestLogger("APIRunner Test")
-		apiRunner := api.NewRunner(uint(apiPort), nil, logger)
+		apiRunner := api.NewRunner(uint(apiPort), nil)
 		apiProcess := ifrit.Invoke(apiRunner)
 		apiProcess.Signal(os.Kill)
 		Eventually(apiProcess.Wait()).Should(Receive())

@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/switchboard/runner/health"
-	"github.com/pivotal-golang/lager/lagertest"
+
+	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,8 +19,7 @@ var _ = Describe("HealthRunner", func() {
 
 	var (
 		healthPort     int
-		logger         *lagertest.TestLogger
-		healthRunner   health.Runner
+		healthRunner   ifrit.Runner
 		healthProcess  ifrit.Process
 		startupTimeout = 5 * time.Second
 	)
@@ -28,8 +28,7 @@ var _ = Describe("HealthRunner", func() {
 
 		healthPort = 10000 + GinkgoParallelNode()
 
-		logger = lagertest.NewTestLogger("HealthRunner Test")
-		healthRunner = health.NewRunner(uint(healthPort), logger)
+		healthRunner = health.NewRunner(uint(healthPort))
 		healthProcess = ifrit.Invoke(healthRunner)
 		isReady := healthProcess.Ready()
 		Eventually(isReady, startupTimeout).Should(BeClosed(), "Error starting Health Runner")
@@ -48,6 +47,16 @@ var _ = Describe("HealthRunner", func() {
 
 			err = conn.Close()
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("accepts HTTP GET connections on / on the health port", func() {
+			req, err := http.NewRequest("GET", fmt.Sprintf("http://127.0.0.1:%d", healthPort), nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			res, err := http.DefaultClient.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(res.StatusCode).To(Equal(200))
 		})
 	})
 

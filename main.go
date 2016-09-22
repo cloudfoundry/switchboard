@@ -94,7 +94,7 @@ func main() {
 	if rootConfig.HealthPort != rootConfig.API.Port {
 		members = append(members, grouper.Member{
 			Name:   "health",
-			Runner: health.NewRunner(rootConfig.HealthPort, logger),
+			Runner: health.NewRunner(rootConfig.HealthPort),
 		})
 	}
 

@@ -60,7 +60,7 @@ func (l Logger) Wrap(next http.Handler) http.Handler {
 				"StatusCode": loggingResponseWriter.statusCode,
 			}
 
-			l.logger.Info("", lager.Data{
+			l.logger.Debug("", lager.Data{
 				"request":  requestData,
 				"response": responseData,
 			})

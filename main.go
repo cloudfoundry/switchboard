@@ -56,7 +56,7 @@ func main() {
 	}
 
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
-	arpManager := monitor.NewArmManager(logger)
+	arpManager := monitor.NewArmManager(new(monitor.ExecCmdRunner), logger)
 
 	bridgeActiveBackendChan := make(chan *domain.Backend)
 	clusterAPIActiveBackendChan := make(chan *domain.Backend)

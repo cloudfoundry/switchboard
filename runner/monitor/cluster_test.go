@@ -45,7 +45,7 @@ var _ = Describe("Cluster", func() {
 
 		logger = lagertest.NewTestLogger("Cluster test")
 		fakeArpManager = new(monitorfakes.FakeArpManager)
-		fakeArpManager.ClearCacheReturns(nil)
+		fakeArpManager.RemoveEntryReturns(nil)
 
 		backend1 = domain.NewBackend(
 			"backend-1",
@@ -289,7 +289,7 @@ var _ = Describe("Cluster", func() {
 			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
 				cluster.Monitor(stopMonitoringChan)
 
-				Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
+				Consistently(fakeArpManager.RemoveEntryCallCount, healthcheckTimeout*2).Should(BeZero())
 			})
 		})
 
@@ -321,8 +321,8 @@ var _ = Describe("Cluster", func() {
 				It("clears the arp cache after ArpFlushInterval has elapsed", func() {
 					cluster.Monitor(stopMonitoringChan)
 
-					Eventually(fakeArpManager.ClearCacheCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
-					Expect(fakeArpManager.ClearCacheArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
+					Eventually(fakeArpManager.RemoveEntryCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.RemoveEntry to be called at least once")
+					Expect(fakeArpManager.RemoveEntryArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
 				})
 			})
 		})

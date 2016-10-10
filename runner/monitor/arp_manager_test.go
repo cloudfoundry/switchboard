@@ -25,11 +25,11 @@ var _ = Describe("ArpManager", func() {
 		logger = lagertest.NewTestLogger("ArpManager test")
 	})
 
-	Describe("ClearCache", func() {
+	Describe("RemoveEntry", func() {
 		It("deletes the entry", func() {
 			runner.RunReturns([]byte{}, nil)
 			arp = NewArpManager(runner, logger)
-			err := arp.ClearCache("192.0.2.0")
+			err := arp.RemoveEntry("192.0.2.0")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(runner.RunCallCount()).To(Equal(1))
@@ -43,7 +43,7 @@ var _ = Describe("ArpManager", func() {
 					[]byte("SIOCDARP(dontpub): Operation not permitted"),
 					errors.New("exit status 255"))
 				arp = NewArpManager(runner, logger)
-				err := arp.ClearCache("192.0.2.0")
+				err := arp.RemoveEntry("192.0.2.0")
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("failed to delete arp entry: OUTPUT=SIOCDARP(dontpub): " +
 					"Operation not permitted, ERROR=exit status 255"))

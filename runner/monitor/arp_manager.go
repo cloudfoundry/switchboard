@@ -10,7 +10,7 @@ import (
 
 //go:generate counterfeiter . ArpManager
 type ArpManager interface {
-	ClearCache(ip string) error
+	RemoveEntry(ip string) error
 }
 
 //go:generate counterfeiter . CmdRunner
@@ -36,7 +36,7 @@ func NewArpManager(runner CmdRunner, logger lager.Logger) ArpManager {
 	}
 }
 
-func (a ArpManagerCmd) ClearCache(ip string) error {
+func (a ArpManagerCmd) RemoveEntry(ip string) error {
 	output, err := a.runner.Run("/usr/sbin/arp", "-d", ip)
 
 	if err != nil {

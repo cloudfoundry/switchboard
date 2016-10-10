@@ -8,47 +8,47 @@ import (
 )
 
 type FakeArpManager struct {
-	ClearCacheStub        func(ip string) error
-	clearCacheMutex       sync.RWMutex
-	clearCacheArgsForCall []struct {
+	RemoveEntryStub        func(ip string) error
+	removeEntryMutex       sync.RWMutex
+	removeEntryArgsForCall []struct {
 		ip string
 	}
-	clearCacheReturns struct {
+	removeEntryReturns struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeArpManager) ClearCache(ip string) error {
-	fake.clearCacheMutex.Lock()
-	fake.clearCacheArgsForCall = append(fake.clearCacheArgsForCall, struct {
+func (fake *FakeArpManager) RemoveEntry(ip string) error {
+	fake.removeEntryMutex.Lock()
+	fake.removeEntryArgsForCall = append(fake.removeEntryArgsForCall, struct {
 		ip string
 	}{ip})
-	fake.recordInvocation("ClearCache", []interface{}{ip})
-	fake.clearCacheMutex.Unlock()
-	if fake.ClearCacheStub != nil {
-		return fake.ClearCacheStub(ip)
+	fake.recordInvocation("RemoveEntry", []interface{}{ip})
+	fake.removeEntryMutex.Unlock()
+	if fake.RemoveEntryStub != nil {
+		return fake.RemoveEntryStub(ip)
 	} else {
-		return fake.clearCacheReturns.result1
+		return fake.removeEntryReturns.result1
 	}
 }
 
-func (fake *FakeArpManager) ClearCacheCallCount() int {
-	fake.clearCacheMutex.RLock()
-	defer fake.clearCacheMutex.RUnlock()
-	return len(fake.clearCacheArgsForCall)
+func (fake *FakeArpManager) RemoveEntryCallCount() int {
+	fake.removeEntryMutex.RLock()
+	defer fake.removeEntryMutex.RUnlock()
+	return len(fake.removeEntryArgsForCall)
 }
 
-func (fake *FakeArpManager) ClearCacheArgsForCall(i int) string {
-	fake.clearCacheMutex.RLock()
-	defer fake.clearCacheMutex.RUnlock()
-	return fake.clearCacheArgsForCall[i].ip
+func (fake *FakeArpManager) RemoveEntryArgsForCall(i int) string {
+	fake.removeEntryMutex.RLock()
+	defer fake.removeEntryMutex.RUnlock()
+	return fake.removeEntryArgsForCall[i].ip
 }
 
-func (fake *FakeArpManager) ClearCacheReturns(result1 error) {
-	fake.ClearCacheStub = nil
-	fake.clearCacheReturns = struct {
+func (fake *FakeArpManager) RemoveEntryReturns(result1 error) {
+	fake.RemoveEntryStub = nil
+	fake.removeEntryReturns = struct {
 		result1 error
 	}{result1}
 }
@@ -56,8 +56,8 @@ func (fake *FakeArpManager) ClearCacheReturns(result1 error) {
 func (fake *FakeArpManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.clearCacheMutex.RLock()
-	defer fake.clearCacheMutex.RUnlock()
+	fake.removeEntryMutex.RLock()
+	defer fake.removeEntryMutex.RUnlock()
 	return fake.invocations
 }
 

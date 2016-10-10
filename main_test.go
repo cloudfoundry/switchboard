@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 	"github.com/tedsuo/ifrit/grouper"
+	"github.com/tedsuo/ifrit/sigmon"
 )
 
 type Response struct {
@@ -37,18 +39,18 @@ type Response struct {
 	Message      string
 }
 
-func allowTraffic(allow bool) {
+func allowTraffic(allow bool, port uint) {
 	var url string
 	if allow {
 		url = fmt.Sprintf(
 			"http://localhost:%d/v0/cluster?trafficEnabled=%t",
-			switchboardAPIPort,
+			port,
 			allow,
 		)
 	} else {
 		url = fmt.Sprintf(
 			"http://localhost:%d/v0/cluster?trafficEnabled=%t&message=%s",
-			switchboardAPIPort,
+			port,
 			allow,
 			"main%20test%20is%20disabling%20traffic",
 		)
@@ -142,15 +144,85 @@ var _ = Describe("Switchboard", func() {
 		initialActiveBackend, initialInactiveBackend config.Backend
 		healthcheckRunners                           []*dummies.HealthcheckRunner
 		healthcheckWaitDuration                      time.Duration
+
+		proxyPort               uint
+		switchboardAPIPort      uint
+		switchboardProfilerPort uint
+		switchboardHealthPort   uint
+		backends                []config.Backend
+		rootConfig              config.Config
+		proxyConfig             config.Proxy
+		apiConfig               config.API
+		profilingConfig         config.Profiling
+		pidFile                 string
+		staticDir               string
 	)
 
 	BeforeEach(func() {
-		initConfig()
+		tempDir, err := ioutil.TempDir(os.TempDir(), "switchboard")
+		Expect(err).NotTo(HaveOccurred())
+
+		testDir := getDirOfCurrentFile()
+		staticDir = filepath.Join(testDir, "static")
+
+		pidFileFile, _ := ioutil.TempFile(tempDir, "switchboard.pid")
+		pidFileFile.Close()
+		pidFile = pidFileFile.Name()
+		os.Remove(pidFile)
+
+		proxyPort = uint(39900 + GinkgoParallelNode())
+		switchboardAPIPort = uint(39000 + GinkgoParallelNode())
+		switchboardProfilerPort = uint(6060 + GinkgoParallelNode())
+		switchboardHealthPort = uint(6160 + GinkgoParallelNode())
+
+		backend1 := config.Backend{
+			Host:           "localhost",
+			Port:           uint(45000 + GinkgoParallelNode()),
+			StatusPort:     uint(45500 + GinkgoParallelNode()),
+			StatusEndpoint: "galera_healthcheck",
+			Name:           "backend-0",
+		}
+
+		backend2 := config.Backend{
+			Host:           "localhost",
+			Port:           uint(46000 + GinkgoParallelNode()),
+			StatusPort:     uint(46500 + GinkgoParallelNode()),
+			StatusEndpoint: "galera_healthcheck",
+			Name:           "backend-1",
+		}
+
+		backends = []config.Backend{backend1, backend2}
+
+		proxyConfig = config.Proxy{
+			Backends:                 backends,
+			HealthcheckTimeoutMillis: 500,
+			Port: proxyPort,
+		}
+		apiConfig = config.API{
+			Port:     switchboardAPIPort,
+			Username: "username",
+			Password: "password",
+		}
+
+		profilingConfig = config.Profiling{
+			Enabled: true,
+			Port:    switchboardProfilerPort,
+		}
+
+		rootConfig = config.Config{
+			Proxy:      proxyConfig,
+			API:        apiConfig,
+			Profiling:  profilingConfig,
+			HealthPort: switchboardHealthPort,
+			PidFile:    pidFile,
+			StaticDir:  staticDir,
+		}
 		healthcheckWaitDuration = 3 * proxyConfig.HealthcheckTimeout()
 	})
 
 	JustBeforeEach(func() {
-		writeConfig()
+		b, err := json.Marshal(rootConfig)
+		Expect(err).NotTo(HaveOccurred())
 
 		healthcheckRunners = []*dummies.HealthcheckRunner{
 			dummies.NewHealthcheckRunner(backends[0]),
@@ -161,7 +233,7 @@ var _ = Describe("Switchboard", func() {
 		switchboardRunner := ginkgomon.New(ginkgomon.Config{
 			Command: exec.Command(
 				switchboardBinPath,
-				fmt.Sprintf("-configPath=%s", configPath),
+				fmt.Sprintf("-config=%s", string(b)),
 				fmt.Sprintf("-logLevel=%s", logLevel),
 			),
 			Name:              fmt.Sprintf("switchboard"),
@@ -176,11 +248,11 @@ var _ = Describe("Switchboard", func() {
 			{Name: "healthcheck-1", Runner: healthcheckRunners[1]},
 			{Name: "switchboard", Runner: switchboardRunner},
 		})
-		process = ifrit.Invoke(group)
+		process = ifrit.Invoke(sigmon.New(group))
 	})
 
 	AfterEach(func() {
-		ginkgomon.Kill(process)
+		ginkgomon.Interrupt(process, 5*time.Second)
 	})
 
 	Context("When consul is not configured", func() {
@@ -647,7 +719,7 @@ var _ = Describe("Switchboard", func() {
 						Expect(err).ToNot(HaveOccurred())
 						Expect(dataWhileHealthy.Message).To(Equal("data while healthy"))
 
-						allowTraffic(false)
+						allowTraffic(false, switchboardAPIPort)
 
 						Eventually(func() error {
 							_, err := sendData(conn, "data when unhealthy")
@@ -656,7 +728,7 @@ var _ = Describe("Switchboard", func() {
 					})
 
 					It("severs new connections", func() {
-						allowTraffic(false)
+						allowTraffic(false, switchboardAPIPort)
 						Eventually(func() error {
 
 							conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
@@ -671,8 +743,8 @@ var _ = Describe("Switchboard", func() {
 					})
 
 					It("permits new connections again after re-enabling traffic", func() {
-						allowTraffic(false)
-						allowTraffic(true)
+						allowTraffic(false, switchboardAPIPort)
+						allowTraffic(true, switchboardAPIPort)
 
 						Eventually(func() error {
 							var err error
@@ -776,7 +848,7 @@ var _ = Describe("Switchboard", func() {
 			})
 
 			AfterEach(func() {
-				ginkgomon.Kill(competingSwitchboardLockProcess)
+				ginkgomon.Interrupt(competingSwitchboardLockProcess, 5*time.Second)
 			})
 
 			It("waits for the lock to become available", func() {

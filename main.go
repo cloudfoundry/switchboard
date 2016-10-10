@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -24,8 +23,7 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
-
-	"time"
+	"github.com/tedsuo/ifrit/sigmon"
 )
 
 func main() {
@@ -139,14 +137,8 @@ func main() {
 		members = append(members, grouper.Member{"registration", registrationRunner})
 	}
 
-	group := grouper.NewOrdered(os.Kill, members)
-
-	process := ifrit.Invoke(group)
-
-	err = waitUntilReady(process, logger)
-	if err != nil {
-		logger.Fatal("Error starting switchboard", err, lager.Data{"proxyConfig": rootConfig.Proxy})
-	}
+	group := grouper.NewOrdered(os.Interrupt, members)
+	process := ifrit.Invoke(sigmon.New(group))
 
 	logger.Info("Proxy started", lager.Data{"proxyConfig": rootConfig.Proxy})
 
@@ -157,24 +149,6 @@ func main() {
 	err = <-process.Wait()
 	if err != nil {
 		logger.Fatal("Switchboard exited unexpectedly", err, lager.Data{"proxyConfig": rootConfig.Proxy})
-	}
-}
-
-func waitUntilReady(process ifrit.Process, logger lager.Logger) error {
-	//we could not find a reliable way for ifrit to report that all processes
-	//were ready without error, so we opted to simply report as ready if no errors
-	//were thrown within a timeout
-	ready := time.After(5 * time.Second)
-	select {
-	case <-ready:
-		logger.Info("All child processes are ready")
-		return nil
-	case err := <-process.Wait():
-		if err == nil {
-			//sometimes process will exit early, but will return a nil error
-			err = errors.New("Child process exited before becoming ready")
-		}
-		return err
 	}
 }
 

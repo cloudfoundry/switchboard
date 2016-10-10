@@ -169,7 +169,7 @@ var _ = Describe("Switchboard", func() {
 			StartCheckTimeout: startupTimeout,
 		})
 
-		group := grouper.NewParallel(os.Interrupt, grouper.Members{
+		group := grouper.NewOrdered(os.Interrupt, grouper.Members{
 			{Name: "backend-0", Runner: dummies.NewBackendRunner(0, backends[0])},
 			{Name: "backend-1", Runner: dummies.NewBackendRunner(1, backends[1])},
 			{Name: "healthcheck-0", Runner: healthcheckRunners[0]},
@@ -187,18 +187,20 @@ var _ = Describe("Switchboard", func() {
 		Context("and switchboard starts successfully", func() {
 			JustBeforeEach(func() {
 				var (
-					err  error
-					conn net.Conn
+					err      error
+					conn     net.Conn
+					response Response
 				)
 
 				Eventually(func() error {
 					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
+					if err != nil {
+						return err
+					}
+					defer conn.Close()
+					response, err = sendData(conn, "detect active")
 					return err
 				}, startupTimeout).Should(Succeed())
-				defer conn.Close()
-
-				response, err := sendData(conn, "detect active")
-				Expect(err).NotTo(HaveOccurred())
 
 				initialActiveBackend = backends[response.BackendIndex]
 				initialInactiveBackend = backends[(response.BackendIndex+1)%2]

@@ -216,6 +216,19 @@ var _ = Describe("Switchboard", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				})
+
+				Context("Profiling is disabled", func() {
+					BeforeEach(func() {
+						rootConfig.Profiling.Enabled = false
+					})
+
+					It("does not bring up a pprof server", func() {
+						url := fmt.Sprintf("http://localhost:%d/debug/pprof/", switchboardProfilerPort)
+						_, err := http.Get(url)
+
+						Expect(err).To(MatchError(ContainSubstring("connection refused")))
+					})
+				})
 			})
 
 			Describe("Health", func() {

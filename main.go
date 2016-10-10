@@ -40,8 +40,15 @@ func main() {
 	}
 
 	go func() {
-		logger.Info(fmt.Sprintf("Starting profiling server on port %d", rootConfig.ProfilerPort))
-		err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", rootConfig.ProfilerPort), nil)
+		if !rootConfig.Profiling.Enabled {
+			logger.Info("Profiling disabled")
+			return
+		}
+
+		logger.Info("Starting profiling server", lager.Data{
+			"port": rootConfig.Profiling.Port,
+		})
+		err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", rootConfig.Profiling.Port), nil)
 		if err != nil {
 			logger.Error("profiler failed with error", err)
 		}

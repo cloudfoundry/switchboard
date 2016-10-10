@@ -36,6 +36,7 @@ var (
 	rootConfig              config.Config
 	proxyConfig             config.Proxy
 	apiConfig               config.API
+	profilingConfig		config.Profiling
 	pidFile                 string
 	tempDir                 string
 	staticDir               string
@@ -94,13 +95,19 @@ func initConfig() {
 		Username: "username",
 		Password: "password",
 	}
+
+	profilingConfig = config.Profiling{
+		Enabled: true,
+		Port:    switchboardProfilerPort,
+	}
+
 	rootConfig = config.Config{
-		Proxy:        proxyConfig,
-		API:          apiConfig,
-		ProfilerPort: switchboardProfilerPort,
-		HealthPort:   switchboardHealthPort,
-		PidFile:      pidFile,
-		StaticDir:    staticDir,
+		Proxy:      proxyConfig,
+		API:        apiConfig,
+		Profiling:  profilingConfig,
+		HealthPort: switchboardHealthPort,
+		PidFile:    pidFile,
+		StaticDir:  staticDir,
 	}
 }
 

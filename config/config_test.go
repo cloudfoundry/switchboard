@@ -52,7 +52,10 @@ var _ = Describe("Config", func() {
 						}
 					]
 				},
-				"ProfilerPort": 6060,
+				"Profiling": {
+					"Enabled": true,
+					"Port": 6060
+				},
 				"HealthPort": 9200,
 				"StaticDir": "fake-path",
 				"PidFile": "fake-pid-path"
@@ -132,11 +135,6 @@ var _ = Describe("Config", func() {
 
 		It("returns an error if Proxy.Backends.Name is blank", func() {
 			err := test_helpers.IsRequiredField(rootConfig, "Proxy.Backends.Name")
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("returns an error if ProfilerPort is blank", func() {
-			err := test_helpers.IsRequiredField(rootConfig, "ProfilerPort")
 			Expect(err).ToNot(HaveOccurred())
 		})
 

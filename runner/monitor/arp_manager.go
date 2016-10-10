@@ -38,7 +38,7 @@ func NewArmManager(runner CmdRunner, logger lager.Logger) ArpManager {
 }
 
 func (a ArpManagerCmd) ClearCache(ip string) error {
-	output, err := a.runner.Run("arp", "-d", ip)
+	output, err := a.runner.Run("/usr/sbin/arp", "-d", ip)
 
 	if err != nil {
 		return errors.New(fmt.Sprintf("failed to delete arp entry: OUTPUT=%s, ERROR=%s", output, err.Error()))
@@ -48,7 +48,7 @@ func (a ArpManagerCmd) ClearCache(ip string) error {
 }
 
 func (a ArpManagerCmd) IsCached(ip string) bool {
-	output, err := a.runner.Run("arp", ip)
+	output, err := a.runner.Run("/usr/sbin/arp", ip)
 	if err != nil {
 		a.logger.Info(fmt.Sprintf("arp didnt find %s in cache, skipping cache invalidation", ip), lager.Data{
 			"err":    err.Error(),

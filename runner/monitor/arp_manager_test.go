@@ -35,7 +35,7 @@ var _ = Describe("ArpManager", func() {
 
 				Expect(runner.RunCallCount()).To(Equal(1))
 				cmd, args := runner.RunArgsForCall(0)
-				Expect(cmd).To(Equal("arp"))
+				Expect(cmd).To(Equal("/usr/sbin/arp"))
 				Expect(args).To(Equal([]string{"192.0.2.0"}))
 			})
 		})
@@ -49,7 +49,7 @@ var _ = Describe("ArpManager", func() {
 
 				Expect(runner.RunCallCount()).To(Equal(1))
 				cmd, args := runner.RunArgsForCall(0)
-				Expect(cmd).To(Equal("arp"))
+				Expect(cmd).To(Equal("/usr/sbin/arp"))
 				Expect(args).To(Equal([]string{"192.0.2.0"}))
 			})
 		})
@@ -64,7 +64,7 @@ var _ = Describe("ArpManager", func() {
 
 			Expect(runner.RunCallCount()).To(Equal(1))
 			cmd, args := runner.RunArgsForCall(0)
-			Expect(cmd).To(Equal("arp"))
+			Expect(cmd).To(Equal("/usr/sbin/arp"))
 			Expect(args).To(Equal([]string{"-d", "192.0.2.0"}))
 		})
 		Context("when the entry cannot be deleted", func() {
@@ -80,7 +80,7 @@ var _ = Describe("ArpManager", func() {
 
 				Expect(runner.RunCallCount()).To(Equal(1))
 				cmd, args := runner.RunArgsForCall(0)
-				Expect(cmd).To(Equal("arp"))
+				Expect(cmd).To(Equal("/usr/sbin/arp"))
 				Expect(args).To(Equal([]string{"-d", "192.0.2.0"}))
 			})
 		})

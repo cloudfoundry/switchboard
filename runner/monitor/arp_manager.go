@@ -30,7 +30,7 @@ type ArpManagerCmd struct {
 	logger lager.Logger
 }
 
-func NewArmManager(runner CmdRunner, logger lager.Logger) ArpManager {
+func NewArpManager(runner CmdRunner, logger lager.Logger) ArpManager {
 	return &ArpManagerCmd{
 		runner: runner,
 		logger: logger,

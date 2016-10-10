@@ -29,7 +29,7 @@ var _ = Describe("ArpManager", func() {
 		Context("when the IP address is found in the ARP cache", func() {
 			It("returns true", func() {
 				runner.RunReturns([]byte{}, nil)
-				arp = NewArmManager(runner, logger)
+				arp = NewArpManager(runner, logger)
 				cached := arp.IsCached("192.0.2.0")
 				Expect(cached).To(BeTrue())
 
@@ -43,7 +43,7 @@ var _ = Describe("ArpManager", func() {
 		Context("when the IP address is not found in the ARP cache", func() {
 			It("returns false", func() {
 				runner.RunReturns([]byte("192.0.2.0 (192.0.2.0) -- no entry"), errors.New("exit status 1"))
-				arp = NewArmManager(runner, logger)
+				arp = NewArpManager(runner, logger)
 				cached := arp.IsCached("192.0.2.0")
 				Expect(cached).To(BeFalse())
 
@@ -58,7 +58,7 @@ var _ = Describe("ArpManager", func() {
 	Describe("ClearCache", func() {
 		It("deletes the entry", func() {
 			runner.RunReturns([]byte{}, nil)
-			arp = NewArmManager(runner, logger)
+			arp = NewArpManager(runner, logger)
 			err := arp.ClearCache("192.0.2.0")
 			Expect(err).ToNot(HaveOccurred())
 
@@ -72,7 +72,7 @@ var _ = Describe("ArpManager", func() {
 				runner.RunReturns(
 					[]byte("SIOCDARP(dontpub): Operation not permitted"),
 					errors.New("exit status 255"))
-				arp = NewArmManager(runner, logger)
+				arp = NewArpManager(runner, logger)
 				err := arp.ClearCache("192.0.2.0")
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("failed to delete arp entry: OUTPUT=SIOCDARP(dontpub): " +

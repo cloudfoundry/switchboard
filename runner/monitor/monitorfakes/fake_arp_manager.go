@@ -16,14 +16,6 @@ type FakeArpManager struct {
 	clearCacheReturns struct {
 		result1 error
 	}
-	IsCachedStub        func(ip string) bool
-	isCachedMutex       sync.RWMutex
-	isCachedArgsForCall []struct {
-		ip string
-	}
-	isCachedReturns struct {
-		result1 bool
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -61,46 +53,11 @@ func (fake *FakeArpManager) ClearCacheReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeArpManager) IsCached(ip string) bool {
-	fake.isCachedMutex.Lock()
-	fake.isCachedArgsForCall = append(fake.isCachedArgsForCall, struct {
-		ip string
-	}{ip})
-	fake.recordInvocation("IsCached", []interface{}{ip})
-	fake.isCachedMutex.Unlock()
-	if fake.IsCachedStub != nil {
-		return fake.IsCachedStub(ip)
-	} else {
-		return fake.isCachedReturns.result1
-	}
-}
-
-func (fake *FakeArpManager) IsCachedCallCount() int {
-	fake.isCachedMutex.RLock()
-	defer fake.isCachedMutex.RUnlock()
-	return len(fake.isCachedArgsForCall)
-}
-
-func (fake *FakeArpManager) IsCachedArgsForCall(i int) string {
-	fake.isCachedMutex.RLock()
-	defer fake.isCachedMutex.RUnlock()
-	return fake.isCachedArgsForCall[i].ip
-}
-
-func (fake *FakeArpManager) IsCachedReturns(result1 bool) {
-	fake.IsCachedStub = nil
-	fake.isCachedReturns = struct {
-		result1 bool
-	}{result1}
-}
-
 func (fake *FakeArpManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.clearCacheMutex.RLock()
 	defer fake.clearCacheMutex.RUnlock()
-	fake.isCachedMutex.RLock()
-	defer fake.isCachedMutex.RUnlock()
 	return fake.invocations
 }
 

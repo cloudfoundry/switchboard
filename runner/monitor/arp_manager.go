@@ -11,7 +11,6 @@ import (
 //go:generate counterfeiter . ArpManager
 type ArpManager interface {
 	ClearCache(ip string) error
-	IsCached(ip string) bool
 }
 
 //go:generate counterfeiter . CmdRunner
@@ -44,19 +43,5 @@ func (a ArpManagerCmd) ClearCache(ip string) error {
 		return errors.New(fmt.Sprintf("failed to delete arp entry: OUTPUT=%s, ERROR=%s", output, err.Error()))
 	} else {
 		return nil
-	}
-}
-
-func (a ArpManagerCmd) IsCached(ip string) bool {
-	output, err := a.runner.Run("/usr/sbin/arp", ip)
-	if err != nil {
-		a.logger.Info(fmt.Sprintf("arp didnt find %s in cache, skipping cache invalidation", ip), lager.Data{
-			"err":    err.Error(),
-			"output": output,
-		})
-		return false
-	} else {
-		a.logger.Info(fmt.Sprintf("arp found %s in cache", ip))
-		return true
 	}
 }

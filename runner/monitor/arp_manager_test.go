@@ -25,36 +25,6 @@ var _ = Describe("ArpManager", func() {
 		logger = lagertest.NewTestLogger("ArpManager test")
 	})
 
-	Describe("IsCached", func() {
-		Context("when the IP address is found in the ARP cache", func() {
-			It("returns true", func() {
-				runner.RunReturns([]byte{}, nil)
-				arp = NewArpManager(runner, logger)
-				cached := arp.IsCached("192.0.2.0")
-				Expect(cached).To(BeTrue())
-
-				Expect(runner.RunCallCount()).To(Equal(1))
-				cmd, args := runner.RunArgsForCall(0)
-				Expect(cmd).To(Equal("/usr/sbin/arp"))
-				Expect(args).To(Equal([]string{"192.0.2.0"}))
-			})
-		})
-
-		Context("when the IP address is not found in the ARP cache", func() {
-			It("returns false", func() {
-				runner.RunReturns([]byte("192.0.2.0 (192.0.2.0) -- no entry"), errors.New("exit status 1"))
-				arp = NewArpManager(runner, logger)
-				cached := arp.IsCached("192.0.2.0")
-				Expect(cached).To(BeFalse())
-
-				Expect(runner.RunCallCount()).To(Equal(1))
-				cmd, args := runner.RunArgsForCall(0)
-				Expect(cmd).To(Equal("/usr/sbin/arp"))
-				Expect(args).To(Equal([]string{"192.0.2.0"}))
-			})
-		})
-	})
-
 	Describe("ClearCache", func() {
 		It("deletes the entry", func() {
 			runner.RunReturns([]byte{}, nil)

@@ -240,11 +240,9 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 	if healthMonitor.Counters.Should("clearArp") {
 		backendHost := backend.AsJSON().Host
 
-		if c.arpManager.IsCached(backendHost) {
-			err := c.arpManager.ClearCache(backendHost)
-			if err != nil {
-				c.logger.Error("Failed to clear arp cache", err)
-			}
+		err := c.arpManager.ClearCache(backendHost)
+		if err != nil {
+			c.logger.Error("Failed to clear arp cache", err)
 		}
 	}
 }

@@ -318,33 +318,11 @@ var _ = Describe("Cluster", func() {
 			})
 
 			Context("and the IP is in the ARP cache", func() {
-				BeforeEach(func() {
-					fakeArpManager.IsCachedStub = func(ip string) bool {
-						if ip == backend2.AsJSON().Host {
-							return true
-						} else {
-							return false
-						}
-					}
-				})
-
 				It("clears the arp cache after ArpFlushInterval has elapsed", func() {
 					cluster.Monitor(stopMonitoringChan)
 
 					Eventually(fakeArpManager.ClearCacheCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.ClearCache to be called at least once")
 					Expect(fakeArpManager.ClearCacheArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
-				})
-			})
-
-			Context("and the IP is not in the ARP cache", func() {
-				BeforeEach(func() {
-					fakeArpManager.IsCachedReturns(false)
-				})
-
-				It("does not clear arp cache", func() {
-					cluster.Monitor(stopMonitoringChan)
-
-					Consistently(fakeArpManager.ClearCacheCallCount, healthcheckTimeout*2).Should(BeZero())
 				})
 			})
 		})

@@ -1,8 +1,8 @@
 package domain
 
 import (
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/switchboard/config"
-	"github.com/pivotal-golang/lager"
 )
 
 var BackendProvider = NewBackend

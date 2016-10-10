@@ -3,7 +3,7 @@ package monitor
 import (
 	"os"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . Monitor

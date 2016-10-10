@@ -36,7 +36,7 @@ var (
 	rootConfig              config.Config
 	proxyConfig             config.Proxy
 	apiConfig               config.API
-	profilingConfig		config.Profiling
+	profilingConfig         config.Profiling
 	pidFile                 string
 	tempDir                 string
 	staticDir               string
@@ -114,6 +114,7 @@ func initConfig() {
 func writeConfig() {
 	fileToWrite, err := os.Create(configPath)
 	Expect(err).NotTo(HaveOccurred())
+	defer fileToWrite.Close()
 
 	b, err := yaml.Marshal(rootConfig)
 	Expect(err).NotTo(HaveOccurred())

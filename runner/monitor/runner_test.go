@@ -3,11 +3,11 @@ package monitor_test
 import (
 	"os"
 
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit"
 )
 

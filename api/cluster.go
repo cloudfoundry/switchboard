@@ -6,7 +6,7 @@ import (
 	"net/http/httputil"
 	"strconv"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . ClusterManager

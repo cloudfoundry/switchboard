@@ -3,9 +3,9 @@ package middleware_test
 import (
 	"net/http"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
 
 	"github.com/cloudfoundry-incubator/switchboard/api/middleware"
 	"github.com/cloudfoundry-incubator/switchboard/api/middleware/fakes"

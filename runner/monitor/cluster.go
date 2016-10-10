@@ -12,9 +12,9 @@ import (
 
 	"encoding/json"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/galera-healthcheck/api"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/pivotal-golang/lager"
 )
 
 //go:generate counterfeiter . UrlGetter

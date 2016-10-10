@@ -16,11 +16,11 @@ import (
 
 	"strings"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	. "github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
 )
 
 const healthcheckTimeout = time.Second

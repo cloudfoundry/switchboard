@@ -9,18 +9,20 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/consul-migrate/migrator"
+	"github.com/armon/go-metrics/circonus"
+	"github.com/armon/go-metrics/datadog"
+	"github.com/hashicorp/consul/lib"
 	"github.com/hashicorp/consul/watch"
 	"github.com/hashicorp/go-checkpoint"
 	"github.com/hashicorp/go-syslog"
 	"github.com/hashicorp/logutils"
-	scada "github.com/hashicorp/scada-client"
+	scada "github.com/hashicorp/scada-client/scada"
 	"github.com/mitchellh/cli"
 )
 
@@ -38,6 +40,7 @@ type Command struct {
 	Revision          string
 	Version           string
 	VersionPrerelease string
+	HumanVersion      string
 	Ui                cli.Ui
 	ShutdownCh        <-chan struct{}
 	args              []string
@@ -48,6 +51,7 @@ type Command struct {
 	httpServers       []*HTTPServer
 	dnsServer         *DNSServer
 	scadaProvider     *scada.Provider
+	scadaHttp         *HTTPServer
 }
 
 // readConfig is responsible for setup of our configuration using
@@ -58,17 +62,22 @@ func (c *Command) readConfig() *Config {
 	var retryInterval string
 	var retryIntervalWan string
 	var dnsRecursors []string
+	var dev bool
+	var dcDeprecated string
 	cmdFlags := flag.NewFlagSet("agent", flag.ContinueOnError)
 	cmdFlags.Usage = func() { c.Ui.Output(c.Help()) }
 
 	cmdFlags.Var((*AppendSliceValue)(&configFiles), "config-file", "json file to read config from")
 	cmdFlags.Var((*AppendSliceValue)(&configFiles), "config-dir", "directory of json files to read")
 	cmdFlags.Var((*AppendSliceValue)(&dnsRecursors), "recursor", "address of an upstream DNS server")
+	cmdFlags.BoolVar(&dev, "dev", false, "development server mode")
 
 	cmdFlags.StringVar(&cmdConfig.LogLevel, "log-level", "", "log level")
 	cmdFlags.StringVar(&cmdConfig.NodeName, "node", "", "node name")
-	cmdFlags.StringVar(&cmdConfig.Datacenter, "dc", "", "node datacenter")
+	cmdFlags.StringVar(&dcDeprecated, "dc", "", "node datacenter (deprecated: use 'datacenter' instead)")
+	cmdFlags.StringVar(&cmdConfig.Datacenter, "datacenter", "", "node datacenter")
 	cmdFlags.StringVar(&cmdConfig.DataDir, "data-dir", "", "path to the data directory")
+	cmdFlags.BoolVar(&cmdConfig.EnableUi, "ui", false, "enable the built-in web UI")
 	cmdFlags.StringVar(&cmdConfig.UiDir, "ui-dir", "", "path to the web UI directory")
 	cmdFlags.StringVar(&cmdConfig.PidFile, "pid-file", "", "path to file to store PID")
 	cmdFlags.StringVar(&cmdConfig.EncryptKey, "encrypt", "", "gossip encryption key")
@@ -80,12 +89,15 @@ func (c *Command) readConfig() *Config {
 
 	cmdFlags.StringVar(&cmdConfig.ClientAddr, "client", "", "address to bind client listeners to (DNS, HTTP, HTTPS, RPC)")
 	cmdFlags.StringVar(&cmdConfig.BindAddr, "bind", "", "address to bind server listeners to")
+	cmdFlags.IntVar(&cmdConfig.Ports.HTTP, "http-port", 0, "http port to use")
+	cmdFlags.IntVar(&cmdConfig.Ports.DNS, "dns-port", 0, "DNS port to use")
 	cmdFlags.StringVar(&cmdConfig.AdvertiseAddr, "advertise", "", "address to advertise instead of bind addr")
 	cmdFlags.StringVar(&cmdConfig.AdvertiseAddrWan, "advertise-wan", "", "address to advertise on wan instead of bind or advertise addr")
 
 	cmdFlags.StringVar(&cmdConfig.AtlasInfrastructure, "atlas", "", "infrastructure name in Atlas")
 	cmdFlags.StringVar(&cmdConfig.AtlasToken, "atlas-token", "", "authentication token for Atlas")
 	cmdFlags.BoolVar(&cmdConfig.AtlasJoin, "atlas-join", false, "auto-join with Atlas")
+	cmdFlags.StringVar(&cmdConfig.AtlasEndpoint, "atlas-endpoint", "", "endpoint for Atlas integration")
 
 	cmdFlags.IntVar(&cmdConfig.Protocol, "protocol", -1, "protocol version")
 
@@ -132,7 +144,13 @@ func (c *Command) readConfig() *Config {
 		cmdConfig.RetryIntervalWan = dur
 	}
 
-	config := DefaultConfig()
+	var config *Config
+	if dev {
+		config = DevConfig()
+	} else {
+		config = DefaultConfig()
+	}
+
 	if len(configFiles) > 0 {
 		fileConfig, err := ReadConfigPaths(configFiles)
 		if err != nil {
@@ -150,16 +168,60 @@ func (c *Command) readConfig() *Config {
 	if config.NodeName == "" {
 		hostname, err := os.Hostname()
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error determining hostname: %s", err))
+			c.Ui.Error(fmt.Sprintf("Error determining node name: %s", err))
 			return nil
 		}
 		config.NodeName = hostname
 	}
+	config.NodeName = strings.TrimSpace(config.NodeName)
+	if config.NodeName == "" {
+		c.Ui.Error("Node name can not be empty")
+		return nil
+	}
+
+	// Make sure LeaveOnTerm and SkipLeaveOnInt are set to the right
+	// defaults based on the agent's mode (client or server).
+	if config.LeaveOnTerm == nil {
+		config.LeaveOnTerm = Bool(!config.Server)
+	}
+	if config.SkipLeaveOnInt == nil {
+		config.SkipLeaveOnInt = Bool(config.Server)
+	}
 
 	// Ensure we have a data directory
-	if config.DataDir == "" {
+	if config.DataDir == "" && !dev {
 		c.Ui.Error("Must specify data directory using -data-dir")
 		return nil
+	}
+
+	// Ensure all endpoints are unique
+	if err := config.verifyUniqueListeners(); err != nil {
+		c.Ui.Error(fmt.Sprintf("All listening endpoints must be unique: %s", err))
+		return nil
+	}
+
+	// Check the data dir for signs of an un-migrated Consul 0.5.x or older
+	// server. Consul refuses to start if this is present to protect a server
+	// with existing data from starting on a fresh data set.
+	if config.Server {
+		mdbPath := filepath.Join(config.DataDir, "mdb")
+		if _, err := os.Stat(mdbPath); !os.IsNotExist(err) {
+			if os.IsPermission(err) {
+				c.Ui.Error(fmt.Sprintf("CRITICAL: Permission denied for data folder at %q!", mdbPath))
+				c.Ui.Error("Consul will refuse to boot without access to this directory.")
+				c.Ui.Error("Please correct permissions and try starting again.")
+				return nil
+			}
+			c.Ui.Error(fmt.Sprintf("CRITICAL: Deprecated data folder found at %q!", mdbPath))
+			c.Ui.Error("Consul will refuse to boot with this directory present.")
+			c.Ui.Error("See https://www.consul.io/docs/upgrade-specific.html for more information.")
+			return nil
+		}
+	}
+
+	// Verify DNS settings
+	if config.DNSConfig.UDPAnswerLimit < 1 {
+		c.Ui.Error(fmt.Sprintf("dns_config.udp_answer_limit %d too low, must always be greater than zero", config.DNSConfig.UDPAnswerLimit))
 	}
 
 	if config.EncryptKey != "" {
@@ -177,6 +239,14 @@ func (c *Command) readConfig() *Config {
 				c.Ui.Error("WARNING: WAN keyring exists but -encrypt given, using keyring")
 			}
 		}
+	}
+
+	// Output a warning if the 'dc' flag has been used.
+	if dcDeprecated != "" {
+		c.Ui.Error("WARNING: the 'dc' flag has been deprecated. Use 'datacenter' instead")
+
+		// Making sure that we don't break previous versions.
+		config.Datacenter = dcDeprecated
 	}
 
 	// Ensure the datacenter is always lowercased. The DNS endpoints automatically
@@ -240,17 +310,56 @@ func (c *Command) readConfig() *Config {
 		c.Ui.Error("WARNING: Bootstrap mode enabled! Do not enable unless necessary")
 	}
 
-	// Warn if using windows as a server
-	if config.Server && runtime.GOOS == "windows" {
-		c.Ui.Error("WARNING: Windows is not recommended as a Consul server. Do not use in production.")
-	}
-
 	// Set the version info
 	config.Revision = c.Revision
 	config.Version = c.Version
 	config.VersionPrerelease = c.VersionPrerelease
 
 	return config
+}
+
+// verifyUniqueListeners checks to see if an address was used more than once in
+// the config
+func (config *Config) verifyUniqueListeners() error {
+	listeners := []struct {
+		host  string
+		port  int
+		descr string
+	}{
+		{config.Addresses.RPC, config.Ports.RPC, "RPC"},
+		{config.Addresses.DNS, config.Ports.DNS, "DNS"},
+		{config.Addresses.HTTP, config.Ports.HTTP, "HTTP"},
+		{config.Addresses.HTTPS, config.Ports.HTTPS, "HTTPS"},
+		{config.AdvertiseAddr, config.Ports.Server, "Server RPC"},
+		{config.AdvertiseAddr, config.Ports.SerfLan, "Serf LAN"},
+		{config.AdvertiseAddr, config.Ports.SerfWan, "Serf WAN"},
+	}
+
+	type key struct {
+		host string
+		port int
+	}
+	m := make(map[key]string, len(listeners))
+
+	for _, l := range listeners {
+		if l.host == "" {
+			l.host = "0.0.0.0"
+		} else if strings.HasPrefix(l.host, "unix") {
+			// Don't compare ports on unix sockets
+			l.port = 0
+		}
+		if l.host == "0.0.0.0" && l.port <= 0 {
+			continue
+		}
+
+		k := key{l.host, l.port}
+		v, ok := m[k]
+		if ok {
+			return fmt.Errorf("%s address already configured for %s", l.descr, v)
+		}
+		m[k] = l.descr
+	}
+	return nil
 }
 
 // setupLoggers is used to setup the logGate, logWriter, and our logOutput
@@ -345,20 +454,14 @@ func (c *Command) setupAgent(config *Config, logOutput io.Writer, logWriter *log
 	c.rpcServer = NewAgentRPC(agent, rpcListener, logOutput, logWriter)
 
 	// Enable the SCADA integration
-	var scadaList net.Listener
-	if config.AtlasInfrastructure != "" {
-		provider, list, err := NewProvider(config, logOutput)
-		if err != nil {
-			agent.Shutdown()
-			c.Ui.Error(fmt.Sprintf("Error starting SCADA connection: %s", err))
-			return err
-		}
-		c.scadaProvider = provider
-		scadaList = list
+	if err := c.setupScadaConn(config); err != nil {
+		agent.Shutdown()
+		c.Ui.Error(fmt.Sprintf("Error starting SCADA connection: %s", err))
+		return err
 	}
 
-	if config.Ports.HTTP > 0 || config.Ports.HTTPS > 0 || scadaList != nil {
-		servers, err := NewHTTPServers(agent, config, scadaList, logOutput)
+	if config.Ports.HTTP > 0 || config.Ports.HTTPS > 0 {
+		servers, err := NewHTTPServers(agent, config, logOutput)
 		if err != nil {
 			agent.Shutdown()
 			c.Ui.Error(fmt.Sprintf("Error starting http servers: %s", err))
@@ -404,7 +507,7 @@ func (c *Command) setupAgent(config *Config, logOutput io.Writer, logWriter *log
 
 		// Do an immediate check within the next 30 seconds
 		go func() {
-			time.Sleep(randomStagger(30 * time.Second))
+			time.Sleep(lib.RandomStagger(30 * time.Second))
 			c.checkpointResults(checkpoint.Check(updateParams))
 		}()
 	}
@@ -418,7 +521,7 @@ func (c *Command) checkpointResults(results *checkpoint.CheckResponse, err error
 		return
 	}
 	if results.Outdated {
-		c.Ui.Error(fmt.Sprintf("Newer Consul version available: %s", results.CurrentVersion))
+		c.Ui.Error(fmt.Sprintf("Newer Consul version available: %s (currently running: %s)", results.CurrentVersion, c.Version))
 	}
 	for _, alert := range results.Alerts {
 		switch alert.Level {
@@ -555,11 +658,6 @@ func (c *Command) Run(args []string) int {
 		return 1
 	}
 
-	// Check GOMAXPROCS
-	if runtime.GOMAXPROCS(0) == 1 {
-		c.Ui.Error("WARNING: It is highly recommended to set GOMAXPROCS higher than 1")
-	}
-
 	// Setup the log outputs
 	logGate, logWriter, logOutput := c.setupLoggers(config)
 	if logWriter == nil {
@@ -572,12 +670,13 @@ func (c *Command) Run(args []string) int {
 	*/
 	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 	metrics.DefaultInmemSignal(inm)
-	metricsConf := metrics.DefaultConfig(config.StatsitePrefix)
+	metricsConf := metrics.DefaultConfig(config.Telemetry.StatsitePrefix)
+	metricsConf.EnableHostname = !config.Telemetry.DisableHostname
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
-	if config.StatsiteAddr != "" {
-		sink, err := metrics.NewStatsiteSink(config.StatsiteAddr)
+	if config.Telemetry.StatsiteAddr != "" {
+		sink, err := metrics.NewStatsiteSink(config.Telemetry.StatsiteAddr)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Failed to start statsite sink. Got: %s", err))
 			return 1
@@ -586,12 +685,64 @@ func (c *Command) Run(args []string) int {
 	}
 
 	// Configure the statsd sink
-	if config.StatsdAddr != "" {
-		sink, err := metrics.NewStatsdSink(config.StatsdAddr)
+	if config.Telemetry.StatsdAddr != "" {
+		sink, err := metrics.NewStatsdSink(config.Telemetry.StatsdAddr)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Failed to start statsd sink. Got: %s", err))
 			return 1
 		}
+		fanout = append(fanout, sink)
+	}
+
+	// Configure the DogStatsd sink
+	if config.Telemetry.DogStatsdAddr != "" {
+		var tags []string
+
+		if config.Telemetry.DogStatsdTags != nil {
+			tags = config.Telemetry.DogStatsdTags
+		}
+
+		sink, err := datadog.NewDogStatsdSink(config.Telemetry.DogStatsdAddr, metricsConf.HostName)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Failed to start DogStatsd sink. Got: %s", err))
+			return 1
+		}
+		sink.SetTags(tags)
+		fanout = append(fanout, sink)
+	}
+
+	if config.Telemetry.CirconusAPIToken != "" || config.Telemetry.CirconusCheckSubmissionURL != "" {
+		cfg := &circonus.Config{}
+		cfg.Interval = config.Telemetry.CirconusSubmissionInterval
+		cfg.CheckManager.API.TokenKey = config.Telemetry.CirconusAPIToken
+		cfg.CheckManager.API.TokenApp = config.Telemetry.CirconusAPIApp
+		cfg.CheckManager.API.URL = config.Telemetry.CirconusAPIURL
+		cfg.CheckManager.Check.SubmissionURL = config.Telemetry.CirconusCheckSubmissionURL
+		cfg.CheckManager.Check.ID = config.Telemetry.CirconusCheckID
+		cfg.CheckManager.Check.ForceMetricActivation = config.Telemetry.CirconusCheckForceMetricActivation
+		cfg.CheckManager.Check.InstanceID = config.Telemetry.CirconusCheckInstanceID
+		cfg.CheckManager.Check.SearchTag = config.Telemetry.CirconusCheckSearchTag
+		cfg.CheckManager.Broker.ID = config.Telemetry.CirconusBrokerID
+		cfg.CheckManager.Broker.SelectTag = config.Telemetry.CirconusBrokerSelectTag
+
+		if cfg.CheckManager.API.TokenApp == "" {
+			cfg.CheckManager.API.TokenApp = "consul"
+		}
+
+		if cfg.CheckManager.Check.InstanceID == "" {
+			cfg.CheckManager.Check.InstanceID = fmt.Sprintf("%s:%s", config.NodeName, config.Datacenter)
+		}
+
+		if cfg.CheckManager.Check.SearchTag == "" {
+			cfg.CheckManager.Check.SearchTag = "service:consul"
+		}
+
+		sink, err := circonus.NewCirconusSink(cfg)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Failed to start Circonus sink. Got: %s", err))
+			return 1
+		}
+		sink.Start()
 		fanout = append(fanout, sink)
 	}
 
@@ -604,36 +755,6 @@ func (c *Command) Run(args []string) int {
 		metrics.NewGlobal(metricsConf, inm)
 	}
 
-	// If we are starting a consul 0.5.1+ server for the first time,
-	// and we have data from a previous Consul version, attempt to
-	// migrate the data from LMDB to BoltDB using the migrator utility.
-	if config.Server {
-		// If the data dir doesn't exist yet (first start), then don't
-		// attempt to migrate.
-		if _, err := os.Stat(config.DataDir); os.IsNotExist(err) {
-			goto AFTER_MIGRATE
-		}
-
-		m, err := migrator.New(config.DataDir)
-		if err != nil {
-			c.Ui.Error(err.Error())
-			return 1
-		}
-
-		c.Ui.Output("Starting raft data migration...")
-		start := time.Now()
-		migrated, err := m.Migrate()
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Failed to migrate raft data: %s", err))
-			return 1
-		}
-		if migrated {
-			duration := time.Now().Sub(start)
-			c.Ui.Output(fmt.Sprintf("Successfully migrated raft data in %s", duration))
-		}
-	}
-
-AFTER_MIGRATE:
 	// Create the agent
 	if err := c.setupAgent(config, logOutput, logWriter); err != nil {
 		return 1
@@ -648,9 +769,16 @@ AFTER_MIGRATE:
 	for _, server := range c.httpServers {
 		defer server.Shutdown()
 	}
-	if c.scadaProvider != nil {
-		defer c.scadaProvider.Shutdown()
-	}
+
+	// Check and shut down the SCADA listeners at the end
+	defer func() {
+		if c.scadaHttp != nil {
+			c.scadaHttp.Shutdown()
+		}
+		if c.scadaProvider != nil {
+			c.scadaProvider.Shutdown()
+		}
+	}()
 
 	// Join startup nodes if specified
 	if err := c.startupJoin(config); err != nil {
@@ -699,6 +827,7 @@ AFTER_MIGRATE:
 	c.agent.StartSync()
 
 	c.Ui.Output("Consul agent running!")
+	c.Ui.Info(fmt.Sprintf("       Version: '%s'", c.HumanVersion))
 	c.Ui.Info(fmt.Sprintf("     Node name: '%s'", config.NodeName))
 	c.Ui.Info(fmt.Sprintf("    Datacenter: '%s'", config.Datacenter))
 	c.Ui.Info(fmt.Sprintf("        Server: %v (bootstrap: %v)", config.Server, config.Bootstrap))
@@ -754,15 +883,17 @@ WAIT:
 
 	// Check if this is a SIGHUP
 	if sig == syscall.SIGHUP {
-		config = c.handleReload(config)
+		if conf := c.handleReload(config); conf != nil {
+			config = conf
+		}
 		goto WAIT
 	}
 
 	// Check if we should do a graceful leave
 	graceful := false
-	if sig == os.Interrupt && !config.SkipLeaveOnInt {
+	if sig == os.Interrupt && !(*config.SkipLeaveOnInt) {
 		graceful = true
-	} else if sig == syscall.SIGTERM && config.LeaveOnTerm {
+	} else if sig == syscall.SIGTERM && (*config.LeaveOnTerm) {
 		graceful = true
 	}
 
@@ -866,7 +997,60 @@ func (c *Command) handleReload(config *Config) *Config {
 		}(wp)
 	}
 
+	// Reload SCADA client if we have a change
+	if newConf.AtlasInfrastructure != config.AtlasInfrastructure ||
+		newConf.AtlasToken != config.AtlasToken ||
+		newConf.AtlasEndpoint != config.AtlasEndpoint {
+		if err := c.setupScadaConn(newConf); err != nil {
+			c.Ui.Error(fmt.Sprintf("Failed reloading SCADA client: %s", err))
+			return nil
+		}
+	}
+
 	return newConf
+}
+
+// startScadaClient is used to start a new SCADA provider and listener,
+// replacing any existing listeners.
+func (c *Command) setupScadaConn(config *Config) error {
+	// Shut down existing SCADA listeners
+	if c.scadaProvider != nil {
+		c.scadaProvider.Shutdown()
+	}
+	if c.scadaHttp != nil {
+		c.scadaHttp.Shutdown()
+	}
+
+	// No-op if we don't have an infrastructure
+	if config.AtlasInfrastructure == "" {
+		return nil
+	}
+
+	scadaConfig := &scada.Config{
+		Service:      "consul",
+		Version:      fmt.Sprintf("%s%s", config.Version, config.VersionPrerelease),
+		ResourceType: "infrastructures",
+		Meta: map[string]string{
+			"auto-join":  strconv.FormatBool(config.AtlasJoin),
+			"datacenter": config.Datacenter,
+			"server":     strconv.FormatBool(config.Server),
+		},
+		Atlas: scada.AtlasConfig{
+			Endpoint:       config.AtlasEndpoint,
+			Infrastructure: config.AtlasInfrastructure,
+			Token:          config.AtlasToken,
+		},
+	}
+
+	// Create the new provider and listener
+	c.Ui.Output("Connecting to Atlas: " + config.AtlasInfrastructure)
+	provider, list, err := scada.NewHTTPProvider(scadaConfig, c.logOutput)
+	if err != nil {
+		return err
+	}
+	c.scadaProvider = provider
+	c.scadaHttp = newScadaHttp(c.agent, list)
+	return nil
 }
 
 func (c *Command) Synopsis() string {
@@ -883,11 +1067,14 @@ Usage: consul agent [options]
 Options:
 
   -advertise=addr          Sets the advertise address to use
+  -advertise-wan=addr      Sets address to advertise on wan instead of advertise addr
   -atlas=org/name          Sets the Atlas infrastructure name, enables SCADA.
   -atlas-join              Enables auto-joining the Atlas cluster
   -atlas-token=token       Provides the Atlas API token
+  -atlas-endpoint=1.2.3.4  The address of the endpoint for Atlas integration.
   -bootstrap               Sets server to bootstrap mode
   -bind=0.0.0.0            Sets the bind address for cluster communication
+  -http-port=8500          Sets the HTTP API port to listen on
   -bootstrap-expect=0      Sets server to expect bootstrap mode.
   -client=127.0.0.1        Sets the address to bind for client access.
                            This includes RPC, DNS, HTTP and HTTPS (if configured)
@@ -898,9 +1085,11 @@ Options:
                            as configuration in this directory in alphabetical
                            order. This can be specified multiple times.
   -data-dir=path           Path to a data directory to store agent state
+  -dev                     Starts the agent in development mode.
   -recursor=1.2.3.4        Address of an upstream DNS server.
                            Can be specified multiple times.
-  -dc=east-aws             Datacenter of the agent
+  -dc=east-aws             Datacenter of the agent (deprecated: use 'datacenter' instead).
+  -datacenter=east-aws     Datacenter of the agent.
   -encrypt=key             Provides the gossip encryption key
   -join=1.2.3.4            Address of an agent to join at start time.
                            Can be specified multiple times.
@@ -922,6 +1111,7 @@ Options:
   -rejoin                  Ignores a previous leave and attempts to rejoin the cluster.
   -server                  Switches agent to server mode.
   -syslog                  Enables logging to syslog
+  -ui                      Enables the built-in static web UI server
   -ui-dir=path             Path to directory containing the Web UI resources
   -pid-file=path           Path to file to store agent PID
 

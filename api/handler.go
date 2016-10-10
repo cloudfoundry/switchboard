@@ -3,10 +3,10 @@ package api
 import (
 	"net/http"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/switchboard/api/middleware"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/pivotal-golang/lager"
 )
 
 //go:generate counterfeiter -o apifakes/fake_response_writer.go /usr/local/opt/go/libexec/src/net/http/server.go ResponseWriter

@@ -9,8 +9,11 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cloudfoundry-incubator/consuladapter"
-	"github.com/cloudfoundry-incubator/locket"
+	"code.cloudfoundry.org/clock"
+	"code.cloudfoundry.org/consuladapter"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/locket"
+
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
@@ -23,13 +26,9 @@ import (
 	"github.com/tedsuo/ifrit/grouper"
 
 	"time"
-
-	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/lager"
 )
 
 func main() {
-
 	rootConfig, err := config.NewConfig(os.Args)
 
 	logger := rootConfig.Logger

@@ -22,6 +22,7 @@ func init() {
 				Revision:          GitCommit,
 				Version:           Version,
 				VersionPrerelease: VersionPrerelease,
+				HumanVersion:      GetHumanVersion(),
 				Ui:                ui,
 				ShutdownCh:        make(chan struct{}),
 			}, nil
@@ -48,6 +49,30 @@ func init() {
 
 		"force-leave": func() (cli.Command, error) {
 			return &command.ForceLeaveCommand{
+				Ui: ui,
+			}, nil
+		},
+
+		"kv": func() (cli.Command, error) {
+			return &command.KVCommand{
+				Ui: ui,
+			}, nil
+		},
+
+		"kv delete": func() (cli.Command, error) {
+			return &command.KVDeleteCommand{
+				Ui: ui,
+			}, nil
+		},
+
+		"kv get": func() (cli.Command, error) {
+			return &command.KVGetCommand{
+				Ui: ui,
+			}, nil
+		},
+
+		"kv put": func() (cli.Command, error) {
+			return &command.KVPutCommand{
 				Ui: ui,
 			}, nil
 		},
@@ -102,6 +127,12 @@ func init() {
 			}, nil
 		},
 
+		"operator": func() (cli.Command, error) {
+			return &command.OperatorCommand{
+				Ui: ui,
+			}, nil
+		},
+
 		"info": func() (cli.Command, error) {
 			return &command.InfoCommand{
 				Ui: ui,
@@ -114,21 +145,16 @@ func init() {
 			}, nil
 		},
 
-		"version": func() (cli.Command, error) {
-			ver := Version
-			rel := VersionPrerelease
-			if GitDescribe != "" {
-				ver = GitDescribe
-			}
-			if GitDescribe == "" && rel == "" {
-				rel = "dev"
-			}
+		"rtt": func() (cli.Command, error) {
+			return &command.RTTCommand{
+				Ui: ui,
+			}, nil
+		},
 
+		"version": func() (cli.Command, error) {
 			return &command.VersionCommand{
-				Revision:          GitCommit,
-				Version:           ver,
-				VersionPrerelease: rel,
-				Ui:                ui,
+				HumanVersion: GetHumanVersion(),
+				Ui:           ui,
 			}, nil
 		},
 

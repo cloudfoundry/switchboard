@@ -55,6 +55,7 @@ const (
 type rExecConf struct {
 	datacenter string
 	prefix     string
+	token      string
 
 	foreignDC bool
 	localDC   string
@@ -136,6 +137,7 @@ func (c *ExecCommand) Run(args []string) int {
 	cmdFlags.DurationVar(&c.conf.replWait, "wait-repl", rExecReplicationWait, "")
 	cmdFlags.DurationVar(&c.conf.wait, "wait", rExecQuietWait, "")
 	cmdFlags.BoolVar(&c.conf.verbose, "verbose", false, "")
+	cmdFlags.StringVar(&c.conf.token, "token", "", "")
 	httpAddr := HTTPAddrFlag(cmdFlags)
 	if err := cmdFlags.Parse(args); err != nil {
 		return 1
@@ -173,7 +175,11 @@ func (c *ExecCommand) Run(args []string) int {
 	}
 
 	// Create and test the HTTP client
-	client, err := HTTPClientDC(*httpAddr, c.conf.datacenter)
+	client, err := HTTPClientConfig(func(clientConf *consulapi.Config) {
+		clientConf.Address = *httpAddr
+		clientConf.Datacenter = c.conf.datacenter
+		clientConf.Token = c.conf.token
+	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error connecting to Consul agent: %s", err))
 		return 1
@@ -262,7 +268,7 @@ func (c *ExecCommand) waitForJob() int {
 	errCh := make(chan struct{}, 1)
 	defer close(doneCh)
 	go c.streamResults(doneCh, ackCh, heartCh, outputCh, exitCh, errCh)
-	target := &TargettedUi{Ui: c.Ui}
+	target := &TargetedUi{Ui: c.Ui}
 
 	var ackCount, exitCount, badExit int
 OUTER:
@@ -617,7 +623,7 @@ Options:
   -http-addr=127.0.0.1:8500  HTTP address of the Consul agent.
   -datacenter=""             Datacenter to dispatch in. Defaults to that of agent.
   -prefix="_rexec"           Prefix in the KV store to use for request data
-  -node=""					 Regular expression to filter on node names
+  -node=""                   Regular expression to filter on node names
   -service=""                Regular expression to filter on service instances
   -tag=""                    Regular expression to filter on service tags. Must be used
                              with -service.
@@ -625,37 +631,39 @@ Options:
   -wait-repl=200ms           Period to wait for replication before firing event. This is an
                              optimization to allow stale reads to be performed.
   -verbose                   Enables verbose output
+  -token=""                  ACL token to use during requests. Defaults to that
+                             of the agent.
 `
 	return strings.TrimSpace(helpText)
 }
 
-// TargettedUi is a UI that wraps another UI implementation and modifies
+// TargetedUi is a UI that wraps another UI implementation and modifies
 // the output to indicate a specific target. Specifically, all Say output
 // is prefixed with the target name. Message output is not prefixed but
 // is offset by the length of the target so that output is lined up properly
 // with Say output. Machine-readable output has the proper target set.
-type TargettedUi struct {
+type TargetedUi struct {
 	Target string
 	Ui     cli.Ui
 }
 
-func (u *TargettedUi) Ask(query string) (string, error) {
+func (u *TargetedUi) Ask(query string) (string, error) {
 	return u.Ui.Ask(u.prefixLines(true, query))
 }
 
-func (u *TargettedUi) Info(message string) {
+func (u *TargetedUi) Info(message string) {
 	u.Ui.Info(u.prefixLines(true, message))
 }
 
-func (u *TargettedUi) Output(message string) {
+func (u *TargetedUi) Output(message string) {
 	u.Ui.Output(u.prefixLines(false, message))
 }
 
-func (u *TargettedUi) Error(message string) {
+func (u *TargetedUi) Error(message string) {
 	u.Ui.Error(u.prefixLines(true, message))
 }
 
-func (u *TargettedUi) prefixLines(arrow bool, message string) string {
+func (u *TargetedUi) prefixLines(arrow bool, message string) string {
 	arrowText := "==>"
 	if !arrow {
 		arrowText = strings.Repeat(" ", len(arrowText))

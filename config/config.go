@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"code.cloudfoundry.org/cflager"
+	"code.cloudfoundry.org/lager"
+
 	"gopkg.in/validator.v2"
 
-	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/pivotal-cf-experimental/service-config"
-	"github.com/pivotal-golang/lager"
 )
 
 type Config struct {
@@ -64,14 +65,14 @@ func NewConfig(osArgs []string) (*Config, error) {
 	serviceConfig := service_config.New()
 	flags := flag.NewFlagSet(binaryName, flag.ExitOnError)
 
-	cf_lager.AddFlags(flags)
+	cflager.AddFlags(flags)
 
 	serviceConfig.AddFlags(flags)
 	flags.Parse(configurationOptions)
 
 	err := serviceConfig.Read(&rootConfig)
 
-	rootConfig.Logger, _ = cf_lager.New(binaryName)
+	rootConfig.Logger, _ = cflager.New(binaryName)
 
 	return &rootConfig, err
 }

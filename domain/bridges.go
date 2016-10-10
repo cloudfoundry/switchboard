@@ -5,7 +5,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 var BridgeProvider = NewBridge

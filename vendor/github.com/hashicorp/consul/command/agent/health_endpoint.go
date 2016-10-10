@@ -1,14 +1,16 @@
 package agent
 
 import (
-	"github.com/hashicorp/consul/consul/structs"
 	"net/http"
 	"strings"
+
+	"github.com/hashicorp/consul/consul/structs"
 )
 
 func (s *HTTPServer) HealthChecksInState(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
 	// Set default DC
 	args := structs.ChecksInStateRequest{}
+	s.parseSource(req, &args.Source)
 	if done := s.parse(resp, req, &args.Datacenter, &args.QueryOptions); done {
 		return nil, nil
 	}
@@ -26,6 +28,11 @@ func (s *HTTPServer) HealthChecksInState(resp http.ResponseWriter, req *http.Req
 	defer setMeta(resp, &out.QueryMeta)
 	if err := s.agent.RPC("Health.ChecksInState", &args, &out); err != nil {
 		return nil, err
+	}
+
+	// Use empty list instead of nil
+	if out.HealthChecks == nil {
+		out.HealthChecks = make(structs.HealthChecks, 0)
 	}
 	return out.HealthChecks, nil
 }
@@ -51,12 +58,18 @@ func (s *HTTPServer) HealthNodeChecks(resp http.ResponseWriter, req *http.Reques
 	if err := s.agent.RPC("Health.NodeChecks", &args, &out); err != nil {
 		return nil, err
 	}
+
+	// Use empty list instead of nil
+	if out.HealthChecks == nil {
+		out.HealthChecks = make(structs.HealthChecks, 0)
+	}
 	return out.HealthChecks, nil
 }
 
 func (s *HTTPServer) HealthServiceChecks(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
 	// Set default DC
 	args := structs.ServiceSpecificRequest{}
+	s.parseSource(req, &args.Source)
 	if done := s.parse(resp, req, &args.Datacenter, &args.QueryOptions); done {
 		return nil, nil
 	}
@@ -75,12 +88,18 @@ func (s *HTTPServer) HealthServiceChecks(resp http.ResponseWriter, req *http.Req
 	if err := s.agent.RPC("Health.ServiceChecks", &args, &out); err != nil {
 		return nil, err
 	}
+
+	// Use empty list instead of nil
+	if out.HealthChecks == nil {
+		out.HealthChecks = make(structs.HealthChecks, 0)
+	}
 	return out.HealthChecks, nil
 }
 
 func (s *HTTPServer) HealthServiceNodes(resp http.ResponseWriter, req *http.Request) (interface{}, error) {
 	// Set default DC
 	args := structs.ServiceSpecificRequest{}
+	s.parseSource(req, &args.Source)
 	if done := s.parse(resp, req, &args.Datacenter, &args.QueryOptions); done {
 		return nil, nil
 	}
@@ -108,9 +127,26 @@ func (s *HTTPServer) HealthServiceNodes(resp http.ResponseWriter, req *http.Requ
 	}
 
 	// Filter to only passing if specified
-	if _, ok := params["passing"]; ok {
+	if _, ok := params[structs.HealthPassing]; ok {
 		out.Nodes = filterNonPassing(out.Nodes)
 	}
+
+	// Translate addresses after filtering so we don't waste effort.
+	translateAddresses(s.agent.config, args.Datacenter, out.Nodes)
+
+	// Use empty list instead of nil
+	for i, _ := range out.Nodes {
+		// TODO (slackpad) It's lame that this isn't a slice of pointers
+		// but it's not a well-scoped change to fix this. We should
+		// change this at the next opportunity.
+		if out.Nodes[i].Checks == nil {
+			out.Nodes[i].Checks = make(structs.HealthChecks, 0)
+		}
+	}
+	if out.Nodes == nil {
+		out.Nodes = make(structs.CheckServiceNodes, 0)
+	}
+
 	return out.Nodes, nil
 }
 

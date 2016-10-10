@@ -1,9 +1,10 @@
 package consul
 
 import (
-	"net"
 	"strings"
 
+	"github.com/hashicorp/consul/consul/agent"
+	"github.com/hashicorp/raft"
 	"github.com/hashicorp/serf/serf"
 )
 
@@ -38,13 +39,11 @@ func (s *Server) lanEventHandler() {
 		case e := <-s.eventChLAN:
 			switch e.EventType() {
 			case serf.EventMemberJoin:
-				s.nodeJoin(e.(serf.MemberEvent), false)
+				s.lanNodeJoin(e.(serf.MemberEvent))
 				s.localMemberEvent(e.(serf.MemberEvent))
 
-			case serf.EventMemberLeave:
-				fallthrough
-			case serf.EventMemberFailed:
-				s.nodeFailed(e.(serf.MemberEvent), false)
+			case serf.EventMemberLeave, serf.EventMemberFailed:
+				s.lanNodeFailed(e.(serf.MemberEvent))
 				s.localMemberEvent(e.(serf.MemberEvent))
 
 			case serf.EventMemberReap:
@@ -54,7 +53,7 @@ func (s *Server) lanEventHandler() {
 			case serf.EventMemberUpdate: // Ignore
 			case serf.EventQuery: // Ignore
 			default:
-				s.logger.Printf("[WARN] consul: unhandled LAN Serf Event: %#v", e)
+				s.logger.Printf("[WARN] consul: Unhandled LAN Serf Event: %#v", e)
 			}
 
 		case <-s.shutdownCh:
@@ -70,17 +69,15 @@ func (s *Server) wanEventHandler() {
 		case e := <-s.eventChWAN:
 			switch e.EventType() {
 			case serf.EventMemberJoin:
-				s.nodeJoin(e.(serf.MemberEvent), true)
-			case serf.EventMemberLeave:
-				fallthrough
-			case serf.EventMemberFailed:
-				s.nodeFailed(e.(serf.MemberEvent), true)
+				s.wanNodeJoin(e.(serf.MemberEvent))
+			case serf.EventMemberLeave, serf.EventMemberFailed:
+				s.wanNodeFailed(e.(serf.MemberEvent))
 			case serf.EventMemberUpdate: // Ignore
 			case serf.EventMemberReap: // Ignore
 			case serf.EventUser:
 			case serf.EventQuery: // Ignore
 			default:
-				s.logger.Printf("[WARN] consul: unhandled WAN Serf Event: %#v", e)
+				s.logger.Printf("[WARN] consul: Unhandled WAN Serf Event: %#v", e)
 			}
 
 		case <-s.shutdownCh:
@@ -130,7 +127,7 @@ func (s *Server) localEvent(event serf.UserEvent) {
 		}
 	case isUserEvent(name):
 		event.Name = rawUserEventName(name)
-		s.logger.Printf("[DEBUG] consul: user event: %s", event.Name)
+		s.logger.Printf("[DEBUG] consul: User event: %s", event.Name)
 
 		// Trigger the callback
 		if s.config.UserEventHandler != nil {
@@ -141,19 +138,40 @@ func (s *Server) localEvent(event serf.UserEvent) {
 	}
 }
 
-// nodeJoin is used to handle join events on the both serf clusters
-func (s *Server) nodeJoin(me serf.MemberEvent, wan bool) {
+// lanNodeJoin is used to handle join events on the LAN pool.
+func (s *Server) lanNodeJoin(me serf.MemberEvent) {
 	for _, m := range me.Members {
-		ok, parts := isConsulServer(m)
+		ok, parts := agent.IsConsulServer(m)
 		if !ok {
-			if wan {
-				s.logger.Printf("[WARN] consul: non-server in WAN pool: %s", m.Name)
-			}
 			continue
 		}
-		s.logger.Printf("[INFO] consul: adding server %s", parts)
+		s.logger.Printf("[INFO] consul: Adding LAN server %s", parts)
 
-		// Check if this server is known
+		// See if it's configured as part of our DC.
+		if parts.Datacenter == s.config.Datacenter {
+			s.localLock.Lock()
+			s.localConsuls[raft.ServerAddress(parts.Addr.String())] = parts
+			s.localLock.Unlock()
+		}
+
+		// If we still expecting to bootstrap, may need to handle this.
+		if s.config.BootstrapExpect != 0 {
+			s.maybeBootstrap()
+		}
+	}
+}
+
+// wanNodeJoin is used to handle join events on the WAN pool.
+func (s *Server) wanNodeJoin(me serf.MemberEvent) {
+	for _, m := range me.Members {
+		ok, parts := agent.IsConsulServer(m)
+		if !ok {
+			s.logger.Printf("[WARN] consul: Non-server in WAN pool: %s", m.Name)
+			continue
+		}
+		s.logger.Printf("[INFO] consul: Adding WAN server %s", parts)
+
+		// Search for this node in our existing remotes.
 		found := false
 		s.remoteLock.Lock()
 		existing := s.remoteConsuls[parts.Datacenter]
@@ -165,46 +183,35 @@ func (s *Server) nodeJoin(me serf.MemberEvent, wan bool) {
 			}
 		}
 
-		// Add ot the list if not known
+		// Add to the list if not known.
 		if !found {
 			s.remoteConsuls[parts.Datacenter] = append(existing, parts)
 		}
 		s.remoteLock.Unlock()
-
-		// Add to the local list as well
-		if !wan && parts.Datacenter == s.config.Datacenter {
-			s.localLock.Lock()
-			s.localConsuls[parts.Addr.String()] = parts
-			s.localLock.Unlock()
-		}
-
-		// If we still expecting to bootstrap, may need to handle this
-		if s.config.BootstrapExpect != 0 {
-			s.maybeBootstrap()
-		}
 	}
 }
 
-// maybeBootsrap is used to handle bootstrapping when a new consul server joins
+// maybeBootstrap is used to handle bootstrapping when a new consul server joins.
 func (s *Server) maybeBootstrap() {
+	// Bootstrap can only be done if there are no committed logs, remove our
+	// expectations of bootstrapping. This is slightly cheaper than the full
+	// check that BootstrapCluster will do, so this is a good pre-filter.
 	index, err := s.raftStore.LastIndex()
 	if err != nil {
-		s.logger.Printf("[ERR] consul: failed to read last raft index: %v", err)
+		s.logger.Printf("[ERR] consul: Failed to read last raft index: %v", err)
 		return
 	}
-
-	// Bootstrap can only be done if there are no committed logs,
-	// remove our expectations of bootstrapping
 	if index != 0 {
+		s.logger.Printf("[INFO] consul: Raft data found, disabling bootstrap mode")
 		s.config.BootstrapExpect = 0
 		return
 	}
 
-	// Scan for all the known servers
+	// Scan for all the known servers.
 	members := s.serfLAN.Members()
-	addrs := make([]string, 0)
+	var servers []agent.Server
 	for _, member := range members {
-		valid, p := isConsulServer(member)
+		valid, p := agent.IsConsulServer(member)
 		if !valid {
 			continue
 		}
@@ -220,33 +227,88 @@ func (s *Server) maybeBootstrap() {
 			s.logger.Printf("[ERR] consul: Member %v has bootstrap mode. Expect disabled.", member)
 			return
 		}
-		addr := &net.TCPAddr{IP: member.Addr, Port: p.Port}
-		addrs = append(addrs, addr.String())
+		servers = append(servers, *p)
 	}
 
-	// Skip if we haven't met the minimum expect count
-	if len(addrs) < s.config.BootstrapExpect {
+	// Skip if we haven't met the minimum expect count.
+	if len(servers) < s.config.BootstrapExpect {
 		return
 	}
 
-	// Update the peer set
-	s.logger.Printf("[INFO] consul: Attempting bootstrap with nodes: %v", addrs)
-	if err := s.raft.SetPeers(addrs).Error(); err != nil {
-		s.logger.Printf("[ERR] consul: failed to bootstrap peers: %v", err)
+	// Query each of the servers and make sure they report no Raft peers.
+	for _, server := range servers {
+		var peers []string
+		if err := s.connPool.RPC(s.config.Datacenter, server.Addr, server.Version,
+			"Status.Peers", &struct{}{}, &peers); err != nil {
+			s.logger.Printf("[ERR] consul: Failed to confirm peer status for %s: %v", server.Name, err)
+			return
+		}
+
+		// Found a node with some Raft peers, stop bootstrap since there's
+		// evidence of an existing cluster. We should get folded in by the
+		// existing servers if that's the case, so it's cleaner to sit as a
+		// candidate with no peers so we don't cause spurious elections.
+		// It's OK this is racy, because even with an initial bootstrap
+		// as long as one peer runs bootstrap things will work, and if we
+		// have multiple peers bootstrap in the same way, that's OK. We
+		// just don't want a server added much later to do a live bootstrap
+		// and interfere with the cluster. This isn't required for Raft's
+		// correctness because no server in the existing cluster will vote
+		// for this server, but it makes things much more stable.
+		if len(peers) > 0 {
+			s.logger.Printf("[INFO] consul: Existing Raft peers reported by %s, disabling bootstrap mode", server.Name)
+			s.config.BootstrapExpect = 0
+			return
+		}
 	}
 
-	// Bootstrapping comlete, don't enter this again
+	// Attempt a live bootstrap!
+	var configuration raft.Configuration
+	var addrs []string
+	for _, server := range servers {
+		addr := server.Addr.String()
+		addrs = append(addrs, addr)
+		peer := raft.Server{
+			ID:      raft.ServerID(addr),
+			Address: raft.ServerAddress(addr),
+		}
+		configuration.Servers = append(configuration.Servers, peer)
+	}
+	s.logger.Printf("[INFO] consul: Found expected number of peers, attempting bootstrap: %s",
+		strings.Join(addrs, ","))
+	future := s.raft.BootstrapCluster(configuration)
+	if err := future.Error(); err != nil {
+		s.logger.Printf("[ERR] consul: Failed to bootstrap cluster: %v", err)
+	}
+
+	// Bootstrapping complete, or failed for some reason, don't enter this
+	// again.
 	s.config.BootstrapExpect = 0
 }
 
-// nodeFailed is used to handle fail events on both the serf clustes
-func (s *Server) nodeFailed(me serf.MemberEvent, wan bool) {
+// lanNodeFailed is used to handle fail events on the LAN pool.
+func (s *Server) lanNodeFailed(me serf.MemberEvent) {
 	for _, m := range me.Members {
-		ok, parts := isConsulServer(m)
+		ok, parts := agent.IsConsulServer(m)
 		if !ok {
 			continue
 		}
-		s.logger.Printf("[INFO] consul: removing server %s", parts)
+		s.logger.Printf("[INFO] consul: Removing LAN server %s", parts)
+
+		s.localLock.Lock()
+		delete(s.localConsuls, raft.ServerAddress(parts.Addr.String()))
+		s.localLock.Unlock()
+	}
+}
+
+// wanNodeFailed is used to handle fail events on the WAN pool.
+func (s *Server) wanNodeFailed(me serf.MemberEvent) {
+	for _, m := range me.Members {
+		ok, parts := agent.IsConsulServer(m)
+		if !ok {
+			continue
+		}
+		s.logger.Printf("[INFO] consul: Removing WAN server %s", parts)
 
 		// Remove the server if known
 		s.remoteLock.Lock()
@@ -268,12 +330,5 @@ func (s *Server) nodeFailed(me serf.MemberEvent, wan bool) {
 			s.remoteConsuls[parts.Datacenter] = existing
 		}
 		s.remoteLock.Unlock()
-
-		// Remove from the local list as well
-		if !wan {
-			s.localLock.Lock()
-			delete(s.localConsuls, parts.Addr.String())
-			s.localLock.Unlock()
-		}
 	}
 }

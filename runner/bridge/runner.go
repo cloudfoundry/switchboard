@@ -5,8 +5,8 @@ import (
 	"net"
 	"os"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	"github.com/pivotal-golang/lager"
 )
 
 type Runner struct {

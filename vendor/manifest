@@ -2,12 +2,19 @@
 	"version": 0,
 	"dependencies": [
 		{
-			"importpath": "code.cloudfoundry.org/cfhttp/unix_transport",
+			"importpath": "code.cloudfoundry.org/cfhttp",
 			"repository": "https://github.com/cloudfoundry/cfhttp",
 			"vcs": "git",
-			"revision": "9f848b8c7da7bf7be58029e20cf2a7dbc2de1fca",
+			"revision": "1d363866d79a7203ee22ee605a9ac6081b56c9a0",
 			"branch": "master",
-			"path": "/unix_transport",
+			"notests": true
+		},
+		{
+			"importpath": "code.cloudfoundry.org/cflager",
+			"repository": "https://github.com/cloudfoundry/cflager",
+			"vcs": "git",
+			"revision": "3b0406dd8038bb31452dfaf171c4f0efa55393bf",
+			"branch": "master",
 			"notests": true
 		},
 		{
@@ -19,11 +26,36 @@
 			"notests": true
 		},
 		{
+			"importpath": "code.cloudfoundry.org/consuladapter",
+			"repository": "https://github.com/cloudfoundry/consuladapter",
+			"vcs": "git",
+			"revision": "cec33a36e6b4178a4a84ba7129c611a879084e4b",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "code.cloudfoundry.org/lager",
 			"repository": "https://github.com/cloudfoundry/lager",
 			"vcs": "git",
 			"revision": "62951a8009ab331bb21dc418074fa54e66eb9b6a",
 			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "code.cloudfoundry.org/locket",
+			"repository": "https://github.com/cloudfoundry/locket",
+			"vcs": "git",
+			"revision": "6dea62db188bc6cfb4904f64b6e6efd8f9a53970",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "code.cloudfoundry.org/runtimeschema/metric",
+			"repository": "https://github.com/cloudfoundry/runtimeschema",
+			"vcs": "git",
+			"revision": "2360d9f5ada66197747df6df043bff24891b8dde",
+			"branch": "master",
+			"path": "/metric",
 			"notests": true
 		},
 		{
@@ -109,44 +141,11 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/cloudfoundry-incubator/cf-lager",
-			"repository": "https://github.com/cloudfoundry-incubator/cf-lager",
-			"vcs": "git",
-			"revision": "3324790250247b4d3bd3abc3e74654a537d79a30",
-			"branch": "HEAD",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/cloudfoundry-incubator/cf_http",
 			"repository": "https://github.com/cloudfoundry-incubator/cf_http",
 			"vcs": "git",
 			"revision": "d3b3360f40c8f144585d9318127327ae892a4302",
 			"branch": "HEAD",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/cloudfoundry-incubator/consuladapter",
-			"repository": "https://github.com/cloudfoundry-incubator/consuladapter",
-			"vcs": "git",
-			"revision": "068a34f4f7080546e34f8a205aa5bd14e1c7feec",
-			"branch": "HEAD",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/cloudfoundry-incubator/locket",
-			"repository": "https://github.com/cloudfoundry-incubator/locket",
-			"vcs": "git",
-			"revision": "bc871f2c5971aa51ba134ff14d68a7cafcfb526d",
-			"branch": "HEAD",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/cloudfoundry-incubator/runtime-schema/metric",
-			"repository": "https://github.com/cloudfoundry-incubator/runtime-schema",
-			"vcs": "git",
-			"revision": "eed404eb6520e181e99a70ada685780b670d705e",
-			"branch": "master",
-			"path": "/metric",
 			"notests": true
 		},
 		{
@@ -225,8 +224,8 @@
 			"importpath": "github.com/hashicorp/consul",
 			"repository": "https://github.com/hashicorp/consul",
 			"vcs": "git",
-			"revision": "9a9cc9341bb487651a0399e3fc5e1e8a42e62dd9",
-			"branch": "HEAD",
+			"revision": "eb44c4cf5d33c8d514e7b6c8187f25bb41a8476f",
+			"branch": "master",
 			"notests": true
 		},
 		{
@@ -533,22 +532,6 @@
 			"repository": "https://github.com/pivotal-cf-experimental/service-config",
 			"vcs": "git",
 			"revision": "b1dc94de6ada8bfddf159ce2234958a8f02aec77",
-			"branch": "HEAD",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/pivotal-golang/clock",
-			"repository": "https://github.com/pivotal-golang/clock",
-			"vcs": "git",
-			"revision": "e0835a7d46f9ea781e764f0dc9325110e32a97dd",
-			"branch": "master",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/pivotal-golang/lager",
-			"repository": "https://github.com/pivotal-golang/lager",
-			"vcs": "git",
-			"revision": "389345f09521afe9c164379d98cb70335aff8726",
 			"branch": "HEAD",
 			"notests": true
 		},

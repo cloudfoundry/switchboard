@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"time"
 
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/api/apifakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
-	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Cluster", func() {

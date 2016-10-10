@@ -2,27 +2,30 @@ package agent
 
 import (
 	"github.com/hashicorp/consul/consul/structs"
+	"github.com/hashicorp/consul/types"
 )
 
 // ServiceDefinition is used to JSON decode the Service definitions
 type ServiceDefinition struct {
-	ID      string
-	Name    string
-	Tags    []string
-	Address string
-	Port    int
-	Check   CheckType
-	Checks  CheckTypes
-	Token   string
+	ID                string
+	Name              string
+	Tags              []string
+	Address           string
+	Port              int
+	Check             CheckType
+	Checks            CheckTypes
+	Token             string
+	EnableTagOverride bool
 }
 
 func (s *ServiceDefinition) NodeService() *structs.NodeService {
 	ns := &structs.NodeService{
-		ID:      s.ID,
-		Service: s.Name,
-		Tags:    s.Tags,
-		Address: s.Address,
-		Port:    s.Port,
+		ID:                s.ID,
+		Service:           s.Name,
+		Tags:              s.Tags,
+		Address:           s.Address,
+		Port:              s.Port,
+		EnableTagOverride: s.EnableTagOverride,
 	}
 	if ns.ID == "" && ns.Service != "" {
 		ns.ID = ns.Service
@@ -40,9 +43,9 @@ func (s *ServiceDefinition) CheckTypes() (checks CheckTypes) {
 	return
 }
 
-// ChecKDefinition is used to JSON decode the Check definitions
+// CheckDefinition is used to JSON decode the Check definitions
 type CheckDefinition struct {
-	ID        string
+	ID        types.CheckID
 	Name      string
 	Notes     string
 	ServiceID string
@@ -64,7 +67,7 @@ func (c *CheckDefinition) HealthCheck(node string) *structs.HealthCheck {
 		health.Status = c.Status
 	}
 	if health.CheckID == "" && health.Name != "" {
-		health.CheckID = health.Name
+		health.CheckID = types.CheckID(health.Name)
 	}
 	return health
 }

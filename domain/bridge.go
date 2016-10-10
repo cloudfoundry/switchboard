@@ -5,7 +5,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . Bridge

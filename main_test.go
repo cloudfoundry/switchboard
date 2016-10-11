@@ -170,23 +170,23 @@ var _ = Describe("Switchboard", func() {
 		pidFile = pidFileFile.Name()
 		os.Remove(pidFile)
 
-		proxyPort = uint(39900 + GinkgoParallelNode())
-		switchboardAPIPort = uint(39000 + GinkgoParallelNode())
+		proxyPort = uint(10000 + GinkgoParallelNode())
+		switchboardAPIPort = uint(10100 + GinkgoParallelNode())
 		switchboardProfilerPort = uint(6060 + GinkgoParallelNode())
 		switchboardHealthPort = uint(6160 + GinkgoParallelNode())
 
 		backend1 := config.Backend{
 			Host:           "localhost",
-			Port:           uint(45000 + GinkgoParallelNode()),
-			StatusPort:     uint(45500 + GinkgoParallelNode()),
+			Port:           uint(10200 + GinkgoParallelNode()),
+			StatusPort:     uint(10300 + GinkgoParallelNode()),
 			StatusEndpoint: "galera_healthcheck",
 			Name:           "backend-0",
 		}
 
 		backend2 := config.Backend{
 			Host:           "localhost",
-			Port:           uint(46000 + GinkgoParallelNode()),
-			StatusPort:     uint(46500 + GinkgoParallelNode()),
+			Port:           uint(10400 + GinkgoParallelNode()),
+			StatusPort:     uint(10500 + GinkgoParallelNode()),
 			StatusEndpoint: "galera_healthcheck",
 			Name:           "backend-1",
 		}
@@ -259,13 +259,11 @@ var _ = Describe("Switchboard", func() {
 		Context("and switchboard starts successfully", func() {
 			JustBeforeEach(func() {
 				var (
-					err      error
-					conn     net.Conn
 					response Response
 				)
 
 				Eventually(func() error {
-					conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
+					conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 					if err != nil {
 						return err
 					}
@@ -714,6 +712,7 @@ var _ = Describe("Switchboard", func() {
 							conn, err = net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 							return err
 						}, startupTimeout).Should(Succeed())
+						defer conn.Close()
 
 						dataWhileHealthy, err := sendData(conn, "data while healthy")
 						Expect(err).ToNot(HaveOccurred())
@@ -730,12 +729,11 @@ var _ = Describe("Switchboard", func() {
 					It("severs new connections", func() {
 						allowTraffic(false, switchboardAPIPort)
 						Eventually(func() error {
-
 							conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
-
 							if err != nil {
 								return err
 							}
+							defer conn.Close()
 							_, err = sendData(conn, "write that should fail")
 
 							return err
@@ -785,6 +783,7 @@ var _ = Describe("Switchboard", func() {
 
 			consulRunner.Start()
 			consulRunner.WaitUntilReady()
+
 			rootConfig.ConsulCluster = consulRunner.ConsulCluster()
 			rootConfig.ConsulServiceName = "test_mysql"
 			consulClient = consulRunner.NewClient()

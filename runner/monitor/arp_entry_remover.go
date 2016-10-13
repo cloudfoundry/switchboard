@@ -34,6 +34,10 @@ func NewPrivilegedArpEntryRemover(runner CmdRunner) ArpEntryRemover {
 }
 
 func (a PrivilegedArpEntryRemover) RemoveEntry(ip net.IP) error {
+	if ip == nil {
+		return errors.New("failed to delete arp entry: invalid IP")
+	}
+
 	output, err := a.runner.Run("/usr/sbin/arp", "-d", ip.String())
 
 	if err != nil {

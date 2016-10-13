@@ -35,6 +35,14 @@ var _ = Describe("ArpEntryRemover", func() {
 			Expect(args).To(Equal([]string{"-d", "192.0.2.0"}))
 		})
 		Context("when the entry cannot be deleted", func() {
+			Context("when the ip is in a wrong format", func() {
+				It("returns an error", func() {
+					arp = NewPrivilegedArpEntryRemover(runner)
+					err := arp.RemoveEntry(net.ParseIP("invalidIP"))
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError("failed to delete arp entry: invalid IP"))
+				})
+			})
 			It("returns an error", func() {
 				runner.RunReturns(
 					[]byte("SIOCDARP(dontpub): Operation not permitted"),

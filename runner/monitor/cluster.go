@@ -41,7 +41,7 @@ type Cluster struct {
 	backends                 []*domain.Backend
 	logger                   lager.Logger
 	healthcheckTimeout       time.Duration
-	arpManager               ArpManager
+	arpEntryRemover          ArpEntryRemover
 	activeBackendSubscribers []chan<- *domain.Backend
 }
 
@@ -49,14 +49,14 @@ func NewCluster(
 	backends []*domain.Backend,
 	healthcheckTimeout time.Duration,
 	logger lager.Logger,
-	arpManager ArpManager,
+	arpEntryRemover ArpEntryRemover,
 	activeBackendSubscribers []chan<- *domain.Backend,
 ) *Cluster {
 	return &Cluster{
 		backends:                 backends,
 		logger:                   logger,
 		healthcheckTimeout:       healthcheckTimeout,
-		arpManager:               arpManager,
+		arpEntryRemover:          arpEntryRemover,
 		activeBackendSubscribers: activeBackendSubscribers,
 	}
 }
@@ -127,7 +127,7 @@ func (c *Cluster) SetupCounters() *DecisionCounters {
 	//only clear ARP cache after X consecutive unhealthy dials
 	counters.AddCondition("clearArp", func() bool {
 		// golang makes it difficult to tell whether the value of an interface is nil
-		if reflect.ValueOf(c.arpManager).IsNil() {
+		if reflect.ValueOf(c.arpEntryRemover).IsNil() {
 			return false
 		} else {
 			checks := counters.GetCount("consecutiveUnhealthyChecks")
@@ -241,7 +241,7 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 	if healthMonitor.Counters.Should("clearArp") {
 		backendHost := backend.AsJSON().Host
 
-		err := c.arpManager.RemoveEntry(net.ParseIP(backendHost))
+		err := c.arpEntryRemover.RemoveEntry(net.ParseIP(backendHost))
 		if err != nil {
 			c.logger.Error("Failed to clear arp cache", err)
 		}

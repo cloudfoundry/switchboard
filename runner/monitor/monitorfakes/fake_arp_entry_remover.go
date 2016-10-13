@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 )
 
-type FakeArpManager struct {
+type FakeArpEntryRemover struct {
 	RemoveEntryStub        func(ip net.IP) error
 	removeEntryMutex       sync.RWMutex
 	removeEntryArgsForCall []struct {
@@ -21,7 +21,7 @@ type FakeArpManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeArpManager) RemoveEntry(ip net.IP) error {
+func (fake *FakeArpEntryRemover) RemoveEntry(ip net.IP) error {
 	fake.removeEntryMutex.Lock()
 	fake.removeEntryArgsForCall = append(fake.removeEntryArgsForCall, struct {
 		ip net.IP
@@ -35,26 +35,26 @@ func (fake *FakeArpManager) RemoveEntry(ip net.IP) error {
 	}
 }
 
-func (fake *FakeArpManager) RemoveEntryCallCount() int {
+func (fake *FakeArpEntryRemover) RemoveEntryCallCount() int {
 	fake.removeEntryMutex.RLock()
 	defer fake.removeEntryMutex.RUnlock()
 	return len(fake.removeEntryArgsForCall)
 }
 
-func (fake *FakeArpManager) RemoveEntryArgsForCall(i int) net.IP {
+func (fake *FakeArpEntryRemover) RemoveEntryArgsForCall(i int) net.IP {
 	fake.removeEntryMutex.RLock()
 	defer fake.removeEntryMutex.RUnlock()
 	return fake.removeEntryArgsForCall[i].ip
 }
 
-func (fake *FakeArpManager) RemoveEntryReturns(result1 error) {
+func (fake *FakeArpEntryRemover) RemoveEntryReturns(result1 error) {
 	fake.RemoveEntryStub = nil
 	fake.removeEntryReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeArpManager) Invocations() map[string][][]interface{} {
+func (fake *FakeArpEntryRemover) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.removeEntryMutex.RLock()
@@ -62,7 +62,7 @@ func (fake *FakeArpManager) Invocations() map[string][][]interface{} {
 	return fake.invocations
 }
 
-func (fake *FakeArpManager) recordInvocation(key string, args []interface{}) {
+func (fake *FakeArpEntryRemover) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -74,4 +74,4 @@ func (fake *FakeArpManager) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ monitor.ArpManager = new(FakeArpManager)
+var _ monitor.ArpEntryRemover = new(FakeArpEntryRemover)

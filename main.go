@@ -56,7 +56,7 @@ func main() {
 	}
 
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
-	arpManager := monitor.NewPrivilegedArpManager(new(monitor.ExecCmdRunner))
+	arpEntryRemover := monitor.NewPrivilegedArpEntryRemover(new(monitor.ExecCmdRunner))
 
 	bridgeActiveBackendChan := make(chan *domain.Backend)
 	clusterAPIActiveBackendChan := make(chan *domain.Backend)
@@ -69,7 +69,7 @@ func main() {
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
-		arpManager,
+		arpEntryRemover,
 		activeBackendSubscribers,
 	)
 

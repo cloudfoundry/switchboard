@@ -7,8 +7,8 @@ import (
 	"os/exec"
 )
 
-//go:generate counterfeiter . ArpManager
-type ArpManager interface {
+//go:generate counterfeiter . ArpEntryRemover
+type ArpEntryRemover interface {
 	RemoveEntry(ip net.IP) error
 }
 
@@ -23,17 +23,17 @@ func (r *ExecCmdRunner) Run(name string, arg ...string) ([]byte, error) {
 	return exec.Command(name, arg...).CombinedOutput()
 }
 
-type PrivilegedArpManager struct {
+type PrivilegedArpEntryRemover struct {
 	runner CmdRunner
 }
 
-func NewPrivilegedArpManager(runner CmdRunner) ArpManager {
-	return &PrivilegedArpManager{
+func NewPrivilegedArpEntryRemover(runner CmdRunner) ArpEntryRemover {
+	return &PrivilegedArpEntryRemover{
 		runner: runner,
 	}
 }
 
-func (a PrivilegedArpManager) RemoveEntry(ip net.IP) error {
+func (a PrivilegedArpEntryRemover) RemoveEntry(ip net.IP) error {
 	output, err := a.runner.Run("/usr/sbin/arp", "-d", ip.String())
 
 	if err != nil {

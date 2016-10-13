@@ -11,11 +11,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("ArpManager", func() {
+var _ = Describe("ArpEntryRemover", func() {
 
 	var (
 		runner *monitorfakes.FakeCmdRunner
-		arp    ArpManager
+		arp    ArpEntryRemover
 	)
 
 	BeforeEach(func() {
@@ -25,7 +25,7 @@ var _ = Describe("ArpManager", func() {
 	Describe("RemoveEntry", func() {
 		It("deletes the entry", func() {
 			runner.RunReturns([]byte{}, nil)
-			arp = NewPrivilegedArpManager(runner)
+			arp = NewPrivilegedArpEntryRemover(runner)
 			err := arp.RemoveEntry(net.ParseIP("192.0.2.0"))
 			Expect(err).ToNot(HaveOccurred())
 
@@ -39,7 +39,7 @@ var _ = Describe("ArpManager", func() {
 				runner.RunReturns(
 					[]byte("SIOCDARP(dontpub): Operation not permitted"),
 					errors.New("exit status 255"))
-				arp = NewPrivilegedArpManager(runner)
+				arp = NewPrivilegedArpEntryRemover(runner)
 				err := arp.RemoveEntry(net.ParseIP("192.0.2.0"))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("failed to delete arp entry: OUTPUT=SIOCDARP(dontpub): " +

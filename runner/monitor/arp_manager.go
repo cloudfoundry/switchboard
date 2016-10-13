@@ -3,6 +3,7 @@ package monitor
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os/exec"
 
 	"code.cloudfoundry.org/lager"
@@ -10,7 +11,7 @@ import (
 
 //go:generate counterfeiter . ArpManager
 type ArpManager interface {
-	RemoveEntry(ip string) error
+	RemoveEntry(ip net.IP) error
 }
 
 //go:generate counterfeiter . CmdRunner
@@ -36,8 +37,8 @@ func NewPrivilegedArpManager(runner CmdRunner, logger lager.Logger) ArpManager {
 	}
 }
 
-func (a PrivilegedArpManager) RemoveEntry(ip string) error {
-	output, err := a.runner.Run("/usr/sbin/arp", "-d", ip)
+func (a PrivilegedArpManager) RemoveEntry(ip net.IP) error {
+	output, err := a.runner.Run("/usr/sbin/arp", "-d", ip.String())
 
 	if err != nil {
 		return errors.New(fmt.Sprintf("failed to delete arp entry: OUTPUT=%s, ERROR=%s", output, err.Error()))

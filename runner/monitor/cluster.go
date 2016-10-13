@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"reflect"
 	"time"
@@ -240,7 +241,7 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 	if healthMonitor.Counters.Should("clearArp") {
 		backendHost := backend.AsJSON().Host
 
-		err := c.arpManager.RemoveEntry(backendHost)
+		err := c.arpManager.RemoveEntry(net.ParseIP(backendHost))
 		if err != nil {
 			c.logger.Error("Failed to clear arp cache", err)
 		}

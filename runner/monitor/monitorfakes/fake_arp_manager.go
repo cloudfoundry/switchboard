@@ -2,16 +2,17 @@
 package monitorfakes
 
 import (
+	"net"
 	"sync"
 
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 )
 
 type FakeArpManager struct {
-	RemoveEntryStub        func(ip string) error
+	RemoveEntryStub        func(ip net.IP) error
 	removeEntryMutex       sync.RWMutex
 	removeEntryArgsForCall []struct {
-		ip string
+		ip net.IP
 	}
 	removeEntryReturns struct {
 		result1 error
@@ -20,10 +21,10 @@ type FakeArpManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeArpManager) RemoveEntry(ip string) error {
+func (fake *FakeArpManager) RemoveEntry(ip net.IP) error {
 	fake.removeEntryMutex.Lock()
 	fake.removeEntryArgsForCall = append(fake.removeEntryArgsForCall, struct {
-		ip string
+		ip net.IP
 	}{ip})
 	fake.recordInvocation("RemoveEntry", []interface{}{ip})
 	fake.removeEntryMutex.Unlock()
@@ -40,7 +41,7 @@ func (fake *FakeArpManager) RemoveEntryCallCount() int {
 	return len(fake.removeEntryArgsForCall)
 }
 
-func (fake *FakeArpManager) RemoveEntryArgsForCall(i int) string {
+func (fake *FakeArpManager) RemoveEntryArgsForCall(i int) net.IP {
 	fake.removeEntryMutex.RLock()
 	defer fake.removeEntryMutex.RUnlock()
 	return fake.removeEntryArgsForCall[i].ip

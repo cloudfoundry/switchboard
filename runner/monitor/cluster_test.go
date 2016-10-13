@@ -3,6 +3,7 @@ package monitor_test
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -322,7 +323,7 @@ var _ = Describe("Cluster", func() {
 					cluster.Monitor(stopMonitoringChan)
 
 					Eventually(fakeArpManager.RemoveEntryCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpManager.RemoveEntry to be called at least once")
-					Expect(fakeArpManager.RemoveEntryArgsForCall(0)).To(Equal(backend2.AsJSON().Host))
+					Expect(fakeArpManager.RemoveEntryArgsForCall(0)).To(Equal(net.ParseIP(backend2.AsJSON().Host)))
 				})
 			})
 		})

@@ -24,19 +24,19 @@ func (r *ExecCmdRunner) Run(name string, arg ...string) ([]byte, error) {
 	return exec.Command(name, arg...).CombinedOutput()
 }
 
-type ArpManagerCmd struct {
+type PrivilegedArpManager struct {
 	runner CmdRunner
 	logger lager.Logger
 }
 
-func NewArpManager(runner CmdRunner, logger lager.Logger) ArpManager {
-	return &ArpManagerCmd{
+func NewPrivilegedArpManager(runner CmdRunner, logger lager.Logger) ArpManager {
+	return &PrivilegedArpManager{
 		runner: runner,
 		logger: logger,
 	}
 }
 
-func (a ArpManagerCmd) RemoveEntry(ip string) error {
+func (a PrivilegedArpManager) RemoveEntry(ip string) error {
 	output, err := a.runner.Run("/usr/sbin/arp", "-d", ip)
 
 	if err != nil {

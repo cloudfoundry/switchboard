@@ -4,8 +4,6 @@ import (
 	"errors"
 	"net"
 
-	"code.cloudfoundry.org/lager/lagertest"
-
 	. "github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
 
@@ -17,19 +15,17 @@ var _ = Describe("ArpManager", func() {
 
 	var (
 		runner *monitorfakes.FakeCmdRunner
-		logger *lagertest.TestLogger
 		arp    ArpManager
 	)
 
 	BeforeEach(func() {
 		runner = new(monitorfakes.FakeCmdRunner)
-		logger = lagertest.NewTestLogger("ArpManager test")
 	})
 
 	Describe("RemoveEntry", func() {
 		It("deletes the entry", func() {
 			runner.RunReturns([]byte{}, nil)
-			arp = NewPrivilegedArpManager(runner, logger)
+			arp = NewPrivilegedArpManager(runner)
 			err := arp.RemoveEntry(net.ParseIP("192.0.2.0"))
 			Expect(err).ToNot(HaveOccurred())
 
@@ -43,7 +39,7 @@ var _ = Describe("ArpManager", func() {
 				runner.RunReturns(
 					[]byte("SIOCDARP(dontpub): Operation not permitted"),
 					errors.New("exit status 255"))
-				arp = NewPrivilegedArpManager(runner, logger)
+				arp = NewPrivilegedArpManager(runner)
 				err := arp.RemoveEntry(net.ParseIP("192.0.2.0"))
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError("failed to delete arp entry: OUTPUT=SIOCDARP(dontpub): " +

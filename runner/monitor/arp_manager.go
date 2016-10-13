@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
-
-	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . ArpManager
@@ -27,13 +25,11 @@ func (r *ExecCmdRunner) Run(name string, arg ...string) ([]byte, error) {
 
 type PrivilegedArpManager struct {
 	runner CmdRunner
-	logger lager.Logger
 }
 
-func NewPrivilegedArpManager(runner CmdRunner, logger lager.Logger) ArpManager {
+func NewPrivilegedArpManager(runner CmdRunner) ArpManager {
 	return &PrivilegedArpManager{
 		runner: runner,
-		logger: logger,
 	}
 }
 

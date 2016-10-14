@@ -218,6 +218,7 @@ func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlG
 }
 
 func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *BackendStatus, client UrlGetter) {
+	c.logger.Debug("Querying Backend", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
 	healthMonitor.Counters.IncrementCount("dial")
 	shouldLog := healthMonitor.Counters.Should("log")
 
@@ -228,17 +229,19 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 	}
 
 	if healthy {
+		c.logger.Debug("Querying Backend: healthy", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
 		backend.SetHealthy()
 		healthMonitor.Healthy = true
 		healthMonitor.Counters.ResetCount("consecutiveUnhealthyChecks")
 	} else {
+		c.logger.Debug("Querying Backend: unhealthy", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
 		backend.SetUnhealthy()
 		healthMonitor.Healthy = false
 		healthMonitor.Counters.IncrementCount("consecutiveUnhealthyChecks")
-
 	}
 
 	if healthMonitor.Counters.Should("clearArp") {
+		c.logger.Debug("Querying Backend: clear arp", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
 		backendHost := backend.AsJSON().Host
 
 		err := c.arpEntryRemover.RemoveEntry(net.ParseIP(backendHost))

@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("ArpEntryRemover", func() {
+var _ = Describe("ARPFlusher", func() {
 
 	var (
 		runner *monitorfakes.FakeCmdRunner
@@ -20,43 +20,45 @@ var _ = Describe("ArpEntryRemover", func() {
 
 	BeforeEach(func() {
 		runner = new(monitorfakes.FakeCmdRunner)
+		arp = NewARPFlusher(runner)
 	})
 
 	Describe("RemoveEntry", func() {
-		It("deletes the entry", func() {
-			runner.RunReturns([]byte{}, nil)
-			arp = NewPrivilegedArpEntryRemover(runner)
+		It("runs", func() {
 			err := arp.RemoveEntry(net.ParseIP("192.0.2.0"))
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(runner.RunCallCount()).To(Equal(1))
+
 			cmd, args := runner.RunArgsForCall(0)
-			Expect(cmd).To(Equal("/usr/sbin/arp"))
-			Expect(args).To(Equal([]string{"-d", "192.0.2.0"}))
+			Expect(cmd).To(Equal(FlushARPBinPath))
+			Expect(args).To(Equal([]string{"192.0.2.0"}))
 		})
-		Context("when the entry cannot be deleted", func() {
-			Context("when the ip is in a wrong format", func() {
-				It("returns an error", func() {
-					arp = NewPrivilegedArpEntryRemover(runner)
-					err := arp.RemoveEntry(net.ParseIP("invalidIP"))
-					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError("failed to delete arp entry: invalid IP"))
-				})
+
+		Context("when there is an error", func() {
+			var (
+				output      string
+				expectedErr error
+			)
+
+			BeforeEach(func() {
+				expectedErr = errors.New("some error")
+				output = "some output"
+
+				runner.RunReturns([]byte(output), expectedErr)
 			})
+
 			It("returns an error", func() {
-				runner.RunReturns(
-					[]byte("SIOCDARP(dontpub): Operation not permitted"),
-					errors.New("exit status 255"))
-				arp = NewPrivilegedArpEntryRemover(runner)
+
 				err := arp.RemoveEntry(net.ParseIP("192.0.2.0"))
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError("failed to delete arp entry: OUTPUT=SIOCDARP(dontpub): " +
-					"Operation not permitted, ERROR=exit status 255"))
+				Expect(err.Error()).To(ContainSubstring(expectedErr.Error()))
+				Expect(err.Error()).To(ContainSubstring(output))
 
 				Expect(runner.RunCallCount()).To(Equal(1))
+
 				cmd, args := runner.RunArgsForCall(0)
-				Expect(cmd).To(Equal("/usr/sbin/arp"))
-				Expect(args).To(Equal([]string{"-d", "192.0.2.0"}))
+				Expect(cmd).To(Equal(FlushARPBinPath))
+				Expect(args).To(Equal([]string{"192.0.2.0"}))
 			})
 		})
 	})

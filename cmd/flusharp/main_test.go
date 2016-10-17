@@ -67,6 +67,6 @@ var _ = Describe("ARP Flusher", func() {
 		Expect(session.ExitCode()).NotTo(BeZero())
 
 		stderr := string(session.Err.Contents())
-		Expect(stderr).To(ContainSubstring("exit status 1"))
+		Expect(stderr).To(ContainSubstring("exit status"))
 	})
 })

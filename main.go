@@ -115,16 +115,6 @@ func main() {
 			logger.Fatal("new-consul-client-failed", err)
 		}
 
-		lock := locket.NewLock(
-			logger,
-			consulClient,
-			locket.LockSchemaPath(rootConfig.ConsulServiceName+"_lock"),
-			[]byte{},
-			clock,
-			locket.RetryInterval,
-			locket.LockTTL,
-		)
-
 		registrationRunner := locket.NewRegistrationRunner(logger,
 			&consulapi.AgentServiceRegistration{
 				Name:  rootConfig.ConsulServiceName,
@@ -133,7 +123,6 @@ func main() {
 			},
 			consulClient, locket.RetryInterval, clock)
 
-		members = append([]grouper.Member{{"lock", lock}}, members...)
 		members = append(members, grouper.Member{"registration", registrationRunner})
 	}
 

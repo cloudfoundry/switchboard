@@ -14,11 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/consuladapter"
 	"code.cloudfoundry.org/consuladapter/consulrunner"
-	"code.cloudfoundry.org/lager/lagertest"
-	"code.cloudfoundry.org/locket"
 
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/dummies"
@@ -805,57 +802,16 @@ var _ = Describe("Switchboard", func() {
 			}, startupTimeout).Should(Equal(os.FileMode(0644)))
 		})
 
-		Context("the switchboard acquires the lock", func() {
-			It("starts up", func() {
-				Eventually(func() error {
-					_, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
-					return err
-				}, startupTimeout).Should(Succeed())
-			})
-
-			It("registers itself with consul", func() {
-				Eventually(func() map[string]*api.AgentService {
-					services, _ := consulClient.Agent().Services()
-					return services
-				}, startupTimeout).Should(HaveKeyWithValue("test_mysql",
-					&api.AgentService{
-						Service: "test_mysql",
-						ID:      "test_mysql",
-						Port:    int(proxyPort),
-					}))
-			})
-
-			Context("but then loses the lock", func() {
-				It("exits with an error", func() {
-					processErr := make(chan error)
-					go func() { err := <-process.Wait(); processErr <- err }()
-
-					consulRunner.Reset()
-					err := <-processErr
-					Expect(err).To(HaveOccurred())
-				})
-			})
-		})
-
-		Context("and the lock is not available", func() {
-			var competingSwitchboardLockProcess ifrit.Process
-			BeforeEach(func() {
-				logger := lagertest.NewTestLogger("test")
-
-				competingSwitchboardLock := locket.NewLock(logger, consulClient, locket.LockSchemaPath("test_mysql_lock"), []byte{}, clock.NewClock(), time.Millisecond*2500, time.Second*5)
-				competingSwitchboardLockProcess = ifrit.Invoke(competingSwitchboardLock)
-			})
-
-			AfterEach(func() {
-				ginkgomon.Interrupt(competingSwitchboardLockProcess, 5*time.Second)
-			})
-
-			It("waits for the lock to become available", func() {
-				Consistently(func() error {
-					_, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
-					return err
-				}).Should(HaveOccurred())
-			})
+		It("registers itself with consul", func() {
+			Eventually(func() map[string]*api.AgentService {
+				services, _ := consulClient.Agent().Services()
+				return services
+			}, startupTimeout).Should(HaveKeyWithValue("test_mysql",
+				&api.AgentService{
+					Service: "test_mysql",
+					ID:      "test_mysql",
+					Port:    int(proxyPort),
+				}))
 		})
 	})
 })

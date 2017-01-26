@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
@@ -14,14 +15,22 @@ type Runner struct {
 	port               uint
 	trafficEnabledChan <-chan bool
 	activeBackendChan  <-chan *domain.Backend
+	timeout            time.Duration
 }
 
-func NewRunner(activeBackendChan <-chan *domain.Backend, trafficEnabledChan <-chan bool, port uint, logger lager.Logger) Runner {
+func NewRunner(
+	activeBackendChan <-chan *domain.Backend,
+	trafficEnabledChan <-chan bool,
+	port uint,
+	timeout time.Duration,
+	logger lager.Logger,
+) Runner {
 	return Runner{
 		logger:             logger,
 		activeBackendChan:  activeBackendChan,
 		trafficEnabledChan: trafficEnabledChan,
 		port:               port,
+		timeout:            timeout,
 	}
 }
 
@@ -95,6 +104,9 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 	signal := <-signals
 	r.logger.Info("Received signal", lager.Data{"signal": signal})
+
+	time.Sleep(r.timeout)
+
 	close(shutdown)
 	listener.Close()
 

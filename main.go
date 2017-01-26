@@ -83,7 +83,7 @@ func main() {
 	members := grouper.Members{
 		{
 			Name:   "bridge",
-			Runner: bridge.NewRunner(bridgeActiveBackendChan, trafficEnabledChan, rootConfig.Proxy.Port, logger),
+			Runner: bridge.NewRunner(bridgeActiveBackendChan, trafficEnabledChan, rootConfig.Proxy.Port, rootConfig.Proxy.ShutdownDelay(), logger),
 		},
 		{
 			Name:   "api",

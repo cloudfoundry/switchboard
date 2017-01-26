@@ -35,6 +35,7 @@ type Proxy struct {
 	Port                     uint      `yaml:"Port" validate:"nonzero"`
 	Backends                 []Backend `yaml:"Backends" validate:"min=1"`
 	HealthcheckTimeoutMillis uint      `yaml:"HealthcheckTimeoutMillis" validate:"nonzero"`
+	ShutdownDelaySeconds     uint      `yaml:"ShutdownDelaySeconds"`
 }
 
 type API struct {
@@ -54,6 +55,10 @@ type Backend struct {
 
 func (p Proxy) HealthcheckTimeout() time.Duration {
 	return time.Duration(p.HealthcheckTimeoutMillis) * time.Millisecond
+}
+
+func (p Proxy) ShutdownDelay() time.Duration {
+	return time.Duration(p.ShutdownDelaySeconds) * time.Second
 }
 
 func NewConfig(osArgs []string) (*Config, error) {

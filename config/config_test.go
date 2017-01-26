@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"fmt"
+	"time"
 
 	. "github.com/cloudfoundry-incubator/switchboard/config"
 
@@ -12,8 +13,21 @@ import (
 )
 
 var _ = Describe("Config", func() {
-	Describe("Validate", func() {
+	Describe("Proxy methods", func() {
+		Describe("HealthcheckTimeout", func() {
+			It("returns timeout in millis", func() {
+				Expect(Proxy{HealthcheckTimeoutMillis: 10}.HealthcheckTimeout()).To(Equal(10 * time.Millisecond))
+			})
+		})
 
+		Describe("ShutdownDelay", func() {
+			It("returns delay in seconds", func() {
+				Expect(Proxy{ShutdownDelaySeconds: 10}.ShutdownDelay()).To(Equal(10 * time.Second))
+			})
+		})
+	})
+
+	Describe("Validate", func() {
 		var (
 			rootConfig    *Config
 			rawConfig     string

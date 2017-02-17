@@ -39,10 +39,12 @@ type Proxy struct {
 }
 
 type API struct {
-	Port       uint   `yaml:"Port" validate:"nonzero"`
-	Username   string `yaml:"Username" validate:"nonzero"`
-	Password   string `yaml:"Password" validate:"nonzero"`
-	ForceHttps bool   `yaml:"ForceHttps"`
+	Port           uint     `yaml:"Port" validate:"nonzero"`
+	AggregatorPort uint     `yaml:"AggregatorPort" validate:"nonzero"`
+	Username       string   `yaml:"Username" validate:"nonzero"`
+	Password       string   `yaml:"Password" validate:"nonzero"`
+	ForceHttps     bool     `yaml:"ForceHttps"`
+	ProxyURIs      []string `yaml:"ProxyURIs"`
 }
 
 type Backend struct {

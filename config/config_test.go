@@ -30,7 +30,6 @@ var _ = Describe("Config", func() {
 	Describe("Validate", func() {
 		var (
 			rootConfig    *Config
-			rawConfig     string
 			rawConfigFile string
 		)
 
@@ -46,34 +45,6 @@ var _ = Describe("Config", func() {
 		})
 
 		BeforeEach(func() {
-			rawConfig = `{
-				"API": {
-					"Port": "80",
-					"Username": "fake-username",
-					"Password": "fake-password",
-					"ForceHttps": true
-				},
-				"Proxy": {
-					"Port": 3306,
-					"HealthcheckTimeoutMillis": 5000,
-					"Backends": [
-						{
-							"Host": "10.10.10.10",
-							"Port": 3306,
-							"StatusPort": 9200,
-							"StatusEndpoint": "galera_healthcheck",
-							"Name": "backend-0"
-						}
-					]
-				},
-				"Profiling": {
-					"Enabled": true,
-					"Port": 6060
-				},
-				"HealthPort": 9200,
-				"StaticDir": "fake-path",
-				"PidFile": "fake-pid-path"
-			}`
 			rawConfigFile = "fixtures/validConfig.yml"
 		})
 

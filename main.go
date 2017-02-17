@@ -14,9 +14,11 @@ import (
 	"code.cloudfoundry.org/locket"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
+	"github.com/cloudfoundry-incubator/switchboard/apiaggregator"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	apirunner "github.com/cloudfoundry-incubator/switchboard/runner/api"
+	apiaggregatorrunner "github.com/cloudfoundry-incubator/switchboard/runner/apiaggregator"
 	"github.com/cloudfoundry-incubator/switchboard/runner/bridge"
 	"github.com/cloudfoundry-incubator/switchboard/runner/health"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
@@ -79,11 +81,16 @@ func main() {
 	go clusterAPI.ListenForActiveBackend()
 
 	handler := api.NewHandler(clusterAPI, backends, logger, rootConfig.API, rootConfig.StaticDir)
+	aggregatorHandler := apiaggregator.NewHandler(logger, rootConfig.API)
 
 	members := grouper.Members{
 		{
 			Name:   "bridge",
 			Runner: bridge.NewRunner(bridgeActiveBackendChan, trafficEnabledChan, rootConfig.Proxy.Port, rootConfig.Proxy.ShutdownDelay(), logger),
+		},
+		{
+			Name:   "api-aggregator",
+			Runner: apiaggregatorrunner.NewRunner(rootConfig.API.AggregatorPort, aggregatorHandler),
 		},
 		{
 			Name:   "api",

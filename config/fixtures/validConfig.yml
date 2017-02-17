@@ -1,5 +1,6 @@
 API:
   Port: 80
+  AggregatorPort: 8081
   Username: fake-username
   Password: fake-password
   ForceHttps: true

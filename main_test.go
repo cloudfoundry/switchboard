@@ -78,7 +78,7 @@ func getClusterFromAPI(req *http.Request) map[string]interface{} {
 }
 
 func sendData(conn net.Conn, data string) (Response, error) {
-	conn.Write([]byte(data))
+	_, _ = conn.Write([]byte(data))
 
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
@@ -142,17 +142,18 @@ var _ = Describe("Switchboard", func() {
 		healthcheckRunners                           []*dummies.HealthcheckRunner
 		healthcheckWaitDuration                      time.Duration
 
-		proxyPort               uint
-		switchboardAPIPort      uint
-		switchboardProfilerPort uint
-		switchboardHealthPort   uint
-		backends                []config.Backend
-		rootConfig              config.Config
-		proxyConfig             config.Proxy
-		apiConfig               config.API
-		profilingConfig         config.Profiling
-		pidFile                 string
-		staticDir               string
+		proxyPort                    uint
+		switchboardAPIPort           uint
+		switchboardAPIAggregatorPort uint
+		switchboardProfilerPort      uint
+		switchboardHealthPort        uint
+		backends                     []config.Backend
+		rootConfig                   config.Config
+		proxyConfig                  config.Proxy
+		apiConfig                    config.API
+		profilingConfig              config.Profiling
+		pidFile                      string
+		staticDir                    string
 	)
 
 	BeforeEach(func() {
@@ -163,12 +164,13 @@ var _ = Describe("Switchboard", func() {
 		staticDir = filepath.Join(testDir, "static")
 
 		pidFileFile, _ := ioutil.TempFile(tempDir, "switchboard.pid")
-		pidFileFile.Close()
+		_ = pidFileFile.Close()
 		pidFile = pidFileFile.Name()
-		os.Remove(pidFile)
+		_ = os.Remove(pidFile)
 
 		proxyPort = uint(10000 + GinkgoParallelNode())
 		switchboardAPIPort = uint(10100 + GinkgoParallelNode())
+		switchboardAPIAggregatorPort = uint(10800 + GinkgoParallelNode())
 		switchboardProfilerPort = uint(6060 + GinkgoParallelNode())
 		switchboardHealthPort = uint(6160 + GinkgoParallelNode())
 
@@ -195,10 +197,13 @@ var _ = Describe("Switchboard", func() {
 			HealthcheckTimeoutMillis: 500,
 			Port: proxyPort,
 		}
+
 		apiConfig = config.API{
-			Port:     switchboardAPIPort,
-			Username: "username",
-			Password: "password",
+			AggregatorPort: switchboardAPIAggregatorPort,
+			Port:           switchboardAPIPort,
+			Username:       "username",
+			Password:       "password",
+			ProxyURIs:      []string{"some-proxy-uri-0", "some-proxy-uri-1"},
 		}
 
 		profilingConfig = config.Profiling{
@@ -255,9 +260,7 @@ var _ = Describe("Switchboard", func() {
 	Context("When consul is not configured", func() {
 		Context("and switchboard starts successfully", func() {
 			JustBeforeEach(func() {
-				var (
-					response Response
-				)
+				var response Response
 
 				Eventually(func() error {
 					conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
@@ -265,6 +268,7 @@ var _ = Describe("Switchboard", func() {
 						return err
 					}
 					defer conn.Close()
+
 					response, err = sendData(conn, "detect active")
 					return err
 				}, startupTimeout).Should(Succeed())
@@ -328,6 +332,50 @@ var _ = Describe("Switchboard", func() {
 
 					It("operates normally", func() {
 						acceptsAndClosesTCPConnections()
+					})
+				})
+			})
+
+			Describe("API Aggregator", func() {
+				Describe("/", func() {
+					var url string
+
+					BeforeEach(func() {
+						url = fmt.Sprintf("http://localhost:%d/", switchboardAPIAggregatorPort)
+					})
+
+					It("prompts for Basic Auth creds when they aren't provided", func() {
+						resp, err := http.Get(url)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+						Expect(resp.Header.Get("WWW-Authenticate")).To(Equal(`Basic realm="Authorization Required"`))
+					})
+
+					It("does not accept bad Basic Auth creds", func() {
+						req, err := http.NewRequest("GET", url, nil)
+						req.SetBasicAuth("bad_username", "bad_password")
+						client := &http.Client{}
+						resp, err := client.Do(req)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+					})
+
+					It("responds with 200 and contains proxy URIs when authorized", func() {
+						req, err := http.NewRequest("GET", url, nil)
+						req.SetBasicAuth("username", "password")
+						client := &http.Client{}
+						resp, err := client.Do(req)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+						Expect(resp.Body).ToNot(BeNil())
+						defer resp.Body.Close()
+						body, err := ioutil.ReadAll(resp.Body)
+						Expect(len(body)).To(BeNumerically(">", 0), "Expected body to not be empty")
+
+						Expect(string(body)).To(ContainSubstring(apiConfig.ProxyURIs[0]))
+						Expect(string(body)).To(ContainSubstring(apiConfig.ProxyURIs[1]))
 					})
 				})
 			})
@@ -581,7 +629,7 @@ var _ = Describe("Switchboard", func() {
 						Expect(err).ToNot(HaveOccurred())
 						Expect(dataBeforeDisconnect.Message).Should(Equal("data before disconnect"))
 
-						connToDisconnect.Close()
+						_ = connToDisconnect.Close()
 
 						dataAfterDisconnect, err := sendData(conn, "data after disconnect")
 						Expect(err).ToNot(HaveOccurred())
@@ -753,7 +801,7 @@ var _ = Describe("Switchboard", func() {
 
 		Context("and switchboard is failing", func() {
 			BeforeEach(func() {
-				rootConfig.StaticDir = "this is totallly invalid so switchboard won't start"
+				rootConfig.StaticDir = "this is totally invalid so switchboard won't start"
 			})
 
 			It("does not write the PidFile", func() {
@@ -787,7 +835,7 @@ var _ = Describe("Switchboard", func() {
 		})
 
 		AfterEach(func() {
-			consulRunner.Reset()
+			_ = consulRunner.Reset()
 			consulRunner.Stop()
 			rootConfig.ConsulCluster = ""
 		})

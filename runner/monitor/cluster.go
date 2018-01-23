@@ -43,6 +43,7 @@ type Cluster struct {
 	healthcheckTimeout       time.Duration
 	arpEntryRemover          ArpEntryRemover
 	activeBackendSubscribers []chan<- *domain.Backend
+	lookupIP                 func(string) ([]net.IP, error)
 }
 
 func NewCluster(
@@ -51,6 +52,7 @@ func NewCluster(
 	logger lager.Logger,
 	arpEntryRemover ArpEntryRemover,
 	activeBackendSubscribers []chan<- *domain.Backend,
+  lookupIP                 func(string) ([]net.IP, error),
 ) *Cluster {
 	return &Cluster{
 		backends:                 backends,
@@ -58,6 +60,7 @@ func NewCluster(
 		healthcheckTimeout:       healthcheckTimeout,
 		arpEntryRemover:          arpEntryRemover,
 		activeBackendSubscribers: activeBackendSubscribers,
+		lookupIP: lookupIP,
 	}
 }
 
@@ -107,11 +110,8 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 			case <-stopChan:
 				return
 			}
-
 		}
-
 	}()
-
 }
 
 func (c *Cluster) SetupCounters() *DecisionCounters {
@@ -244,7 +244,19 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 		c.logger.Debug("Querying Backend: clear arp", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
 		backendHost := backend.AsJSON().Host
 
-		err := c.arpEntryRemover.RemoveEntry(net.ParseIP(backendHost))
+		backendIp := net.ParseIP(backendHost)
+		if backendIp == nil {
+			var ips []net.IP
+			ips, err := c.lookupIP(backendHost)
+			if err != nil {
+				c.logger.Error("DNS lookup failed", err)
+				return
+			} else {
+				backendIp = ips[0]
+			}
+		}
+
+		err := c.arpEntryRemover.RemoveEntry(backendIp)
 		if err != nil {
 			c.logger.Error("Failed to clear arp cache", err)
 		}

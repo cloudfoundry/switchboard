@@ -17,19 +17,18 @@ import (
 
 	"strings"
 
-	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	. "github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
 )
 
-const healthcheckTimeout = time.Second
+const healthcheckTimeout = 500 * time.Millisecond
 
 var _ = Describe("Cluster", func() {
 	var (
 		backends                     []*domain.Backend
-		logger                       lager.Logger
+		logger                       *lagertest.TestLogger
 		cluster                      *Cluster
 		fakeArpEntryRemover          *monitorfakes.FakeArpEntryRemover
 		backend1, backend2, backend3 *domain.Backend
@@ -37,6 +36,7 @@ var _ = Describe("Cluster", func() {
 		subscriberB                  chan *domain.Backend
 		activeBackendSubscribers     []chan<- *domain.Backend
 		notFoundResponse             *http.Response
+		fakeLookupIP								 func(string) ([]net.IP, error)
 
 		m sync.RWMutex
 	)
@@ -47,6 +47,15 @@ var _ = Describe("Cluster", func() {
 		logger = lagertest.NewTestLogger("Cluster test")
 		fakeArpEntryRemover = new(monitorfakes.FakeArpEntryRemover)
 		fakeArpEntryRemover.RemoveEntryReturns(nil)
+
+		fakeLookupIP = func(s string) ([]net.IP, error) {
+			if s == "one-ip.example.com" {
+				return []net.IP{
+					net.IPv4(9, 8, 7, 6),
+				}, nil
+			}
+			return nil, errors.New("DNS LOOKUP FAILED")
+		}
 
 		backend1 = domain.NewBackend(
 			"backend-1",
@@ -107,6 +116,7 @@ var _ = Describe("Cluster", func() {
 			logger,
 			fakeArpEntryRemover,
 			activeBackendSubscribers,
+			fakeLookupIP,
 		)
 	})
 
@@ -318,12 +328,58 @@ var _ = Describe("Cluster", func() {
 				}
 			})
 
-			Context("and the IP is in the ARP cache", func() {
-				It("clears the arp cache after ArpFlushInterval has elapsed", func() {
+			Context("and the backend host is in the ARP cache", func() {
+				It("removes the host IP entry from the arp cache after ArpFlushInterval has elapsed", func() {
 					cluster.Monitor(stopMonitoringChan)
 
 					Eventually(fakeArpEntryRemover.RemoveEntryCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpEntryRemover.RemoveEntry to be called at least once")
 					Expect(fakeArpEntryRemover.RemoveEntryArgsForCall(0)).To(Equal(net.ParseIP(backend2.AsJSON().Host)))
+				})
+
+				Context("when backend host is a domain name", func(){
+					JustBeforeEach(func() {
+						backend2 = domain.NewBackend(
+							"backend-2",
+							"one-ip.example.com",
+							1337,
+							1338,
+							"healthcheck",
+							logger,
+						)
+
+						backends[1] = backend2
+						backend2.SetHealthy()
+					})
+
+					It("removes the IP corresponding to the backend host from the arp cache after ArpFlushInterval has elapsed", func(){
+						cluster.Monitor(stopMonitoringChan)
+
+						Eventually(fakeArpEntryRemover.RemoveEntryCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpEntryRemover.RemoveEntry to be called at least once")
+						Expect(fakeArpEntryRemover.RemoveEntryArgsForCall(0).String()).To(Equal("9.8.7.6"))
+					})
+
+					Context("when the host fails to resolve to an IP", func() {
+						JustBeforeEach(func() {
+							backend2 = domain.NewBackend(
+								"backend-2",
+								"will-not-resolve.example.com",
+								1337,
+								1338,
+								"healthcheck",
+								logger,
+							)
+
+							backends[1] = backend2
+							backend2.SetHealthy()
+						})
+
+						It("does not call RemoveEntry() and logs a failure message", func() {
+							cluster.Monitor(stopMonitoringChan)
+
+							Consistently(fakeArpEntryRemover.RemoveEntryCallCount, time.Second, 500*time.Millisecond).Should(BeNumerically("==", 0), "Expected arpEntryRemover.RemoveEntry to not have been called")
+							Expect(logger.TestSink.LogMessages()).To(ContainElement(ContainSubstring("DNS lookup failed")))
+						})
+					})
 				})
 			})
 		})

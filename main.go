@@ -26,6 +26,7 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/sigmon"
+	"net"
 )
 
 func main() {
@@ -73,6 +74,7 @@ func main() {
 		logger,
 		arpEntryRemover,
 		activeBackendSubscribers,
+		net.LookupIP,
 	)
 
 	trafficEnabledChan := make(chan bool)

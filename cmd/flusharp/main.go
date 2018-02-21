@@ -7,11 +7,13 @@ import (
 	"os/exec"
 )
 
-const (
-	arpCommand = "/usr/sbin/arp"
-)
+var arpCommand = "/usr/sbin/arp"
 
 func main() {
+	if _, err := os.Stat(arpCommand); err != nil {
+		arpCommand = "/sbin/arp"
+	}
+
 	if len(os.Args) != 2 {
 		fmt.Fprintf(os.Stderr, fmt.Sprintf("%s: wrong number of arguments", os.Args[0]))
 		os.Exit(1)

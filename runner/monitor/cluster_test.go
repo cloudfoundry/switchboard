@@ -3,7 +3,6 @@ package monitor_test
 import (
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -30,13 +29,11 @@ var _ = Describe("Cluster", func() {
 		backends                     []*domain.Backend
 		logger                       *lagertest.TestLogger
 		cluster                      *Cluster
-		fakeArpEntryRemover          *monitorfakes.FakeArpEntryRemover
 		backend1, backend2, backend3 *domain.Backend
 		subscriberA                  chan *domain.Backend
 		subscriberB                  chan *domain.Backend
 		activeBackendSubscribers     []chan<- *domain.Backend
 		notFoundResponse             *http.Response
-		fakeLookupIP								 func(string) ([]net.IP, error)
 
 		m sync.RWMutex
 	)
@@ -45,17 +42,6 @@ var _ = Describe("Cluster", func() {
 		cluster = nil
 
 		logger = lagertest.NewTestLogger("Cluster test")
-		fakeArpEntryRemover = new(monitorfakes.FakeArpEntryRemover)
-		fakeArpEntryRemover.RemoveEntryReturns(nil)
-
-		fakeLookupIP = func(s string) ([]net.IP, error) {
-			if s == "one-ip.example.com" {
-				return []net.IP{
-					net.IPv4(9, 8, 7, 6),
-				}, nil
-			}
-			return nil, errors.New("DNS LOOKUP FAILED")
-		}
 
 		backend1 = domain.NewBackend(
 			"backend-1",
@@ -114,9 +100,7 @@ var _ = Describe("Cluster", func() {
 			backends,
 			healthcheckTimeout,
 			logger,
-			fakeArpEntryRemover,
 			activeBackendSubscribers,
-			fakeLookupIP,
 		)
 	})
 
@@ -289,98 +273,6 @@ var _ = Describe("Cluster", func() {
 
 				Eventually(subscriberA).Should(Receive(Not(Equal(firstActive))))
 				Eventually(subscriberB).Should(Receive(Not(Equal(firstActive))))
-			})
-		})
-
-		Context("when a backend is healthy", func() {
-			BeforeEach(func() {
-				fakeArpEntryRemover = new(monitorfakes.FakeArpEntryRemover)
-			})
-
-			It("does not clears arp cache after ArpFlushInterval has elapsed", func() {
-				cluster.Monitor(stopMonitoringChan)
-
-				Consistently(fakeArpEntryRemover.RemoveEntryCallCount, healthcheckTimeout*2).Should(BeZero())
-			})
-		})
-
-		Context("when a backend is unhealthy", func() {
-			BeforeEach(func() {
-				fakeArpEntryRemover = new(monitorfakes.FakeArpEntryRemover)
-				unhealthyResponse := &http.Response{
-					Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
-					StatusCode: http.StatusInternalServerError,
-				}
-
-				urlGetter.GetStub = func(url string) (*http.Response, error) {
-					m.RLock()
-					defer m.RUnlock()
-
-					if strings.HasSuffix(url, "api/v1/status") {
-						return notFoundResponse, nil
-					}
-
-					if url == backend2.HealthcheckUrl() {
-						return unhealthyResponse, nil
-					} else {
-						return healthyResponse, nil
-					}
-				}
-			})
-
-			Context("and the backend host is in the ARP cache", func() {
-				It("removes the host IP entry from the arp cache after ArpFlushInterval has elapsed", func() {
-					cluster.Monitor(stopMonitoringChan)
-
-					Eventually(fakeArpEntryRemover.RemoveEntryCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpEntryRemover.RemoveEntry to be called at least once")
-					Expect(fakeArpEntryRemover.RemoveEntryArgsForCall(0)).To(Equal(net.ParseIP(backend2.AsJSON().Host)))
-				})
-
-				Context("when backend host is a domain name", func(){
-					JustBeforeEach(func() {
-						backend2 = domain.NewBackend(
-							"backend-2",
-							"one-ip.example.com",
-							1337,
-							1338,
-							"healthcheck",
-							logger,
-						)
-
-						backends[1] = backend2
-						backend2.SetHealthy()
-					})
-
-					It("removes the IP corresponding to the backend host from the arp cache after ArpFlushInterval has elapsed", func(){
-						cluster.Monitor(stopMonitoringChan)
-
-						Eventually(fakeArpEntryRemover.RemoveEntryCallCount, 10*time.Second, 500*time.Millisecond).Should(BeNumerically(">=", 1), "Expected arpEntryRemover.RemoveEntry to be called at least once")
-						Expect(fakeArpEntryRemover.RemoveEntryArgsForCall(0).String()).To(Equal("9.8.7.6"))
-					})
-
-					Context("when the host fails to resolve to an IP", func() {
-						JustBeforeEach(func() {
-							backend2 = domain.NewBackend(
-								"backend-2",
-								"will-not-resolve.example.com",
-								1337,
-								1338,
-								"healthcheck",
-								logger,
-							)
-
-							backends[1] = backend2
-							backend2.SetHealthy()
-						})
-
-						It("does not call RemoveEntry() and logs a failure message", func() {
-							cluster.Monitor(stopMonitoringChan)
-
-							Consistently(fakeArpEntryRemover.RemoveEntryCallCount, time.Second, 500*time.Millisecond).Should(BeNumerically("==", 0), "Expected arpEntryRemover.RemoveEntry to not have been called")
-							Expect(logger.TestSink.LogMessages()).To(ContainElement(ContainSubstring("DNS lookup failed")))
-						})
-					})
-				})
 			})
 		})
 	})

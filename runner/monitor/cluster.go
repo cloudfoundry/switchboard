@@ -2,9 +2,7 @@ package monitor
 
 import (
 	"fmt"
-	"net"
 	"net/http"
-	"reflect"
 	"time"
 
 	"sync"
@@ -41,26 +39,20 @@ type Cluster struct {
 	backends                 []*domain.Backend
 	logger                   lager.Logger
 	healthcheckTimeout       time.Duration
-	arpEntryRemover          ArpEntryRemover
 	activeBackendSubscribers []chan<- *domain.Backend
-	lookupIP                 func(string) ([]net.IP, error)
 }
 
 func NewCluster(
 	backends []*domain.Backend,
 	healthcheckTimeout time.Duration,
 	logger lager.Logger,
-	arpEntryRemover ArpEntryRemover,
 	activeBackendSubscribers []chan<- *domain.Backend,
-  lookupIP                 func(string) ([]net.IP, error),
 ) *Cluster {
 	return &Cluster{
 		backends:                 backends,
 		logger:                   logger,
 		healthcheckTimeout:       healthcheckTimeout,
-		arpEntryRemover:          arpEntryRemover,
 		activeBackendSubscribers: activeBackendSubscribers,
-		lookupIP: lookupIP,
 	}
 }
 
@@ -117,22 +109,10 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 func (c *Cluster) SetupCounters() *DecisionCounters {
 	counters := NewDecisionCounters()
 	logFreq := uint64(5)
-	clearArpFreq := uint64(5)
 
 	//used to make logs less noisy
 	counters.AddCondition("log", func() bool {
 		return (counters.GetCount("dial") % logFreq) == 0
-	})
-
-	//only clear ARP cache after X consecutive unhealthy dials
-	counters.AddCondition("clearArp", func() bool {
-		// golang makes it difficult to tell whether the value of an interface is nil
-		if reflect.ValueOf(c.arpEntryRemover).IsNil() {
-			return false
-		} else {
-			checks := counters.GetCount("consecutiveUnhealthyChecks")
-			return (checks > 0) && (checks%clearArpFreq) == 0
-		}
 	})
 
 	return counters
@@ -238,27 +218,5 @@ func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *Bac
 		backend.SetUnhealthy()
 		healthMonitor.Healthy = false
 		healthMonitor.Counters.IncrementCount("consecutiveUnhealthyChecks")
-	}
-
-	if healthMonitor.Counters.Should("clearArp") {
-		c.logger.Debug("Querying Backend: clear arp", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
-		backendHost := backend.AsJSON().Host
-
-		backendIp := net.ParseIP(backendHost)
-		if backendIp == nil {
-			var ips []net.IP
-			ips, err := c.lookupIP(backendHost)
-			if err != nil {
-				c.logger.Error("DNS lookup failed", err)
-				return
-			} else {
-				backendIp = ips[0]
-			}
-		}
-
-		err := c.arpEntryRemover.RemoveEntry(backendIp)
-		if err != nil {
-			c.logger.Error("Failed to clear arp cache", err)
-		}
 	}
 }

@@ -26,7 +26,6 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/sigmon"
-	"net"
 )
 
 func main() {
@@ -59,7 +58,6 @@ func main() {
 	}
 
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
-	arpEntryRemover := monitor.NewARPFlusher(new(monitor.ExecCmdRunner))
 
 	bridgeActiveBackendChan := make(chan *domain.Backend)
 	clusterAPIActiveBackendChan := make(chan *domain.Backend)
@@ -72,9 +70,7 @@ func main() {
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
-		arpEntryRemover,
 		activeBackendSubscribers,
-		net.LookupIP,
 	)
 
 	trafficEnabledChan := make(chan bool)

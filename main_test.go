@@ -516,7 +516,10 @@ var _ = Describe("Switchboard", func() {
 
 							returnedBackends := getBackendsFromApi(req)
 
-							Expect(returnedBackends[0]["currentSessionCount"]).To(BeNumerically("==", 1), "Expected active backend to have SessionCount == 1")
+							Eventually(func() interface{} {
+								return getBackendsFromApi(req)[0]["currentSessionCount"]
+							}).Should(BeNumerically("==", 1), "Expected active backend to have SessionCount == 1")
+
 							Expect(returnedBackends[1]["currentSessionCount"]).To(BeNumerically("==", 0), "Expected inactive backend to have SessionCount == 0")
 						})
 					})

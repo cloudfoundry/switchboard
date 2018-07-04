@@ -18,15 +18,17 @@ type HealthcheckRunner struct {
 	endpoint   string
 	stopped    chan interface{}
 	statusCode int
+	index      int
 	hang       bool
 }
 
-func NewHealthcheckRunner(backend config.Backend) *HealthcheckRunner {
+func NewHealthcheckRunner(backend config.Backend, index int) *HealthcheckRunner {
 	return &HealthcheckRunner{
 		port:       backend.StatusPort,
 		endpoint:   backend.StatusEndpoint,
 		stopped:    make(chan interface{}),
 		statusCode: http.StatusOK,
+		index:      index,
 		hang:       false,
 	}
 }
@@ -98,7 +100,7 @@ func (fh *HealthcheckRunner) health(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(fh.statusCode)
 	switch fh.statusCode {
 	case http.StatusOK:
-		io.WriteString(w, "synced")
+		io.WriteString(w, fmt.Sprintf(`{"wsrep_local_state":4,"wsrep_local_state_comment":"Synced","wsrep_local_index":%d,"healthy":true}`, fh.index))
 	case http.StatusServiceUnavailable:
 		io.WriteString(w, "")
 	}

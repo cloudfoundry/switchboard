@@ -14,8 +14,6 @@ import (
 
 	"sync"
 
-	"strings"
-
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 	. "github.com/cloudfoundry-incubator/switchboard/runner/monitor"
@@ -48,7 +46,7 @@ var _ = Describe("Cluster", func() {
 			"10.10.1.2",
 			1337,
 			1338,
-			"healthcheck",
+			"api/v1/status",
 			logger,
 		)
 
@@ -58,7 +56,7 @@ var _ = Describe("Cluster", func() {
 			"10.10.2.2",
 			1337,
 			1338,
-			"healthcheck",
+			"api/v1/status",
 			logger,
 		)
 		m.Unlock()
@@ -68,7 +66,7 @@ var _ = Describe("Cluster", func() {
 			"10.10.3.2",
 			1337,
 			1338,
-			"healthcheck",
+			"api/v1/status",
 			logger,
 		)
 
@@ -106,8 +104,7 @@ var _ = Describe("Cluster", func() {
 
 	Describe("Monitor", func() {
 		var (
-			urlGetter       *monitorfakes.FakeUrlGetter
-			healthyResponse *http.Response
+			urlGetter *monitorfakes.FakeUrlGetter
 
 			stopMonitoringChan chan interface{}
 		)
@@ -120,17 +117,14 @@ var _ = Describe("Cluster", func() {
 				return urlGetter
 			}
 
-			healthyResponse = &http.Response{
-				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
-				StatusCode: http.StatusOK,
-			}
-
+			var callCount = 0
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
-				if strings.HasSuffix(url, "api/v1/status") {
-					return notFoundResponse, nil
-				}
+
+				healthyResponse := healthyResponse(callCount)
+				callCount++
+
 				return healthyResponse, nil
 			}
 		})
@@ -160,21 +154,15 @@ var _ = Describe("Cluster", func() {
 		}, 5)
 
 		It("notices when a healthy backend becomes unhealthy", func(done Done) {
-			unhealthyResponse := &http.Response{
-				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
-				StatusCode: http.StatusInternalServerError,
-			}
 
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
-				if strings.HasSuffix(url, "api/v1/status") {
-					return notFoundResponse, nil
-				}
+
 				if url == backend2.HealthcheckUrl() {
-					return unhealthyResponse, nil
+					return unhealthyResponse(0), nil
 				} else {
-					return healthyResponse, nil
+					return healthyResponse(0), nil
 				}
 			}
 
@@ -194,13 +182,10 @@ var _ = Describe("Cluster", func() {
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
-				if strings.HasSuffix(url, "api/v1/status") {
-					return notFoundResponse, nil
-				}
 				if url == backend2.HealthcheckUrl() {
 					return nil, errors.New("some error")
 				} else {
-					return healthyResponse, nil
+					return healthyResponse(0), nil
 				}
 			}
 
@@ -218,23 +203,15 @@ var _ = Describe("Cluster", func() {
 		It("notices when an unhealthy backend becomes healthy", func() {
 			backend2.SetUnhealthy()
 
-			unhealthyResponse := &http.Response{
-				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
-				StatusCode: http.StatusInternalServerError,
-			}
-
 			isUnhealthy := true
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
-				if strings.HasSuffix(url, "api/v1/status") {
-					return notFoundResponse, nil
-				}
 				if url == backend2.HealthcheckUrl() && isUnhealthy {
 					isUnhealthy = false
-					return unhealthyResponse, nil
+					return unhealthyResponse(0), nil
 				} else {
-					return healthyResponse, nil
+					return healthyResponse(0), nil
 				}
 			}
 
@@ -260,14 +237,10 @@ var _ = Describe("Cluster", func() {
 					m.RLock()
 					defer m.RUnlock()
 
-					if strings.HasSuffix(url, "api/v1/status") {
-						return notFoundResponse, nil
-					}
-
 					if url == firstActive.HealthcheckUrl() {
 						return nil, errors.New("some error")
 					} else {
-						return healthyResponse, nil
+						return healthyResponse(0), nil
 					}
 				}
 
@@ -285,23 +258,9 @@ var _ = Describe("Cluster", func() {
 
 			backendStatusPort uint
 			backendHost       string
-
-			v0Err        error
-			v0StatusCode int
-			v0Response   *http.Response
-
-			v1Err        error
-			v1StatusCode int
-			v1Response   *http.Response
 		)
 
 		BeforeEach(func() {
-			v0Err = nil
-			v1Err = nil
-
-			v0StatusCode = http.StatusOK
-			v1StatusCode = http.StatusOK
-
 			urlGetter = new(monitorfakes.FakeUrlGetter)
 			UrlGetterProvider = func(time.Duration) UrlGetter {
 				return urlGetter
@@ -321,24 +280,11 @@ var _ = Describe("Cluster", func() {
 		})
 
 		JustBeforeEach(func() {
-			v0Response = &http.Response{
-				Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
-				StatusCode: v0StatusCode,
-			}
-
-			v1Response = &http.Response{
-				Body:       ioutil.NopCloser(strings.NewReader(`{"healthy": true, "wsrep_local_index": 0}`)),
-				StatusCode: v1StatusCode,
-			}
-
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
 
-				if strings.Contains(url, "api/v1/") {
-					return v1Response, v1Err
-				}
-				return v0Response, v0Err
+				return healthyResponse(0), nil
 			}
 
 			backendStatus = &BackendStatus{
@@ -370,9 +316,13 @@ var _ = Describe("Cluster", func() {
 			Expect(backendStatus.Index).To(Equal(0))
 		})
 
-		Context("when GETting the v1 API returns an error", func() {
-			BeforeEach(func() {
-				v1Err = errors.New("v1 api not available")
+		Context("when GETting the API returns an error", func() {
+			JustBeforeEach(func() {
+				urlGetter.GetStub = func(url string) (*http.Response, error) {
+					m.RLock()
+					defer m.RUnlock()
+					return nil, errors.New("api not available")
+				}
 			})
 
 			It("marks the backend as unhealthy", func() {
@@ -385,60 +335,17 @@ var _ = Describe("Cluster", func() {
 			})
 		})
 
-		Context("when GETting the v1 API returns a 404", func() {
-			BeforeEach(func() {
-				v1StatusCode = http.StatusNotFound
-			})
+		Context("when GETting the API returns a bad status code", func() {
+			JustBeforeEach(func() {
+				urlGetter.GetStub = func(url string) (*http.Response, error) {
+					m.RLock()
+					defer m.RUnlock()
 
-			It("uses the previous API to set the health to true, ignoring the index", func() {
-				Expect(backendStatus.Healthy).To(BeFalse())
-				Expect(backendStatus.Index).To(Equal(2))
-
-				cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
-				Expect(urlGetter.GetCallCount()).To(Equal(2))
-
-				Expect(backendStatus.Healthy).To(BeTrue())
-				Expect(backendStatus.Index).To(Equal(2)) // unchanged
-			})
-
-			Context("when GETting the v0 API returns an error", func() {
-				BeforeEach(func() {
-					v0Err = errors.New("v0 api not available")
-				})
-
-				It("uses the previous API to set the health to false, ignoring the index", func() {
-					Expect(backendStatus.Healthy).To(BeFalse())
-					Expect(backendStatus.Index).To(Equal(2))
-
-					cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
-					Expect(urlGetter.GetCallCount()).To(Equal(2))
-
-					Expect(backendStatus.Healthy).To(BeFalse())
-					Expect(backendStatus.Index).To(Equal(2)) // unchanged
-				})
-
-				Context("when GETting the v0 API returns a bad status code", func() {
-					BeforeEach(func() {
-						v0StatusCode = http.StatusTeapot
-					})
-
-					It("uses the previous API to set the health to false, ignoring the index", func() {
-						Expect(backendStatus.Healthy).To(BeFalse())
-						Expect(backendStatus.Index).To(Equal(2))
-
-						cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
-						Expect(urlGetter.GetCallCount()).To(Equal(2))
-
-						Expect(backendStatus.Healthy).To(BeFalse())
-						Expect(backendStatus.Index).To(Equal(2)) // unchanged
-					})
-				})
-			})
-		})
-
-		Context("when GETting the v1 API returns a bad status code", func() {
-			BeforeEach(func() {
-				v1StatusCode = http.StatusTeapot
+					return &http.Response{
+						Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
+						StatusCode: http.StatusTeapot,
+					}, nil
+				}
 			})
 
 			It("marks the backend as unhealthy", func() {
@@ -556,3 +463,21 @@ var _ = Describe("Cluster", func() {
 		})
 	})
 })
+
+func healthyResponse(index int) *http.Response {
+	healthyResponseBodyTemplate := `{"wsrep_local_state":4,"wsrep_local_state_comment":"Synced","wsrep_local_index":%d,"healthy":true}`
+
+	return &http.Response{
+		Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(fmt.Sprintf(healthyResponseBodyTemplate, index)))),
+		StatusCode: http.StatusOK,
+	}
+}
+
+func unhealthyResponse(index int) *http.Response {
+	unhealthyResponseBodyTemplate := `{"wsrep_local_state":2,"wsrep_local_state_comment":"Joiner","wsrep_local_index":%d,"healthy":false}`
+
+	return &http.Response{
+		Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(fmt.Sprintf(unhealthyResponseBodyTemplate, index)))),
+		StatusCode: http.StatusOK,
+	}
+}

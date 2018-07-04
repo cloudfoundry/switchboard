@@ -61,9 +61,9 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 
 	backendHealthMap := make(map[*domain.Backend]*BackendStatus)
 
-	for i, backend := range c.backends {
+	for _, backend := range c.backends {
 		backendHealthMap[backend] = &BackendStatus{
-			Index:    i,
+			Index:    -1,
 			Counters: c.SetupCounters(),
 		}
 	}
@@ -140,9 +140,6 @@ func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlG
 	url := fmt.Sprintf("http://%s:%d/api/v1/status", j.Host, j.StatusPort)
 	resp, err := client.Get(url)
 
-	/////////////////
-	// Determine health from either the v1 status endpoint
-	// or fallback to the v0 status endpoint
 	var healthy bool
 	var index *int
 
@@ -155,11 +152,6 @@ func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlG
 			healthy = v1StatusResponse.Healthy
 			indexVal := int(v1StatusResponse.WsrepLocalIndex)
 			index = &indexVal
-		} else if resp.StatusCode == http.StatusNotFound {
-			url = backend.HealthcheckUrl()
-			resp, err = client.Get(url)
-
-			healthy = (err == nil && resp.StatusCode == http.StatusOK)
 		}
 	}
 

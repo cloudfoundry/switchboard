@@ -173,7 +173,7 @@ var _ = Describe("Switchboard", func() {
 			Host:           "localhost",
 			Port:           uint(10200 + GinkgoParallelNode()),
 			StatusPort:     uint(10300 + GinkgoParallelNode()),
-			StatusEndpoint: "galera_healthcheck",
+			StatusEndpoint: "api/v1/status",
 			Name:           "backend-0",
 		}
 
@@ -181,7 +181,7 @@ var _ = Describe("Switchboard", func() {
 			Host:           "localhost",
 			Port:           uint(10400 + GinkgoParallelNode()),
 			StatusPort:     uint(10500 + GinkgoParallelNode()),
-			StatusEndpoint: "galera_healthcheck",
+			StatusEndpoint: "api/v1/status",
 			Name:           "backend-1",
 		}
 
@@ -222,8 +222,8 @@ var _ = Describe("Switchboard", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		healthcheckRunners = []*dummies.HealthcheckRunner{
-			dummies.NewHealthcheckRunner(backends[0]),
-			dummies.NewHealthcheckRunner(backends[1]),
+			dummies.NewHealthcheckRunner(backends[0], 0),
+			dummies.NewHealthcheckRunner(backends[1], 1),
 		}
 
 		logLevel := "debug"

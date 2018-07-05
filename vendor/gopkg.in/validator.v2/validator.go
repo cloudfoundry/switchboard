@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -158,9 +159,13 @@ func (mv *Validator) WithTag(tag string) *Validator {
 
 // Copy a validator
 func (mv *Validator) copy() *Validator {
+	newFuncs := map[string]ValidationFunc{}
+	for k, f := range mv.validationFuncs {
+		newFuncs[k] = f
+	}
 	return &Validator{
 		tagName:         mv.tagName,
-		validationFuncs: mv.validationFuncs,
+		validationFuncs: newFuncs,
 	}
 }
 
@@ -202,46 +207,30 @@ func (mv *Validator) Validate(v interface{}) error {
 	if sv.Kind() == reflect.Ptr && !sv.IsNil() {
 		return mv.Validate(sv.Elem().Interface())
 	}
-	if sv.Kind() != reflect.Struct {
+	if sv.Kind() != reflect.Struct && sv.Kind() != reflect.Interface {
 		return ErrUnsupported
 	}
 
 	nfields := sv.NumField()
 	m := make(ErrorMap)
 	for i := 0; i < nfields; i++ {
+		fname := st.Field(i).Name
+		if !unicode.IsUpper(rune(fname[0])) {
+			continue
+		}
+
 		f := sv.Field(i)
 		// deal with pointers
 		for f.Kind() == reflect.Ptr && !f.IsNil() {
 			f = f.Elem()
 		}
 		tag := st.Field(i).Tag.Get(mv.tagName)
-		if f.Kind() == reflect.Ptr {
-			ff := f.Elem()
-			if ff.Kind() == reflect.Struct {
-
-			}
-		}
 		if tag == "-" {
 			continue
 		}
-		if tag == "" && f.Kind() != reflect.Struct {
-			continue
-		}
-		fname := st.Field(i).Name
 		var errs ErrorArray
-		switch f.Kind() {
-		case reflect.Struct:
-			if !unicode.IsUpper(rune(fname[0])) {
-				continue
-			}
-			e := mv.Validate(f.Interface())
-			if e, ok := e.(ErrorMap); ok && len(e) > 0 {
-				for j, k := range e {
-					m[fname+"."+j] = k
-				}
-			}
 
-		default:
+		if tag != "" {
 			err := mv.Valid(f.Interface(), tag)
 			if errors, ok := err.(ErrorArray); ok {
 				errs = errors
@@ -252,14 +241,39 @@ func (mv *Validator) Validate(v interface{}) error {
 			}
 		}
 
+		mv.deepValidateCollection(f, fname, m) // no-op if field is not a struct, interface, array, slice or map
+
 		if len(errs) > 0 {
 			m[st.Field(i).Name] = errs
 		}
 	}
+
 	if len(m) > 0 {
 		return m
 	}
 	return nil
+}
+
+func (mv *Validator) deepValidateCollection(f reflect.Value, fname string, m ErrorMap) {
+	switch f.Kind() {
+	case reflect.Struct, reflect.Interface, reflect.Ptr:
+		e := mv.Validate(f.Interface())
+		if e, ok := e.(ErrorMap); ok && len(e) > 0 {
+			for j, k := range e {
+				m[fname+"."+j] = k
+			}
+		}
+	case reflect.Array, reflect.Slice:
+		for i := 0; i < f.Len(); i++ {
+			mv.deepValidateCollection(f.Index(i), fmt.Sprintf("%s[%d]", fname, i), m)
+		}
+	case reflect.Map:
+		for _, key := range f.MapKeys() {
+			mv.deepValidateCollection(key, fmt.Sprintf("%s[%+v](key)", fname, key.Interface()), m) // validate the map key
+			value := f.MapIndex(key)
+			mv.deepValidateCollection(value, fmt.Sprintf("%s[%+v](value)", fname, key.Interface()), m)
+		}
+	}
 }
 
 // Valid validates a value based on the provided
@@ -280,8 +294,6 @@ func (mv *Validator) Valid(val interface{}, tags string) error {
 	}
 	var err error
 	switch v.Kind() {
-	case reflect.Struct:
-		return ErrUnsupported
 	case reflect.Invalid:
 		err = mv.validateVar(nil, tags)
 	default:
@@ -316,11 +328,27 @@ type tag struct {
 	Param string         // parameter to send to the validation function
 }
 
+// separate by no escaped commas
+var sepPattern *regexp.Regexp = regexp.MustCompile(`((?:^|[^\\])(?:\\\\)*),`)
+
+func splitUnescapedComma(str string) []string {
+	ret := []string{}
+	indexes := sepPattern.FindAllStringIndex(str, -1)
+	last := 0
+	for _, is := range indexes {
+		ret = append(ret, str[last:is[1]-1])
+		last = is[1]
+	}
+	ret = append(ret, str[last:])
+	return ret
+}
+
 // parseTags parses all individual tags found within a struct tag.
 func (mv *Validator) parseTags(t string) ([]tag, error) {
-	tl := strings.Split(t, ",")
+	tl := splitUnescapedComma(t)
 	tags := make([]tag, 0, len(tl))
 	for _, i := range tl {
+		i = strings.Replace(i, `\,`, ",", -1)
 		tg := tag{}
 		v := strings.SplitN(i, "=", 2)
 		tg.Name = strings.Trim(v[0], " ")

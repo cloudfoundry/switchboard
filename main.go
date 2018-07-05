@@ -8,10 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"code.cloudfoundry.org/clock"
-	"code.cloudfoundry.org/consuladapter"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/locket"
 
 	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/apiaggregator"
@@ -22,7 +19,6 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/runner/bridge"
 	"github.com/cloudfoundry-incubator/switchboard/runner/health"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
-	consulapi "github.com/hashicorp/consul/api"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/sigmon"
@@ -107,38 +103,12 @@ func main() {
 		})
 	}
 
-	if rootConfig.ConsulCluster != "" {
-		writePid(logger, rootConfig.PidFile)
-
-		if rootConfig.ConsulServiceName == "" {
-			rootConfig.ConsulServiceName = "mysql"
-		}
-
-		clock := clock.NewClock()
-		consulClient, err := consuladapter.NewClientFromUrl(rootConfig.ConsulCluster)
-		if err != nil {
-			logger.Fatal("new-consul-client-failed", err)
-		}
-
-		registrationRunner := locket.NewRegistrationRunner(logger,
-			&consulapi.AgentServiceRegistration{
-				Name:  rootConfig.ConsulServiceName,
-				Port:  int(rootConfig.Proxy.Port),
-				Check: &consulapi.AgentServiceCheck{TTL: "3s"},
-			},
-			consulClient, locket.RetryInterval, clock)
-
-		members = append(members, grouper.Member{"registration", registrationRunner})
-	}
-
 	group := grouper.NewOrdered(os.Interrupt, members)
 	process := ifrit.Invoke(sigmon.New(group))
 
 	logger.Info("Proxy started", lager.Data{"proxyConfig": rootConfig.Proxy})
 
-	if rootConfig.ConsulCluster == "" {
-		writePid(logger, rootConfig.PidFile)
-	}
+	writePid(logger, rootConfig.PidFile)
 
 	err = <-process.Wait()
 	if err != nil {

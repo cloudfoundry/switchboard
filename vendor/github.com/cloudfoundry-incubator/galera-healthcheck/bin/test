@@ -1,0 +1,14 @@
+#!/bin/bash
+
+result=0
+
+MY_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+echo -e "\nFormatting packages..."
+go fmt github.com/cloudfoundry-incubator/galera-healthcheck/...
+
+echo -e "\nVetting packages for potential issues..."
+$MY_DIR/govet
+
+echo -e "\nTesting packages..."
+ginkgo -p -r -race -failOnPending -randomizeAllSpecs -skipPackage=integration "$@" $MY_DIR/..

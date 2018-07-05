@@ -1,0 +1,14 @@
+sudo: false
+language: go
+go:
+- 1.4.2
+install:
+- PATH=$PATH:$HOME/gopath/bin
+- go get -t -v -d ./...
+- go install -v github.com/onsi/ginkgo/ginkgo
+script:
+- ./bin/test-unit
+- CONFIG_PATH="$PWD/config-travis.yaml" ./bin/test-integration
+branches:
+  only:
+  - master

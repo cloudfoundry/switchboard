@@ -80,6 +80,16 @@ func (r *Runner) Buffer() *gbytes.Buffer {
 	return r.session.Buffer()
 }
 
+// Err returns the gbytes.Buffer associated with the stderr stream.
+// For use with the gbytes.Say matcher.
+func (r *Runner) Err() *gbytes.Buffer {
+	if r.sessionReady == nil {
+		ginkgo.Fail(fmt.Sprintf("ginkgomon.Runner '%s' improperly created without using New", r.Name))
+	}
+	<-r.sessionReady
+	return r.session.Err
+}
+
 func (r *Runner) Run(sigChan <-chan os.Signal, ready chan<- struct{}) error {
 	defer ginkgo.GinkgoRecover()
 
@@ -102,7 +112,7 @@ func (r *Runner) Run(sigChan <-chan os.Signal, ready chan<- struct{}) error {
 		),
 	)
 
-	Ω(err).ShouldNot(HaveOccurred())
+	Ω(err).ShouldNot(HaveOccurred(), fmt.Sprintf("%s failed to start with err: %s", r.Name, err))
 
 	fmt.Fprintf(debugWriter, "spawned %s (pid: %d)\n", r.Command.Path, r.Command.Process.Pid)
 

@@ -34,10 +34,10 @@ func BuildGenerateCommand() *Command {
 var specText = `package {{.Package}}
 
 import (
-	. "{{.PackageImportPath}}"
-
 	{{if .IncludeImports}}. "github.com/onsi/ginkgo"{{end}}
 	{{if .IncludeImports}}. "github.com/onsi/gomega"{{end}}
+
+	{{if .DotImportPackage}}. "{{.PackageImportPath}}"{{end}}
 )
 
 var _ = Describe("{{.Subject}}", func() {
@@ -45,15 +45,15 @@ var _ = Describe("{{.Subject}}", func() {
 })
 `
 
-var agoutiSpecText = `package {{.Package}}_test
+var agoutiSpecText = `package {{.Package}}
 
 import (
-	. "{{.PackageImportPath}}"
-
 	{{if .IncludeImports}}. "github.com/onsi/ginkgo"{{end}}
 	{{if .IncludeImports}}. "github.com/onsi/gomega"{{end}}
-	. "github.com/sclevine/agouti/matchers"
 	"github.com/sclevine/agouti"
+	. "github.com/sclevine/agouti/matchers"
+
+	{{if .DotImportPackage}}. "{{.PackageImportPath}}"{{end}}
 )
 
 var _ = Describe("{{.Subject}}", func() {
@@ -76,6 +76,7 @@ type specData struct {
 	Subject           string
 	PackageImportPath string
 	IncludeImports    bool
+	DotImportPackage  bool
 }
 
 func generateSpec(args []string, agouti, noDot, internal bool) {
@@ -118,6 +119,7 @@ func generateSpecForSubject(subject string, agouti, noDot, internal bool) error 
 		Subject:           formattedName,
 		PackageImportPath: getPackageImportPath(),
 		IncludeImports:    !noDot,
+		DotImportPackage:  !internal,
 	}
 
 	targetFile := fmt.Sprintf("%s_test.go", specFilePrefix)

@@ -73,16 +73,6 @@ var _ = Describe("Config", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("does not return an error if ConsulCluster is blank", func() {
-			err := test_helpers.IsOptionalField(rootConfig, "ConsulCluster")
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("does not return an error if ConsulServiceName is blank", func() {
-			err := test_helpers.IsOptionalField(rootConfig, "ConsulServiceName")
-			Expect(err).ToNot(HaveOccurred())
-		})
-
 		It("returns an error if Proxy.Port is blank", func() {
 			err := test_helpers.IsRequiredField(rootConfig, "Proxy.Port")
 			Expect(err).ToNot(HaveOccurred())

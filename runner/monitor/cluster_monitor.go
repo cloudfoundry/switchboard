@@ -35,28 +35,31 @@ type BackendStatus struct {
 	Counters *DecisionCounters
 }
 
-type Cluster struct {
+type ClusterMonitor struct {
 	backends                 []*domain.Backend
 	logger                   lager.Logger
 	healthcheckTimeout       time.Duration
 	activeBackendSubscribers []chan<- *domain.Backend
+	useLowestIndex           bool
 }
 
-func NewCluster(
+func NewClusterMonitor(
 	backends []*domain.Backend,
 	healthcheckTimeout time.Duration,
 	logger lager.Logger,
 	activeBackendSubscribers []chan<- *domain.Backend,
-) *Cluster {
-	return &Cluster{
+	useLowestIndex bool,
+) *ClusterMonitor {
+	return &ClusterMonitor{
 		backends:                 backends,
 		logger:                   logger,
 		healthcheckTimeout:       healthcheckTimeout,
 		activeBackendSubscribers: activeBackendSubscribers,
+		useLowestIndex:           useLowestIndex,
 	}
 }
 
-func (c *Cluster) Monitor(stopChan <-chan interface{}) {
+func (c *ClusterMonitor) Monitor(stopChan <-chan interface{}) {
 	client := UrlGetterProvider(c.healthcheckTimeout)
 
 	backendHealthMap := make(map[*domain.Backend]*BackendStatus)
@@ -86,7 +89,7 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 
 				wg.Wait()
 
-				newActiveBackend := ChooseActiveBackend(backendHealthMap)
+				newActiveBackend := ChooseActiveBackend(backendHealthMap, c.useLowestIndex)
 
 				if newActiveBackend != activeBackend {
 					if newActiveBackend != nil {
@@ -106,7 +109,7 @@ func (c *Cluster) Monitor(stopChan <-chan interface{}) {
 	}()
 }
 
-func (c *Cluster) SetupCounters() *DecisionCounters {
+func (c *ClusterMonitor) SetupCounters() *DecisionCounters {
 	counters := NewDecisionCounters()
 	logFreq := uint64(5)
 
@@ -118,23 +121,33 @@ func (c *Cluster) SetupCounters() *DecisionCounters {
 	return counters
 }
 
-func ChooseActiveBackend(backendHealths map[*domain.Backend]*BackendStatus) *domain.Backend {
-	var lowestIndexedHealthyDomain *domain.Backend
+func ChooseActiveBackend(backendHealths map[*domain.Backend]*BackendStatus, useLowestIndex bool) *domain.Backend {
+	var lowestIndexedHealthyBackend, highestIndexedHealthyBackend *domain.Backend
 	lowestHealthyIndex := math.MaxUint32
+	highestHealthyIndex := -1
 
 	for backend, backendStatus := range backendHealths {
-		if !backendStatus.Healthy || lowestHealthyIndex <= backendStatus.Index {
+		if !backendStatus.Healthy {
 			continue
 		}
-
-		lowestHealthyIndex = backendStatus.Index
-		lowestIndexedHealthyDomain = backend
+		if backendStatus.Index <= lowestHealthyIndex {
+			lowestHealthyIndex = backendStatus.Index
+			lowestIndexedHealthyBackend = backend
+		}
+		if backendStatus.Index >= highestHealthyIndex {
+			highestHealthyIndex = backendStatus.Index
+			highestIndexedHealthyBackend = backend
+		}
 	}
 
-	return lowestIndexedHealthyDomain
+	if useLowestIndex {
+		return lowestIndexedHealthyBackend
+	} else {
+		return highestIndexedHealthyBackend
+	}
 }
 
-func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlGetter, shouldLog bool) (bool, *int) {
+func (c *ClusterMonitor) determineStateFromBackend(backend *domain.Backend, client UrlGetter, shouldLog bool) (bool, *int) {
 	j := backend.AsJSON()
 
 	url := fmt.Sprintf("http://%s:%d/api/v1/status", j.Host, j.StatusPort)
@@ -189,7 +202,7 @@ func (c *Cluster) determineStateFromBackend(backend *domain.Backend, client UrlG
 	return healthy, index
 }
 
-func (c *Cluster) QueryBackendHealth(backend *domain.Backend, healthMonitor *BackendStatus, client UrlGetter) {
+func (c *ClusterMonitor) QueryBackendHealth(backend *domain.Backend, healthMonitor *BackendStatus, client UrlGetter) {
 	c.logger.Debug("Querying Backend", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
 	healthMonitor.Counters.IncrementCount("dial")
 	shouldLog := healthMonitor.Counters.Should("log")

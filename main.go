@@ -62,11 +62,12 @@ func main() {
 		clusterAPIActiveBackendChan,
 	}
 
-	cluster := monitor.NewCluster(
+	clusterMonitor := monitor.NewClusterMonitor(
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
 		activeBackendSubscribers,
+		true,
 	)
 
 	trafficEnabledChan := make(chan bool)
@@ -92,7 +93,7 @@ func main() {
 		},
 		{
 			Name:   "monitor",
-			Runner: monitor.NewRunner(cluster, logger),
+			Runner: monitor.NewRunner(clusterMonitor, logger),
 		},
 	}
 

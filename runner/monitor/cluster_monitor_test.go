@@ -16,30 +16,31 @@ import (
 
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/switchboard/domain"
-	. "github.com/cloudfoundry-incubator/switchboard/runner/monitor"
+	"github.com/cloudfoundry-incubator/switchboard/runner/monitor"
 	"github.com/cloudfoundry-incubator/switchboard/runner/monitor/monitorfakes"
 )
 
 const healthcheckTimeout = 500 * time.Millisecond
 
-var _ = Describe("Cluster", func() {
+var _ = Describe("ClusterMonitor", func() {
 	var (
 		backends                     []*domain.Backend
 		logger                       *lagertest.TestLogger
-		cluster                      *Cluster
+		clusterMonitor               *monitor.ClusterMonitor
 		backend1, backend2, backend3 *domain.Backend
 		subscriberA                  chan *domain.Backend
 		subscriberB                  chan *domain.Backend
 		activeBackendSubscribers     []chan<- *domain.Backend
 		notFoundResponse             *http.Response
+		useLowestIndex               bool
 
 		m sync.RWMutex
 	)
 
 	BeforeEach(func() {
-		cluster = nil
+		clusterMonitor = nil
 
-		logger = lagertest.NewTestLogger("Cluster test")
+		logger = lagertest.NewTestLogger("ClusterMonitor test")
 
 		backend1 = domain.NewBackend(
 			"backend-1",
@@ -91,14 +92,16 @@ var _ = Describe("Cluster", func() {
 			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 			StatusCode: http.StatusNotFound,
 		}
+		useLowestIndex = true
 	})
 
 	JustBeforeEach(func() {
-		cluster = NewCluster(
+		clusterMonitor = monitor.NewClusterMonitor(
 			backends,
 			healthcheckTimeout,
 			logger,
 			activeBackendSubscribers,
+			useLowestIndex,
 		)
 	})
 
@@ -113,24 +116,28 @@ var _ = Describe("Cluster", func() {
 			stopMonitoringChan = make(chan interface{})
 
 			urlGetter = new(monitorfakes.FakeUrlGetter)
-			UrlGetterProvider = func(time.Duration) UrlGetter {
+			monitor.UrlGetterProvider = func(time.Duration) monitor.UrlGetter {
 				return urlGetter
 			}
 
-			var callCount = 0
 			urlGetter.GetStub = func(url string) (*http.Response, error) {
 				m.RLock()
 				defer m.RUnlock()
 
-				healthyResponse := healthyResponse(callCount)
-				callCount++
+				if url == backend1.HealthcheckUrl() {
+					return healthyResponse(0), nil
+				} else if url == backend2.HealthcheckUrl() {
+					return healthyResponse(1), nil
+				} else if url == backend3.HealthcheckUrl() {
+					return healthyResponse(2), nil
+				}
 
-				return healthyResponse, nil
+				panic("Unexpected backend")
 			}
 		})
 
 		AfterEach(func() {
-			UrlGetterProvider = HttpUrlGetterProvider
+			monitor.UrlGetterProvider = monitor.HttpUrlGetterProvider
 
 			close(stopMonitoringChan)
 		})
@@ -144,7 +151,7 @@ var _ = Describe("Cluster", func() {
 			Expect(backend2.Healthy()).To(BeFalse())
 			Expect(backend3.Healthy()).To(BeFalse())
 
-			cluster.Monitor(stopMonitoringChan)
+			clusterMonitor.Monitor(stopMonitoringChan)
 
 			Eventually(backend1.Healthy).Should(BeTrue())
 			Eventually(backend2.Healthy).Should(BeTrue())
@@ -170,7 +177,7 @@ var _ = Describe("Cluster", func() {
 			Expect(backend2.Healthy()).To(BeTrue())
 			Expect(backend3.Healthy()).To(BeTrue())
 
-			cluster.Monitor(stopMonitoringChan)
+			clusterMonitor.Monitor(stopMonitoringChan)
 
 			Eventually(backend2.Healthy).Should(BeFalse())
 			Consistently(backend1.Healthy).Should(BeTrue())
@@ -193,7 +200,7 @@ var _ = Describe("Cluster", func() {
 			Expect(backend2.Healthy()).To(BeTrue())
 			Expect(backend3.Healthy()).To(BeTrue())
 
-			cluster.Monitor(stopMonitoringChan)
+			clusterMonitor.Monitor(stopMonitoringChan)
 
 			Eventually(backend2.Healthy).Should(BeFalse())
 			Consistently(backend1.Healthy).Should(BeTrue())
@@ -219,33 +226,70 @@ var _ = Describe("Cluster", func() {
 			Expect(backend2.Healthy()).To(BeFalse())
 			Expect(backend3.Healthy()).To(BeTrue())
 
-			cluster.Monitor(stopMonitoringChan)
+			clusterMonitor.Monitor(stopMonitoringChan)
 
 			Eventually(backend2.Healthy).Should(BeTrue())
 			Consistently(backend1.Healthy).Should(BeTrue())
 			Consistently(backend3.Healthy).Should(BeTrue())
 		})
 
-		Context("when the active backend changes", func() {
-			It("publishes the new backend", func() {
-				cluster.Monitor(stopMonitoringChan)
-				var firstActive *domain.Backend
-				Eventually(subscriberA).Should(Receive(&firstActive))
-				Eventually(subscriberB).Should(Receive(&firstActive))
+		Context("when useLowestIndex is true", func() {
+			Context("when the active backend changes", func() {
+				It("publishes the new backend", func() {
+					clusterMonitor.Monitor(stopMonitoringChan)
 
-				urlGetter.GetStub = func(url string) (*http.Response, error) {
-					m.RLock()
-					defer m.RUnlock()
+					Eventually(subscriberA).Should(Receive(Equal(backend1)))
+					Eventually(subscriberB).Should(Receive(Equal(backend1)))
 
-					if url == firstActive.HealthcheckUrl() {
-						return nil, errors.New("some error")
-					} else {
-						return healthyResponse(0), nil
+					urlGetter.GetStub = func(url string) (*http.Response, error) {
+						m.RLock()
+						defer m.RUnlock()
+
+						if url == backend1.HealthcheckUrl() {
+							return healthyResponse(1), nil
+						} else if url == backend2.HealthcheckUrl() {
+							return healthyResponse(2), nil
+						} else if url == backend3.HealthcheckUrl() {
+							return healthyResponse(0), nil
+						}
+						return nil, nil
 					}
-				}
 
-				Eventually(subscriberA).Should(Receive(Not(Equal(firstActive))))
-				Eventually(subscriberB).Should(Receive(Not(Equal(firstActive))))
+					Eventually(subscriberA).Should(Receive(Equal(backend3)))
+					Eventually(subscriberB).Should(Receive(Equal(backend3)))
+				})
+			})
+		})
+
+		Context("when useLowestIndex is false", func() {
+			BeforeEach(func() {
+				useLowestIndex = false
+			})
+
+			Context("when the active backend changes", func() {
+				It("publishes the new backend", func() {
+					clusterMonitor.Monitor(stopMonitoringChan)
+
+					Eventually(subscriberA).Should(Receive(Equal(backend3)))
+					Eventually(subscriberB).Should(Receive(Equal(backend3)))
+
+					urlGetter.GetStub = func(url string) (*http.Response, error) {
+						m.RLock()
+						defer m.RUnlock()
+
+						if url == backend1.HealthcheckUrl() {
+							return healthyResponse(0), nil
+						} else if url == backend2.HealthcheckUrl() {
+							return healthyResponse(2), nil
+						} else if url == backend3.HealthcheckUrl() {
+							return healthyResponse(1), nil
+						}
+						return nil, nil
+					}
+
+					Eventually(subscriberA).Should(Receive(Equal(backend2)))
+					Eventually(subscriberB).Should(Receive(Equal(backend2)))
+				})
 			})
 		})
 	})
@@ -254,7 +298,7 @@ var _ = Describe("Cluster", func() {
 		var (
 			urlGetter     *monitorfakes.FakeUrlGetter
 			backend       *domain.Backend
-			backendStatus *BackendStatus
+			backendStatus *monitor.BackendStatus
 
 			backendStatusPort uint
 			backendHost       string
@@ -262,7 +306,7 @@ var _ = Describe("Cluster", func() {
 
 		BeforeEach(func() {
 			urlGetter = new(monitorfakes.FakeUrlGetter)
-			UrlGetterProvider = func(time.Duration) UrlGetter {
+			monitor.UrlGetterProvider = func(time.Duration) monitor.UrlGetter {
 				return urlGetter
 			}
 
@@ -287,22 +331,22 @@ var _ = Describe("Cluster", func() {
 				return healthyResponse(0), nil
 			}
 
-			backendStatus = &BackendStatus{
+			backendStatus = &monitor.BackendStatus{
 				Index:    2,
-				Counters: cluster.SetupCounters(),
+				Counters: clusterMonitor.SetupCounters(),
 				Healthy:  false,
 			}
 		})
 
 		AfterEach(func() {
-			UrlGetterProvider = HttpUrlGetterProvider
+			monitor.UrlGetterProvider = monitor.HttpUrlGetterProvider
 		})
 
 		It("changes the backend health and index", func() {
 			Expect(backendStatus.Healthy).To(BeFalse())
 			Expect(backendStatus.Index).To(Equal(2))
 
-			cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
+			clusterMonitor.QueryBackendHealth(backend, backendStatus, urlGetter)
 			Expect(urlGetter.GetCallCount()).To(Equal(1))
 
 			expectedURL := fmt.Sprintf(
@@ -328,7 +372,7 @@ var _ = Describe("Cluster", func() {
 			It("marks the backend as unhealthy", func() {
 				backend.SetHealthy()
 
-				cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
+				clusterMonitor.QueryBackendHealth(backend, backendStatus, urlGetter)
 				Expect(urlGetter.GetCallCount()).To(Equal(1))
 
 				Expect(backendStatus.Healthy).To(BeFalse())
@@ -351,7 +395,7 @@ var _ = Describe("Cluster", func() {
 			It("marks the backend as unhealthy", func() {
 				backend.SetHealthy()
 
-				cluster.QueryBackendHealth(backend, backendStatus, urlGetter)
+				clusterMonitor.QueryBackendHealth(backend, backendStatus, urlGetter)
 				Expect(urlGetter.GetCallCount()).To(Equal(1))
 
 				Expect(backendStatus.Healthy).To(BeFalse())
@@ -361,12 +405,13 @@ var _ = Describe("Cluster", func() {
 
 	Describe("ChooseActiveBackend", func() {
 		var (
-			statuses                     map[*domain.Backend]*BackendStatus
+			statuses                     map[*domain.Backend]*monitor.BackendStatus
 			backend1, backend2, backend3 *domain.Backend
+			useLowestIndex               bool
 		)
 
 		BeforeEach(func() {
-			statuses = make(map[*domain.Backend]*BackendStatus)
+			statuses = make(map[*domain.Backend]*monitor.BackendStatus)
 			backend1 = domain.NewBackend(
 				"backend-1",
 				"10.10.1.2",
@@ -392,73 +437,101 @@ var _ = Describe("Cluster", func() {
 				"healthcheck",
 				logger,
 			)
+			useLowestIndex = true
 		})
 
 		Context("When there are no backends", func() {
 			It("returns nil", func() {
-				Expect(ChooseActiveBackend(statuses)).To(BeNil())
+				Expect(monitor.ChooseActiveBackend(statuses, useLowestIndex)).To(BeNil())
 			})
 		})
 		Context("If none of the backends are healthy", func() {
 			It("returns nil", func() {
-				statuses[backend1] = &BackendStatus{
+				statuses[backend1] = &monitor.BackendStatus{
 					Healthy: false,
 					Index:   0,
 				}
 
-				statuses[backend2] = &BackendStatus{
+				statuses[backend2] = &monitor.BackendStatus{
 					Healthy: false,
 					Index:   1,
 				}
 
-				statuses[backend3] = &BackendStatus{
+				statuses[backend3] = &monitor.BackendStatus{
 					Healthy: false,
 					Index:   2,
 				}
 
-				Expect(ChooseActiveBackend(statuses)).To(BeNil())
+				Expect(monitor.ChooseActiveBackend(statuses, useLowestIndex)).To(BeNil())
 			})
 		})
 
 		Context("If only one of the backends is healthy", func() {
 			It("chooses the only healthy one", func() {
-				statuses[backend1] = &BackendStatus{
+				statuses[backend1] = &monitor.BackendStatus{
 					Healthy: false,
 					Index:   0,
 				}
 
-				statuses[backend2] = &BackendStatus{
+				statuses[backend2] = &monitor.BackendStatus{
 					Healthy: false,
 					Index:   1,
 				}
 
-				statuses[backend3] = &BackendStatus{
+				statuses[backend3] = &monitor.BackendStatus{
 					Healthy: true,
 					Index:   2,
 				}
 
-				Expect(ChooseActiveBackend(statuses)).To(Equal(backend3))
+				Expect(monitor.ChooseActiveBackend(statuses, useLowestIndex)).To(Equal(backend3))
 			})
 		})
 
 		Context("If multiple backends are healthy", func() {
-			It("chooses the healthy one with the lowest index", func() {
-				statuses[backend2] = &BackendStatus{
-					Healthy: true,
-					Index:   2,
-				}
+			Context("when useLowestIndex is true", func() {
+				It("chooses the healthy one with the lowest index", func() {
+					statuses[backend2] = &monitor.BackendStatus{
+						Healthy: true,
+						Index:   2,
+					}
 
-				statuses[backend3] = &BackendStatus{
-					Healthy: true,
-					Index:   1,
-				}
+					statuses[backend3] = &monitor.BackendStatus{
+						Healthy: true,
+						Index:   1,
+					}
 
-				statuses[backend1] = &BackendStatus{
-					Healthy: false,
-					Index:   0,
-				}
+					statuses[backend1] = &monitor.BackendStatus{
+						Healthy: false,
+						Index:   0,
+					}
 
-				Expect(ChooseActiveBackend(statuses)).To(Equal(backend3))
+					Expect(monitor.ChooseActiveBackend(statuses, useLowestIndex)).To(Equal(backend3))
+				})
+			})
+
+			Context("when useLowestIndex is false", func() {
+				BeforeEach(func() {
+					useLowestIndex = false
+				})
+
+				It("chooses the healthy one with the highest index", func() {
+					statuses[backend2] = &monitor.BackendStatus{
+						Healthy: true,
+						Index:   2,
+					}
+
+					statuses[backend3] = &monitor.BackendStatus{
+						Healthy: true,
+						Index:   1,
+					}
+
+					statuses[backend1] = &monitor.BackendStatus{
+						Healthy: false,
+						Index:   0,
+					}
+
+					Expect(monitor.ChooseActiveBackend(statuses, useLowestIndex)).To(Equal(backend2))
+				})
 			})
 		})
 	})

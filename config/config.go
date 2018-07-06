@@ -31,6 +31,7 @@ type Profiling struct {
 
 type Proxy struct {
 	Port                     uint      `yaml:"Port" validate:"nonzero"`
+	InactiveMysqlPort        uint      `yaml:"InactiveMysqlPort"`
 	Backends                 []Backend `yaml:"Backends" validate:"min=1"`
 	HealthcheckTimeoutMillis uint      `yaml:"HealthcheckTimeoutMillis" validate:"nonzero"`
 	ShutdownDelaySeconds     uint      `yaml:"ShutdownDelaySeconds"`

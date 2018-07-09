@@ -20,7 +20,7 @@ var _ = Describe("Bridge Runner", func() {
 		proxyPort := 10000 + GinkgoParallelNode()
 		logger := lagertest.NewTestLogger("ProxyRunner test")
 
-		proxyRunner := bridge.NewRunner(nil, nil, uint(proxyPort), timeout, logger)
+		proxyRunner := bridge.NewRunner( uint(proxyPort), timeout, logger)
 		proxyProcess := ifrit.Invoke(proxyRunner)
 
 		Eventually(func() error {

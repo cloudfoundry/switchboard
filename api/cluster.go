@@ -16,15 +16,15 @@ type ClusterManager interface {
 	DisableTraffic(string)
 }
 
-var Cluster = func(cluster ClusterManager, logger lager.Logger) http.HandlerFunc {
+var ClusterEndpoint = func(clusterManager ClusterManager, logger lager.Logger) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case "GET":
-			writeClusterResponse(w, cluster)
+			writeClusterResponse(w, clusterManager)
 			return
 		case "PATCH":
-			handleUpdate(w, req, cluster, logger)
-			writeClusterResponse(w, cluster)
+			handleUpdate(w, req, clusterManager, logger)
+			writeClusterResponse(w, clusterManager)
 			return
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

@@ -15,24 +15,26 @@ type ClusterAPI struct {
 	lastUpdated         time.Time
 	trafficEnabled      bool
 	trafficEnabledChans []chan<- bool
-	activeBackendChan   <-chan *domain.Backend
+	ActiveBackendChan   chan *domain.Backend
 	activeBackend       *BackendJSON
 }
 
 func NewClusterAPI(
-	trafficEnabledChans []chan<- bool,
-	activeBackendChan <-chan *domain.Backend,
 	logger lager.Logger) *ClusterAPI {
+	activeBackendChan := make(chan *domain.Backend)
 	return &ClusterAPI{
-		logger:              logger,
-		trafficEnabled:      true,
-		trafficEnabledChans: trafficEnabledChans,
-		activeBackendChan:   activeBackendChan,
+		logger:            logger,
+		trafficEnabled:    true,
+		ActiveBackendChan: activeBackendChan,
 	}
 }
 
+func (c *ClusterAPI) RegisterTrafficEnabledChan(chanToRegister chan bool) {
+	c.trafficEnabledChans = append(c.trafficEnabledChans, chanToRegister)
+}
+
 func (c *ClusterAPI) ListenForActiveBackend() {
-	for b := range c.activeBackendChan {
+	for b := range c.ActiveBackendChan {
 		c.mutex.Lock()
 
 		if b == nil {

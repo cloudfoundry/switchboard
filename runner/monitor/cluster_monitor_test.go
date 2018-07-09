@@ -30,7 +30,6 @@ var _ = Describe("ClusterMonitor", func() {
 		backend1, backend2, backend3 *domain.Backend
 		subscriberA                  chan *domain.Backend
 		subscriberB                  chan *domain.Backend
-		activeBackendSubscribers     []chan<- *domain.Backend
 		notFoundResponse             *http.Response
 		useLowestIndex               bool
 
@@ -79,10 +78,6 @@ var _ = Describe("ClusterMonitor", func() {
 
 		subscriberA = make(chan *domain.Backend, 100)
 		subscriberB = make(chan *domain.Backend, 100)
-		activeBackendSubscribers = []chan<- *domain.Backend{
-			subscriberA,
-			subscriberB,
-		}
 
 		backend1.SetHealthy()
 		backend2.SetHealthy()
@@ -100,9 +95,10 @@ var _ = Describe("ClusterMonitor", func() {
 			backends,
 			healthcheckTimeout,
 			logger,
-			activeBackendSubscribers,
 			useLowestIndex,
 		)
+		clusterMonitor.RegisterBackendSubscriber(subscriberA)
+		clusterMonitor.RegisterBackendSubscriber(subscriberB)
 	})
 
 	Describe("Monitor", func() {

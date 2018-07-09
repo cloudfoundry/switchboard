@@ -55,55 +55,29 @@ func main() {
 
 	backends := domain.NewBackends(rootConfig.Proxy.Backends, logger)
 
-	bridgeActiveBackendChan := make(chan *domain.Backend)
-	clusterAPIActiveBackendChan := make(chan *domain.Backend)
-	activeBackendSubscribers := []chan<- *domain.Backend{
-		bridgeActiveBackendChan,
-		clusterAPIActiveBackendChan,
-	}
-
-	clusterMonitorLowestIndex := monitor.NewClusterMonitor(
+	activeNodeClusterMonitor := monitor.NewClusterMonitor(
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
-		activeBackendSubscribers,
 		true,
 	)
 
-	trafficEnabledActivePortChan := make(chan bool)
-	trafficEnabledChans := []chan<- bool{trafficEnabledActivePortChan}
+	activeNodeBridgeRunner := bridge.NewRunner(rootConfig.Proxy.Port, rootConfig.Proxy.ShutdownDelay(), logger)
+	clusterStateManager := api.NewClusterAPI(logger)
 
-	var trafficEnabledInactivePortChan chan bool
-	var bridgeInactiveBackendChan chan *domain.Backend
-	var clusterMonitorHighestIndex *monitor.ClusterMonitor
-	if rootConfig.Proxy.InactiveMysqlPort != 0 {
-		bridgeInactiveBackendChan = make(chan *domain.Backend)
-		inactiveBackendSubscribers := []chan<- *domain.Backend{
-			bridgeInactiveBackendChan,
-		}
+	activeNodeClusterMonitor.RegisterBackendSubscriber(activeNodeBridgeRunner.ActiveBackendChan)
+	activeNodeClusterMonitor.RegisterBackendSubscriber(clusterStateManager.ActiveBackendChan)
 
-		clusterMonitorHighestIndex = monitor.NewClusterMonitor(
-			backends,
-			rootConfig.Proxy.HealthcheckTimeout(),
-			logger,
-			inactiveBackendSubscribers,
-			false,
-		)
+	clusterStateManager.RegisterTrafficEnabledChan(activeNodeBridgeRunner.TrafficEnabledChan)
+	go clusterStateManager.ListenForActiveBackend()
 
-		trafficEnabledInactivePortChan = make(chan bool)
-		trafficEnabledChans = append(trafficEnabledChans, trafficEnabledInactivePortChan)
-	}
-
-	clusterAPI := api.NewClusterAPI(trafficEnabledChans, clusterAPIActiveBackendChan, logger)
-	go clusterAPI.ListenForActiveBackend()
-
-	handler := api.NewHandler(clusterAPI, backends, logger, rootConfig.API, rootConfig.StaticDir)
+	apiHandler := api.NewHandler(clusterStateManager, backends, logger, rootConfig.API, rootConfig.StaticDir)
 	aggregatorHandler := apiaggregator.NewHandler(logger, rootConfig.API)
 
 	members := grouper.Members{
 		{
-			Name:   "lowest-indexed-bridge",
-			Runner: bridge.NewRunner(bridgeActiveBackendChan, trafficEnabledActivePortChan, rootConfig.Proxy.Port, rootConfig.Proxy.ShutdownDelay(), logger),
+			Name:   "active-node-bridge",
+			Runner: activeNodeBridgeRunner,
 		},
 		{
 			Name:   "api-aggregator",
@@ -111,11 +85,11 @@ func main() {
 		},
 		{
 			Name:   "api",
-			Runner: apirunner.NewRunner(rootConfig.API.Port, handler),
+			Runner: apirunner.NewRunner(rootConfig.API.Port, apiHandler),
 		},
 		{
-			Name:   "lowest-indexed-monitor",
-			Runner: monitor.NewRunner(clusterMonitorLowestIndex, logger),
+			Name:   "active-node-monitor",
+			Runner: monitor.NewRunner(activeNodeClusterMonitor, logger),
 		},
 	}
 
@@ -127,14 +101,26 @@ func main() {
 	}
 
 	if rootConfig.Proxy.InactiveMysqlPort != 0 {
+		inactiveNodeClusterMonitor := monitor.NewClusterMonitor(
+			backends,
+			rootConfig.Proxy.HealthcheckTimeout(),
+			logger,
+			false,
+		)
+
+		inactiveNodeBridgeRunner := bridge.NewRunner(rootConfig.Proxy.InactiveMysqlPort, rootConfig.Proxy.ShutdownDelay(), logger)
+
+		inactiveNodeClusterMonitor.RegisterBackendSubscriber(inactiveNodeBridgeRunner.ActiveBackendChan)
+		clusterStateManager.RegisterTrafficEnabledChan(inactiveNodeBridgeRunner.TrafficEnabledChan)
+
 		members = append(members,
 			grouper.Member{
-				Name:   "highest-indexed-bridge",
-				Runner: bridge.NewRunner(bridgeInactiveBackendChan, trafficEnabledInactivePortChan, rootConfig.Proxy.InactiveMysqlPort, rootConfig.Proxy.ShutdownDelay(), logger),
+				Name:   "inactive-node-bridge",
+				Runner: inactiveNodeBridgeRunner,
 			},
 			grouper.Member{
-				Name:   "highest-indexed-monitor",
-				Runner: monitor.NewRunner(clusterMonitorHighestIndex, logger),
+				Name:   "inactive-node-monitor",
+				Runner: monitor.NewRunner(inactiveNodeClusterMonitor, logger),
 			},
 		)
 	}

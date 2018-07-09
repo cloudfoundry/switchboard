@@ -13,7 +13,7 @@ import (
 	"github.com/onsi/gomega/ghttp"
 )
 
-var _ = Describe("Cluster", func() {
+var _ = Describe("ClusterEndpoint", func() {
 	var (
 		fakeCluster *apifakes.FakeClusterManager
 		testLogger  *lagertest.TestLogger
@@ -28,7 +28,7 @@ var _ = Describe("Cluster", func() {
 
 		testLogger = lagertest.NewTestLogger("Switchboard API test")
 
-		handler = api.Cluster(fakeCluster, testLogger)
+		handler = api.ClusterEndpoint(fakeCluster, testLogger)
 
 		server = ghttp.NewServer()
 		server.AppendHandlers(handler)

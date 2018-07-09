@@ -36,26 +36,24 @@ type BackendStatus struct {
 }
 
 type ClusterMonitor struct {
-	backends                 []*domain.Backend
-	logger                   lager.Logger
-	healthcheckTimeout       time.Duration
-	activeBackendSubscribers []chan<- *domain.Backend
-	useLowestIndex           bool
+	backends           []*domain.Backend
+	logger             lager.Logger
+	healthcheckTimeout time.Duration
+	backendSubscribers []chan<- *domain.Backend
+	useLowestIndex     bool
 }
 
 func NewClusterMonitor(
 	backends []*domain.Backend,
 	healthcheckTimeout time.Duration,
 	logger lager.Logger,
-	activeBackendSubscribers []chan<- *domain.Backend,
 	useLowestIndex bool,
 ) *ClusterMonitor {
 	return &ClusterMonitor{
-		backends:                 backends,
-		logger:                   logger,
-		healthcheckTimeout:       healthcheckTimeout,
-		activeBackendSubscribers: activeBackendSubscribers,
-		useLowestIndex:           useLowestIndex,
+		backends:           backends,
+		logger:             logger,
+		healthcheckTimeout: healthcheckTimeout,
+		useLowestIndex:     useLowestIndex,
 	}
 }
 
@@ -97,7 +95,7 @@ func (c *ClusterMonitor) Monitor(stopChan <-chan interface{}) {
 					}
 
 					activeBackend = newActiveBackend
-					for _, s := range c.activeBackendSubscribers {
+					for _, s := range c.backendSubscribers {
 						s <- activeBackend
 					}
 				}
@@ -107,6 +105,10 @@ func (c *ClusterMonitor) Monitor(stopChan <-chan interface{}) {
 			}
 		}
 	}()
+}
+
+func (c *ClusterMonitor) RegisterBackendSubscriber(newSubscriber chan<- *domain.Backend) {
+	c.backendSubscribers = append(c.backendSubscribers, newSubscriber)
 }
 
 func (c *ClusterMonitor) SetupCounters() *DecisionCounters {

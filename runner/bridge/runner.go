@@ -13,22 +13,23 @@ import (
 type Runner struct {
 	logger             lager.Logger
 	port               uint
-	trafficEnabledChan <-chan bool
-	activeBackendChan  <-chan *domain.Backend
+	TrafficEnabledChan chan bool
+	ActiveBackendChan  chan *domain.Backend
 	timeout            time.Duration
 }
 
 func NewRunner(
-	activeBackendChan <-chan *domain.Backend,
-	trafficEnabledChan <-chan bool,
 	port uint,
 	timeout time.Duration,
 	logger lager.Logger,
 ) Runner {
+	backendChan := make(chan *domain.Backend)
+	trafficEnabledChan := make(chan bool)
+
 	return Runner{
 		logger:             logger,
-		activeBackendChan:  activeBackendChan,
-		trafficEnabledChan: trafficEnabledChan,
+		ActiveBackendChan:  backendChan,
+		TrafficEnabledChan: trafficEnabledChan,
 		port:               port,
 		timeout:            timeout,
 	}
@@ -54,7 +55,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 			select {
 			case <-shutdown:
 				return
-			case t := <-r.trafficEnabledChan:
+			case t := <-r.TrafficEnabledChan:
 				// ENABLED -> DISABLED
 				if trafficEnabled && !t {
 					if activeBackend != nil {
@@ -64,7 +65,7 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 
 				trafficEnabled = t
 
-			case a := <-r.activeBackendChan:
+			case a := <-r.ActiveBackendChan:
 				// NEW ACTIVE BACKEND
 				if activeBackend != nil {
 					activeBackend.SeverConnections()

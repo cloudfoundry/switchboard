@@ -7,9 +7,9 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
-var BackendsIndex = func(backends []*domain.Backend, cluster ClusterManager) http.Handler {
+var BackendsIndex = func(backends []*domain.Backend, clusterManager ClusterManager) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		backendsJSON, err := json.Marshal(Backends(backends).AsV0JSON(cluster))
+		backendsJSON, err := json.Marshal(Backends(backends).AsV0JSON(clusterManager))
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

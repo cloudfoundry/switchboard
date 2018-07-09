@@ -18,22 +18,20 @@ var _ = Describe("ClusterAPI", func() {
 		cluster             *api.ClusterAPI
 		trafficEnabledChan1 chan bool
 		trafficEnabledChan2 chan bool
-		activeBackendChan   chan *domain.Backend
 	)
 
 	BeforeEach(func() {
 		trafficEnabledChan1 = make(chan bool, 10)
 		trafficEnabledChan2 = make(chan bool, 10)
-		activeBackendChan = make(chan *domain.Backend)
 	})
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("Cluster test")
 		cluster = api.NewClusterAPI(
-			[]chan<- bool{trafficEnabledChan1, trafficEnabledChan2},
-			activeBackendChan,
 			logger,
 		)
+		cluster.RegisterTrafficEnabledChan(trafficEnabledChan1)
+		cluster.RegisterTrafficEnabledChan(trafficEnabledChan2)
 	})
 
 	Describe("Active Backends", func() {
@@ -47,7 +45,7 @@ var _ = Describe("ClusterAPI", func() {
 		Context("when there is an active backend", func() {
 			It("returns the backend", func() {
 				go cluster.ListenForActiveBackend()
-				activeBackendChan <- domain.NewBackend(
+				cluster.ActiveBackendChan <- domain.NewBackend(
 					"backend-0",
 					"192.0.2.10",
 					3306,
@@ -71,7 +69,7 @@ var _ = Describe("ClusterAPI", func() {
 		Context("when there are no available active backends", func() {
 			It("returns nil", func() {
 				go cluster.ListenForActiveBackend()
-				activeBackendChan <- nil
+				cluster.ActiveBackendChan <- nil
 				Expect(cluster.AsJSON().ActiveBackend).To(BeNil())
 			})
 		})

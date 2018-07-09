@@ -11,7 +11,7 @@ import (
 
 //go:generate counterfeiter -o apifakes/fake_response_writer.go /usr/local/opt/go/libexec/src/net/http/server.go ResponseWriter
 func NewHandler(
-	cluster ClusterManager,
+	clusterManager ClusterManager,
 	backends []*domain.Backend,
 	logger lager.Logger,
 	apiConfig config.API,
@@ -21,8 +21,8 @@ func NewHandler(
 
 	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
 
-	mux.Handle("/v0/backends", BackendsIndex(backends, cluster))
-	mux.Handle("/v0/cluster", Cluster(cluster, logger))
+	mux.Handle("/v0/backends", BackendsIndex(backends, clusterManager))
+	mux.Handle("/v0/cluster", ClusterEndpoint(clusterManager, logger))
 
 	return middleware.Chain{
 		middleware.NewPanicRecovery(logger),

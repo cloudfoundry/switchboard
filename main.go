@@ -62,7 +62,7 @@ func main() {
 		clusterAPIActiveBackendChan,
 	}
 
-	clusterMonitor := monitor.NewClusterMonitor(
+	clusterMonitorLowestIndex := monitor.NewClusterMonitor(
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
 		logger,
@@ -70,9 +70,31 @@ func main() {
 		true,
 	)
 
-	trafficEnabledChan := make(chan bool)
+	trafficEnabledActivePortChan := make(chan bool)
+	trafficEnabledChans := []chan<- bool{trafficEnabledActivePortChan}
 
-	clusterAPI := api.NewClusterAPI(trafficEnabledChan, clusterAPIActiveBackendChan, logger)
+	var trafficEnabledInactivePortChan chan bool
+	var bridgeInactiveBackendChan chan *domain.Backend
+	var clusterMonitorHighestIndex *monitor.ClusterMonitor
+	if rootConfig.Proxy.InactiveMysqlPort != 0 {
+		bridgeInactiveBackendChan = make(chan *domain.Backend)
+		inactiveBackendSubscribers := []chan<- *domain.Backend{
+			bridgeInactiveBackendChan,
+		}
+
+		clusterMonitorHighestIndex = monitor.NewClusterMonitor(
+			backends,
+			rootConfig.Proxy.HealthcheckTimeout(),
+			logger,
+			inactiveBackendSubscribers,
+			false,
+		)
+
+		trafficEnabledInactivePortChan = make(chan bool)
+		trafficEnabledChans = append(trafficEnabledChans, trafficEnabledInactivePortChan)
+	}
+
+	clusterAPI := api.NewClusterAPI(trafficEnabledChans, clusterAPIActiveBackendChan, logger)
 	go clusterAPI.ListenForActiveBackend()
 
 	handler := api.NewHandler(clusterAPI, backends, logger, rootConfig.API, rootConfig.StaticDir)
@@ -80,8 +102,8 @@ func main() {
 
 	members := grouper.Members{
 		{
-			Name:   "bridge",
-			Runner: bridge.NewRunner(bridgeActiveBackendChan, trafficEnabledChan, rootConfig.Proxy.Port, rootConfig.Proxy.ShutdownDelay(), logger),
+			Name:   "lowest-indexed-bridge",
+			Runner: bridge.NewRunner(bridgeActiveBackendChan, trafficEnabledActivePortChan, rootConfig.Proxy.Port, rootConfig.Proxy.ShutdownDelay(), logger),
 		},
 		{
 			Name:   "api-aggregator",
@@ -92,8 +114,8 @@ func main() {
 			Runner: apirunner.NewRunner(rootConfig.API.Port, handler),
 		},
 		{
-			Name:   "monitor",
-			Runner: monitor.NewRunner(clusterMonitor, logger),
+			Name:   "lowest-indexed-monitor",
+			Runner: monitor.NewRunner(clusterMonitorLowestIndex, logger),
 		},
 	}
 
@@ -102,6 +124,19 @@ func main() {
 			Name:   "health",
 			Runner: health.NewRunner(rootConfig.HealthPort),
 		})
+	}
+
+	if rootConfig.Proxy.InactiveMysqlPort != 0 {
+		members = append(members,
+			grouper.Member{
+				Name:   "highest-indexed-bridge",
+				Runner: bridge.NewRunner(bridgeInactiveBackendChan, trafficEnabledInactivePortChan, rootConfig.Proxy.InactiveMysqlPort, rootConfig.Proxy.ShutdownDelay(), logger),
+			},
+			grouper.Member{
+				Name:   "highest-indexed-monitor",
+				Runner: monitor.NewRunner(clusterMonitorHighestIndex, logger),
+			},
+		)
 	}
 
 	group := grouper.NewOrdered(os.Interrupt, members)

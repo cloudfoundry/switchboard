@@ -14,21 +14,23 @@ import (
 
 var _ = Describe("ClusterAPI", func() {
 	var (
-		logger             lager.Logger
-		cluster            *api.ClusterAPI
-		trafficEnabledChan chan bool
-		activeBackendChan  chan *domain.Backend
+		logger              lager.Logger
+		cluster             *api.ClusterAPI
+		trafficEnabledChan1 chan bool
+		trafficEnabledChan2 chan bool
+		activeBackendChan   chan *domain.Backend
 	)
 
 	BeforeEach(func() {
-		trafficEnabledChan = make(chan bool, 10)
+		trafficEnabledChan1 = make(chan bool, 10)
+		trafficEnabledChan2 = make(chan bool, 10)
 		activeBackendChan = make(chan *domain.Backend)
 	})
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("Cluster test")
 		cluster = api.NewClusterAPI(
-			trafficEnabledChan,
+			[]chan<- bool{trafficEnabledChan1, trafficEnabledChan2},
 			activeBackendChan,
 			logger,
 		)
@@ -114,7 +116,8 @@ var _ = Describe("ClusterAPI", func() {
 		It("publishes that traffic is enabled", func() {
 			cluster.EnableTraffic(message)
 
-			Eventually(trafficEnabledChan).Should(Receive(BeTrue()))
+			Eventually(trafficEnabledChan1).Should(Receive(BeTrue()))
+			Eventually(trafficEnabledChan2).Should(Receive(BeTrue()))
 		})
 	})
 

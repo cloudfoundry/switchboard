@@ -9,25 +9,25 @@ import (
 )
 
 type ClusterAPI struct {
-	mutex              sync.RWMutex
-	logger             lager.Logger
-	message            string
-	lastUpdated        time.Time
-	trafficEnabled     bool
-	trafficEnabledChan chan<- bool
-	activeBackendChan  <-chan *domain.Backend
-	activeBackend      *BackendJSON
+	mutex               sync.RWMutex
+	logger              lager.Logger
+	message             string
+	lastUpdated         time.Time
+	trafficEnabled      bool
+	trafficEnabledChans []chan<- bool
+	activeBackendChan   <-chan *domain.Backend
+	activeBackend       *BackendJSON
 }
 
 func NewClusterAPI(
-	trafficEnabledChan chan<- bool,
+	trafficEnabledChans []chan<- bool,
 	activeBackendChan <-chan *domain.Backend,
 	logger lager.Logger) *ClusterAPI {
 	return &ClusterAPI{
-		logger:             logger,
-		trafficEnabled:     true,
-		trafficEnabledChan: trafficEnabledChan,
-		activeBackendChan:  activeBackendChan,
+		logger:              logger,
+		trafficEnabled:      true,
+		trafficEnabledChans: trafficEnabledChans,
+		activeBackendChan:   activeBackendChan,
 	}
 }
 
@@ -71,7 +71,9 @@ func (c *ClusterAPI) EnableTraffic(message string) {
 	c.lastUpdated = time.Now()
 	c.trafficEnabled = true
 
-	c.trafficEnabledChan <- c.trafficEnabled
+	for _, trafficEnabledChan := range c.trafficEnabledChans {
+		trafficEnabledChan <- c.trafficEnabled
+	}
 }
 
 func (c *ClusterAPI) DisableTraffic(message string) {
@@ -84,7 +86,9 @@ func (c *ClusterAPI) DisableTraffic(message string) {
 	c.lastUpdated = time.Now()
 	c.trafficEnabled = false
 
-	c.trafficEnabledChan <- c.trafficEnabled
+	for _, trafficEnabledChan := range c.trafficEnabledChans {
+		trafficEnabledChan <- c.trafficEnabled
+	}
 }
 
 type ClusterJSON struct {

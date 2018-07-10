@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"strconv"
@@ -33,21 +32,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("Error validating config:", err, lager.Data{"config": rootConfig})
 	}
-
-	go func() {
-		if !rootConfig.Profiling.Enabled {
-			logger.Info("Profiling disabled")
-			return
-		}
-
-		logger.Info("Starting profiling server", lager.Data{
-			"port": rootConfig.Profiling.Port,
-		})
-		err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", rootConfig.Profiling.Port), nil)
-		if err != nil {
-			logger.Error("profiler failed with error", err)
-		}
-	}()
 
 	if _, err := os.Stat(rootConfig.StaticDir); os.IsNotExist(err) {
 		logger.Fatal(fmt.Sprintf("staticDir: %s does not exist", rootConfig.StaticDir), nil)

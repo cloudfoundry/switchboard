@@ -13,9 +13,6 @@ Proxy:
     StatusPort: 9200
     StatusEndpoint: galera_healthcheck
     Name: backend-0
-Profiling:
-  Enabled: true
-  Port: 6060
 HealthPort: 9200
 StaticDir: fake-path
 PidFile: fake-pid-path

@@ -147,7 +147,6 @@ var _ = Describe("Switchboard", func() {
 		rootConfig                   config.Config
 		proxyConfig                  config.Proxy
 		apiConfig                    config.API
-		profilingConfig              config.Profiling
 		pidFile                      string
 		staticDir                    string
 	)
@@ -204,15 +203,9 @@ var _ = Describe("Switchboard", func() {
 			ProxyURIs:      []string{"some-proxy-uri-0", "some-proxy-uri-1"},
 		}
 
-		profilingConfig = config.Profiling{
-			Enabled: true,
-			Port:    switchboardProfilerPort,
-		}
-
 		rootConfig = config.Config{
 			Proxy:      proxyConfig,
 			API:        apiConfig,
-			Profiling:  profilingConfig,
 			HealthPort: switchboardHealthPort,
 			PidFile:    pidFile,
 			StaticDir:  staticDir,
@@ -278,28 +271,6 @@ var _ = Describe("Switchboard", func() {
 			finfo, err := os.Stat(pidFile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(finfo.Mode().Perm()).To(Equal(os.FileMode(0644)))
-		})
-
-		Describe("Profiler", func() {
-			It("responds with 200 at /debug/pprof", func() {
-				url := fmt.Sprintf("http://localhost:%d/debug/pprof/", switchboardProfilerPort)
-				resp, err := http.Get(url)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			})
-
-			Context("Profiling is disabled", func() {
-				BeforeEach(func() {
-					rootConfig.Profiling.Enabled = false
-				})
-
-				It("does not bring up a pprof server", func() {
-					url := fmt.Sprintf("http://localhost:%d/debug/pprof/", switchboardProfilerPort)
-					_, err := http.Get(url)
-
-					Expect(err).To(MatchError(ContainSubstring("connection refused")))
-				})
-			})
 		})
 
 		Describe("Health", func() {

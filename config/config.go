@@ -17,16 +17,10 @@ import (
 type Config struct {
 	Proxy      Proxy     `yaml:"Proxy" validate:"nonzero"`
 	API        API       `yaml:"API" validate:"nonzero"`
-	Profiling  Profiling `yaml:"Profiling"`
 	StaticDir  string    `yaml:"StaticDir" validate:"nonzero"`
 	PidFile    string    `yaml:"PidFile" validate:"nonzero"`
 	HealthPort uint      `yaml:"HealthPort" validate:"nonzero"`
 	Logger     lager.Logger
-}
-
-type Profiling struct {
-	Enabled bool `yaml:"Enabled"`
-	Port    uint `yaml:"Port"`
 }
 
 type Proxy struct {

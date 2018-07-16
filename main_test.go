@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cloudfoundry-incubator/switchboard/api"
 	"github.com/cloudfoundry-incubator/switchboard/config"
 	"github.com/cloudfoundry-incubator/switchboard/dummies"
 	. "github.com/onsi/ginkgo"
@@ -251,6 +253,32 @@ var _ = Describe("Switchboard", func() {
 	Context("when switchboard starts successfully", func() {
 		JustBeforeEach(func() {
 			var response Response
+			Eventually(func() error {
+				url := fmt.Sprintf("http://localhost:%d/v0/cluster", switchboardAPIPort)
+				req, err := http.NewRequest("GET", url, nil)
+				if err != nil {
+					return err
+				}
+				req.SetBasicAuth("username", "password")
+
+				client := &http.Client{}
+				resp, err := client.Do(req)
+				if err != nil {
+					return err
+				}
+
+				var returnedCluster api.ClusterJSON
+				decoder := json.NewDecoder(resp.Body)
+				err = decoder.Decode(&returnedCluster)
+				if err != nil {
+					return err
+				}
+				if returnedCluster.ActiveBackend == nil || returnedCluster.ActiveBackend.Port != backends[0].Port {
+					return errors.New("Expected backend not active yet")
+				}
+
+				return err
+			}, startupTimeout).Should(Succeed())
 
 			Eventually(func() error {
 				conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))

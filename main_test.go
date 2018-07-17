@@ -281,6 +281,36 @@ var _ = Describe("Switchboard", func() {
 			}, startupTimeout).Should(Succeed())
 
 			Eventually(func() error {
+				url := fmt.Sprintf("http://localhost:%d/v0/backends", switchboardAPIPort)
+				req, err := http.NewRequest("GET", url, nil)
+				if err != nil {
+					return err
+				}
+				req.SetBasicAuth("username", "password")
+
+				client := &http.Client{}
+				resp, err := client.Do(req)
+				if err != nil {
+					return err
+				}
+
+				var returnedBackends []api.V0BackendResponse
+				decoder := json.NewDecoder(resp.Body)
+				err = decoder.Decode(&returnedBackends)
+				if err != nil {
+					return err
+				}
+
+				for _, backend := range returnedBackends {
+					if backend.Healthy == true && backend.Active == false {
+						return nil
+					}
+				}
+
+				return errors.New("Inactive backend never became healthy")
+			}, startupTimeout).Should(Succeed())
+
+			Eventually(func() error {
 				conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyPort))
 				if err != nil {
 					return err

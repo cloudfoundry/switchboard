@@ -72,6 +72,11 @@ func (r Runner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 				}
 
 				activeBackend = a
+				if a != nil {
+					r.logger.Info("Done severing connections, new active backend:", lager.Data{"backend": a.AsJSON()})
+				} else {
+					r.logger.Info("Done severing connections, new active backend:", lager.Data{"backend": nil})
+				}
 
 			case clientConn := <-c:
 				if !trafficEnabled {

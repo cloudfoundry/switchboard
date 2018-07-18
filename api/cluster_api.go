@@ -39,6 +39,7 @@ func (c *ClusterAPI) ListenForActiveBackend() {
 
 		if b == nil {
 			c.activeBackend = nil
+			c.logger.Info("Done updating Cluster Api, new active backend:", lager.Data{"backend": nil})
 		} else {
 			j := b.AsJSON()
 			c.activeBackend = &BackendJSON{
@@ -46,6 +47,7 @@ func (c *ClusterAPI) ListenForActiveBackend() {
 				Port: j.Port,
 				Name: j.Name,
 			}
+			c.logger.Info("Done updating Cluster Api, new active backend:", lager.Data{"backend": j})
 		}
 		c.mutex.Unlock()
 	}

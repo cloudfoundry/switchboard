@@ -155,7 +155,7 @@ func (c *ClusterMonitor) determineStateFromBackend(backend *domain.Backend, clie
 	url := fmt.Sprintf("http://%s:%d/api/v1/status", j.Host, j.StatusPort)
 	resp, err := client.Get(url)
 
-	var healthy bool
+	healthy := false
 	var index *int
 
 	if err == nil {

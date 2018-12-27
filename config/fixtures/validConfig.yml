@@ -15,4 +15,3 @@ Proxy:
     Name: backend-0
 HealthPort: 9200
 StaticDir: fake-path
-PidFile: fake-pid-path

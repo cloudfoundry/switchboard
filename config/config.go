@@ -10,16 +10,15 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"gopkg.in/validator.v2"
-
 	"github.com/pivotal-cf-experimental/service-config"
+
 )
 
 type Config struct {
-	Proxy      Proxy     `yaml:"Proxy" validate:"nonzero"`
-	API        API       `yaml:"API" validate:"nonzero"`
-	StaticDir  string    `yaml:"StaticDir" validate:"nonzero"`
-	PidFile    string    `yaml:"PidFile" validate:"nonzero"`
-	HealthPort uint      `yaml:"HealthPort" validate:"nonzero"`
+	Proxy      Proxy  `yaml:"Proxy" validate:"nonzero"`
+	API        API    `yaml:"API" validate:"nonzero"`
+	StaticDir  string `yaml:"StaticDir" validate:"nonzero"`
+	HealthPort uint   `yaml:"HealthPort" validate:"nonzero"`
 	Logger     lager.Logger
 }
 

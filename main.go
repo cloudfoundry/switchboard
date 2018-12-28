@@ -2,10 +2,8 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	_ "net/http/pprof"
 	"os"
-	"strconv"
 
 	"code.cloudfoundry.org/lager"
 
@@ -114,19 +112,8 @@ func main() {
 
 	logger.Info("Proxy started", lager.Data{"proxyConfig": rootConfig.Proxy})
 
-	writePid(logger, rootConfig.PidFile)
-
 	err = <-process.Wait()
 	if err != nil {
 		logger.Fatal("Switchboard exited unexpectedly", err, lager.Data{"proxyConfig": rootConfig.Proxy})
-	}
-}
-
-func writePid(logger lager.Logger, pidFile string) {
-	err := ioutil.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())), 0644)
-	if err == nil {
-		logger.Info(fmt.Sprintf("Wrote pidFile to %s", pidFile))
-	} else {
-		logger.Fatal("Cannot write pid to file", err, lager.Data{"pidFile": pidFile})
 	}
 }

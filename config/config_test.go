@@ -122,10 +122,5 @@ var _ = Describe("Config", func() {
 			err := test_helpers.IsRequiredField(rootConfig, "StaticDir")
 			Expect(err).ToNot(HaveOccurred())
 		})
-
-		It("returns an error if PidFile is blank", func() {
-			err := test_helpers.IsRequiredField(rootConfig, "PidFile")
-			Expect(err).ToNot(HaveOccurred())
-		})
 	})
 })

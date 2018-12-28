@@ -143,33 +143,22 @@ var _ = Describe("Switchboard", func() {
 		proxyInactiveNodePort        uint
 		switchboardAPIPort           uint
 		switchboardAPIAggregatorPort uint
-		switchboardProfilerPort      uint
 		switchboardHealthPort        uint
 		backends                     []config.Backend
 		rootConfig                   config.Config
 		proxyConfig                  config.Proxy
 		apiConfig                    config.API
-		pidFile                      string
 		staticDir                    string
 	)
 
 	BeforeEach(func() {
-		tempDir, err := ioutil.TempDir(os.TempDir(), "switchboard")
-		Expect(err).NotTo(HaveOccurred())
-
 		testDir := getDirOfCurrentFile()
 		staticDir = filepath.Join(testDir, "static")
-
-		pidFileFile, _ := ioutil.TempFile(tempDir, "switchboard.pid")
-		_ = pidFileFile.Close()
-		pidFile = pidFileFile.Name()
-		_ = os.Remove(pidFile)
 
 		proxyPort = uint(10000 + GinkgoParallelNode())
 		proxyInactiveNodePort = uint(10600 + GinkgoParallelNode())
 		switchboardAPIPort = uint(10100 + GinkgoParallelNode())
 		switchboardAPIAggregatorPort = uint(10800 + GinkgoParallelNode())
-		switchboardProfilerPort = uint(6060 + GinkgoParallelNode())
 		switchboardHealthPort = uint(6160 + GinkgoParallelNode())
 
 		backend1 := config.Backend{
@@ -209,7 +198,6 @@ var _ = Describe("Switchboard", func() {
 			Proxy:      proxyConfig,
 			API:        apiConfig,
 			HealthPort: switchboardHealthPort,
-			PidFile:    pidFile,
 			StaticDir:  staticDir,
 		}
 		healthcheckWaitDuration = 3 * proxyConfig.HealthcheckTimeout()
@@ -323,12 +311,6 @@ var _ = Describe("Switchboard", func() {
 
 			initialActiveBackend = backends[response.BackendIndex]
 			initialInactiveBackend = backends[(response.BackendIndex+1)%2]
-		})
-
-		It("writes its PidFile", func() {
-			finfo, err := os.Stat(pidFile)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(finfo.Mode().Perm()).To(Equal(os.FileMode(0644)))
 		})
 
 		Describe("Health", func() {
@@ -1072,19 +1054,6 @@ var _ = Describe("Switchboard", func() {
 				})
 
 			})
-		})
-	})
-
-	Context("and switchboard is failing", func() {
-		BeforeEach(func() {
-			rootConfig.StaticDir = "this is totally invalid so switchboard won't start"
-		})
-
-		It("does not write the PidFile", func() {
-			Consistently(func() error {
-				_, err := os.Stat(pidFile)
-				return err
-			}).Should(HaveOccurred())
 		})
 	})
 })

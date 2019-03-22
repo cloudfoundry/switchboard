@@ -30,7 +30,6 @@ var _ = Describe("ClusterMonitor", func() {
 		backend1, backend2, backend3 *domain.Backend
 		subscriberA                  chan *domain.Backend
 		subscriberB                  chan *domain.Backend
-		notFoundResponse             *http.Response
 		useLowestIndex               bool
 
 		m sync.RWMutex
@@ -83,10 +82,6 @@ var _ = Describe("ClusterMonitor", func() {
 		backend2.SetHealthy()
 		backend3.SetHealthy()
 
-		notFoundResponse = &http.Response{
-			Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
-			StatusCode: http.StatusNotFound,
-		}
 		useLowestIndex = true
 	})
 

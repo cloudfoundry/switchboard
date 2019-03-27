@@ -101,10 +101,16 @@ var _ = Describe("ClusterMonitor", func() {
 			urlGetter *monitorfakes.FakeUrlGetter
 
 			stopMonitoringChan chan interface{}
+			backendToIndex     map[*domain.Backend]int
 		)
 
 		BeforeEach(func() {
 			stopMonitoringChan = make(chan interface{})
+			backendToIndex = map[*domain.Backend]int{
+				backend1: 0,
+				backend2: 1,
+				backend3: 2,
+			}
 
 			urlGetter = new(monitorfakes.FakeUrlGetter)
 			monitor.UrlGetterProvider = func(time.Duration) monitor.UrlGetter {
@@ -116,11 +122,11 @@ var _ = Describe("ClusterMonitor", func() {
 				defer m.RUnlock()
 
 				if url == backend1.HealthcheckUrl() {
-					return healthyResponse(0), nil
+					return healthyResponse(backendToIndex[backend1]), nil
 				} else if url == backend2.HealthcheckUrl() {
-					return healthyResponse(1), nil
+					return healthyResponse(backendToIndex[backend2]), nil
 				} else if url == backend3.HealthcheckUrl() {
-					return healthyResponse(2), nil
+					return healthyResponse(backendToIndex[backend3]), nil
 				}
 
 				panic("Unexpected backend")
@@ -232,19 +238,13 @@ var _ = Describe("ClusterMonitor", func() {
 					Eventually(subscriberA).Should(Receive(Equal(backend1)))
 					Eventually(subscriberB).Should(Receive(Equal(backend1)))
 
-					urlGetter.GetStub = func(url string) (*http.Response, error) {
-						m.RLock()
-						defer m.RUnlock()
-
-						if url == backend1.HealthcheckUrl() {
-							return healthyResponse(1), nil
-						} else if url == backend2.HealthcheckUrl() {
-							return healthyResponse(2), nil
-						} else if url == backend3.HealthcheckUrl() {
-							return healthyResponse(0), nil
-						}
-						return nil, nil
+					m.Lock()
+					backendToIndex = map[*domain.Backend]int{
+						backend1: 1,
+						backend2: 2,
+						backend3: 0,
 					}
+					m.Unlock()
 
 					Eventually(subscriberA).Should(Receive(Equal(backend3)))
 					Eventually(subscriberB).Should(Receive(Equal(backend3)))
@@ -263,20 +263,13 @@ var _ = Describe("ClusterMonitor", func() {
 
 					Eventually(subscriberA).Should(Receive(Equal(backend3)))
 					Eventually(subscriberB).Should(Receive(Equal(backend3)))
-
-					urlGetter.GetStub = func(url string) (*http.Response, error) {
-						m.RLock()
-						defer m.RUnlock()
-
-						if url == backend1.HealthcheckUrl() {
-							return healthyResponse(0), nil
-						} else if url == backend2.HealthcheckUrl() {
-							return healthyResponse(2), nil
-						} else if url == backend3.HealthcheckUrl() {
-							return healthyResponse(1), nil
-						}
-						return nil, nil
+					m.Lock()
+					backendToIndex = map[*domain.Backend]int{
+						backend1: 0,
+						backend2: 2,
+						backend3: 1,
 					}
+					m.Unlock()
 
 					Eventually(subscriberA).Should(Receive(Equal(backend2)))
 					Eventually(subscriberB).Should(Receive(Equal(backend2)))

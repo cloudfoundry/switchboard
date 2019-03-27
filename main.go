@@ -40,11 +40,15 @@ func main() {
 	activeNodeClusterMonitor := monitor.NewClusterMonitor(
 		backends,
 		rootConfig.Proxy.HealthcheckTimeout(),
-		logger,
+		logger.Session("active-monitor"),
 		true,
 	)
 
-	activeNodeBridgeRunner := bridge.NewRunner(rootConfig.Proxy.Port, rootConfig.Proxy.ShutdownDelay(), logger)
+	activeNodeBridgeRunner := bridge.NewRunner(
+		rootConfig.Proxy.Port,
+		rootConfig.Proxy.ShutdownDelay(),
+		logger.Session("active-bridge-runner"),
+	)
 	clusterStateManager := api.NewClusterAPI(logger)
 
 	activeNodeClusterMonitor.RegisterBackendSubscriber(activeNodeBridgeRunner.ActiveBackendChan)
@@ -86,11 +90,15 @@ func main() {
 		inactiveNodeClusterMonitor := monitor.NewClusterMonitor(
 			backends,
 			rootConfig.Proxy.HealthcheckTimeout(),
-			logger,
+			logger.Session("inactive-monitor"),
 			false,
 		)
 
-		inactiveNodeBridgeRunner := bridge.NewRunner(rootConfig.Proxy.InactiveMysqlPort, rootConfig.Proxy.ShutdownDelay(), logger)
+		inactiveNodeBridgeRunner := bridge.NewRunner(
+			rootConfig.Proxy.InactiveMysqlPort,
+			rootConfig.Proxy.ShutdownDelay(),
+			logger.Session("inactive-bridge-runner"),
+		)
 
 		inactiveNodeClusterMonitor.RegisterBackendSubscriber(inactiveNodeBridgeRunner.ActiveBackendChan)
 		clusterStateManager.RegisterTrafficEnabledChan(inactiveNodeBridgeRunner.TrafficEnabledChan)

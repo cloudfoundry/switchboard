@@ -182,8 +182,8 @@ var _ = Describe("Switchboard", func() {
 		proxyConfig = config.Proxy{
 			Backends:                 backends,
 			HealthcheckTimeoutMillis: 500,
-			Port:              proxyPort,
-			InactiveMysqlPort: proxyInactiveNodePort,
+			Port:                     proxyPort,
+			InactiveMysqlPort:        proxyInactiveNodePort,
 		}
 
 		apiConfig = config.API{

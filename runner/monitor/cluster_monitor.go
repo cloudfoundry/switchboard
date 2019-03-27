@@ -205,7 +205,7 @@ func (c *ClusterMonitor) determineStateFromBackend(backend *domain.Backend, clie
 }
 
 func (c *ClusterMonitor) QueryBackendHealth(backend *domain.Backend, healthMonitor *BackendStatus, client UrlGetter) {
-	c.logger.Debug("Querying Backend", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
+	c.logger.Debug("Querying Backend", lager.Data{"backend": backend.AsJSON(), "healthMonitor": healthMonitor})
 	healthMonitor.Counters.IncrementCount("dial")
 	shouldLog := healthMonitor.Counters.Should("log")
 
@@ -216,12 +216,12 @@ func (c *ClusterMonitor) QueryBackendHealth(backend *domain.Backend, healthMonit
 	}
 
 	if healthy {
-		c.logger.Debug("Querying Backend: healthy", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
+		c.logger.Debug("Querying Backend: healthy", lager.Data{"backend": backend.AsJSON(), "healthMonitor": healthMonitor})
 		backend.SetHealthy()
 		healthMonitor.Healthy = true
 		healthMonitor.Counters.ResetCount("consecutiveUnhealthyChecks")
 	} else {
-		c.logger.Debug("Querying Backend: unhealthy", lager.Data{"backend": backend, "healthMonitor": healthMonitor})
+		c.logger.Debug("Querying Backend: unhealthy", lager.Data{"backend": backend.AsJSON(), "healthMonitor": healthMonitor})
 		backend.SetUnhealthy()
 		healthMonitor.Healthy = false
 		healthMonitor.Counters.IncrementCount("consecutiveUnhealthyChecks")

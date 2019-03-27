@@ -811,6 +811,16 @@ var _ = Describe("Switchboard", func() {
 				})
 			})
 			Context("when connecting to the inactive port", func() {
+				JustBeforeEach(func() {
+					Eventually(func() error {
+						conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", proxyInactiveNodePort))
+						if err != nil {
+							return err
+						}
+						_, err = sendData(conn, "checking inactive port is ready")
+						return err
+					}, startupTimeout).ShouldNot(HaveOccurred(), "Switchboard inactive mysql port never became ready")
+				})
 
 				Context("when there are multiple concurrent clients", func() {
 					It("proxies all the connections to the highest indexed backend", func() {

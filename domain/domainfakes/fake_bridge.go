@@ -8,35 +8,22 @@ import (
 )
 
 type FakeBridge struct {
+	CloseStub        func()
+	closeMutex       sync.RWMutex
+	closeArgsForCall []struct {
+	}
 	ConnectStub        func()
 	connectMutex       sync.RWMutex
-	connectArgsForCall []struct{}
-	CloseStub          func()
-	closeMutex         sync.RWMutex
-	closeArgsForCall   []struct{}
-	invocations        map[string][][]interface{}
-	invocationsMutex   sync.RWMutex
-}
-
-func (fake *FakeBridge) Connect() {
-	fake.connectMutex.Lock()
-	fake.connectArgsForCall = append(fake.connectArgsForCall, struct{}{})
-	fake.recordInvocation("Connect", []interface{}{})
-	fake.connectMutex.Unlock()
-	if fake.ConnectStub != nil {
-		fake.ConnectStub()
+	connectArgsForCall []struct {
 	}
-}
-
-func (fake *FakeBridge) ConnectCallCount() int {
-	fake.connectMutex.RLock()
-	defer fake.connectMutex.RUnlock()
-	return len(fake.connectArgsForCall)
+	invocations      map[string][][]interface{}
+	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeBridge) Close() {
 	fake.closeMutex.Lock()
-	fake.closeArgsForCall = append(fake.closeArgsForCall, struct{}{})
+	fake.closeArgsForCall = append(fake.closeArgsForCall, struct {
+	}{})
 	fake.recordInvocation("Close", []interface{}{})
 	fake.closeMutex.Unlock()
 	if fake.CloseStub != nil {
@@ -50,13 +37,42 @@ func (fake *FakeBridge) CloseCallCount() int {
 	return len(fake.closeArgsForCall)
 }
 
+func (fake *FakeBridge) CloseCalls(stub func()) {
+	fake.closeMutex.Lock()
+	defer fake.closeMutex.Unlock()
+	fake.CloseStub = stub
+}
+
+func (fake *FakeBridge) Connect() {
+	fake.connectMutex.Lock()
+	fake.connectArgsForCall = append(fake.connectArgsForCall, struct {
+	}{})
+	fake.recordInvocation("Connect", []interface{}{})
+	fake.connectMutex.Unlock()
+	if fake.ConnectStub != nil {
+		fake.ConnectStub()
+	}
+}
+
+func (fake *FakeBridge) ConnectCallCount() int {
+	fake.connectMutex.RLock()
+	defer fake.connectMutex.RUnlock()
+	return len(fake.connectArgsForCall)
+}
+
+func (fake *FakeBridge) ConnectCalls(stub func()) {
+	fake.connectMutex.Lock()
+	defer fake.connectMutex.Unlock()
+	fake.ConnectStub = stub
+}
+
 func (fake *FakeBridge) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.connectMutex.RLock()
-	defer fake.connectMutex.RUnlock()
 	fake.closeMutex.RLock()
 	defer fake.closeMutex.RUnlock()
+	fake.connectMutex.RLock()
+	defer fake.connectMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

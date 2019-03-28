@@ -9,11 +9,22 @@ import (
 )
 
 type FakeBridges struct {
-	CreateStub        func(clientConn, backendConn net.Conn) domain.Bridge
+	ContainsStub        func(domain.Bridge) bool
+	containsMutex       sync.RWMutex
+	containsArgsForCall []struct {
+		arg1 domain.Bridge
+	}
+	containsReturns struct {
+		result1 bool
+	}
+	containsReturnsOnCall map[int]struct {
+		result1 bool
+	}
+	CreateStub        func(net.Conn, net.Conn) domain.Bridge
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		clientConn  net.Conn
-		backendConn net.Conn
+		arg1 net.Conn
+		arg2 net.Conn
 	}
 	createReturns struct {
 		result1 domain.Bridge
@@ -21,10 +32,10 @@ type FakeBridges struct {
 	createReturnsOnCall map[int]struct {
 		result1 domain.Bridge
 	}
-	RemoveStub        func(bridge domain.Bridge) error
+	RemoveStub        func(domain.Bridge) error
 	removeMutex       sync.RWMutex
 	removeArgsForCall []struct {
-		bridge domain.Bridge
+		arg1 domain.Bridge
 	}
 	removeReturns struct {
 		result1 error
@@ -34,47 +45,99 @@ type FakeBridges struct {
 	}
 	RemoveAndCloseAllStub        func()
 	removeAndCloseAllMutex       sync.RWMutex
-	removeAndCloseAllArgsForCall []struct{}
-	SizeStub                     func() uint
-	sizeMutex                    sync.RWMutex
-	sizeArgsForCall              []struct{}
-	sizeReturns                  struct {
+	removeAndCloseAllArgsForCall []struct {
+	}
+	SizeStub        func() uint
+	sizeMutex       sync.RWMutex
+	sizeArgsForCall []struct {
+	}
+	sizeReturns struct {
 		result1 uint
 	}
 	sizeReturnsOnCall map[int]struct {
 		result1 uint
 	}
-	ContainsStub        func(bridge domain.Bridge) bool
-	containsMutex       sync.RWMutex
-	containsArgsForCall []struct {
-		bridge domain.Bridge
-	}
-	containsReturns struct {
-		result1 bool
-	}
-	containsReturnsOnCall map[int]struct {
-		result1 bool
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBridges) Create(clientConn net.Conn, backendConn net.Conn) domain.Bridge {
-	fake.createMutex.Lock()
-	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
-	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		clientConn  net.Conn
-		backendConn net.Conn
-	}{clientConn, backendConn})
-	fake.recordInvocation("Create", []interface{}{clientConn, backendConn})
-	fake.createMutex.Unlock()
-	if fake.CreateStub != nil {
-		return fake.CreateStub(clientConn, backendConn)
+func (fake *FakeBridges) Contains(arg1 domain.Bridge) bool {
+	fake.containsMutex.Lock()
+	ret, specificReturn := fake.containsReturnsOnCall[len(fake.containsArgsForCall)]
+	fake.containsArgsForCall = append(fake.containsArgsForCall, struct {
+		arg1 domain.Bridge
+	}{arg1})
+	fake.recordInvocation("Contains", []interface{}{arg1})
+	fake.containsMutex.Unlock()
+	if fake.ContainsStub != nil {
+		return fake.ContainsStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.createReturns.result1
+	fakeReturns := fake.containsReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeBridges) ContainsCallCount() int {
+	fake.containsMutex.RLock()
+	defer fake.containsMutex.RUnlock()
+	return len(fake.containsArgsForCall)
+}
+
+func (fake *FakeBridges) ContainsCalls(stub func(domain.Bridge) bool) {
+	fake.containsMutex.Lock()
+	defer fake.containsMutex.Unlock()
+	fake.ContainsStub = stub
+}
+
+func (fake *FakeBridges) ContainsArgsForCall(i int) domain.Bridge {
+	fake.containsMutex.RLock()
+	defer fake.containsMutex.RUnlock()
+	argsForCall := fake.containsArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeBridges) ContainsReturns(result1 bool) {
+	fake.containsMutex.Lock()
+	defer fake.containsMutex.Unlock()
+	fake.ContainsStub = nil
+	fake.containsReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeBridges) ContainsReturnsOnCall(i int, result1 bool) {
+	fake.containsMutex.Lock()
+	defer fake.containsMutex.Unlock()
+	fake.ContainsStub = nil
+	if fake.containsReturnsOnCall == nil {
+		fake.containsReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.containsReturnsOnCall[i] = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeBridges) Create(arg1 net.Conn, arg2 net.Conn) domain.Bridge {
+	fake.createMutex.Lock()
+	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
+	fake.createArgsForCall = append(fake.createArgsForCall, struct {
+		arg1 net.Conn
+		arg2 net.Conn
+	}{arg1, arg2})
+	fake.recordInvocation("Create", []interface{}{arg1, arg2})
+	fake.createMutex.Unlock()
+	if fake.CreateStub != nil {
+		return fake.CreateStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.createReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeBridges) CreateCallCount() int {
@@ -83,13 +146,22 @@ func (fake *FakeBridges) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
+func (fake *FakeBridges) CreateCalls(stub func(net.Conn, net.Conn) domain.Bridge) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
+	fake.CreateStub = stub
+}
+
 func (fake *FakeBridges) CreateArgsForCall(i int) (net.Conn, net.Conn) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].clientConn, fake.createArgsForCall[i].backendConn
+	argsForCall := fake.createArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeBridges) CreateReturns(result1 domain.Bridge) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 domain.Bridge
@@ -97,6 +169,8 @@ func (fake *FakeBridges) CreateReturns(result1 domain.Bridge) {
 }
 
 func (fake *FakeBridges) CreateReturnsOnCall(i int, result1 domain.Bridge) {
+	fake.createMutex.Lock()
+	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
@@ -108,21 +182,22 @@ func (fake *FakeBridges) CreateReturnsOnCall(i int, result1 domain.Bridge) {
 	}{result1}
 }
 
-func (fake *FakeBridges) Remove(bridge domain.Bridge) error {
+func (fake *FakeBridges) Remove(arg1 domain.Bridge) error {
 	fake.removeMutex.Lock()
 	ret, specificReturn := fake.removeReturnsOnCall[len(fake.removeArgsForCall)]
 	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
-		bridge domain.Bridge
-	}{bridge})
-	fake.recordInvocation("Remove", []interface{}{bridge})
+		arg1 domain.Bridge
+	}{arg1})
+	fake.recordInvocation("Remove", []interface{}{arg1})
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
-		return fake.RemoveStub(bridge)
+		return fake.RemoveStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.removeReturns.result1
+	fakeReturns := fake.removeReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeBridges) RemoveCallCount() int {
@@ -131,13 +206,22 @@ func (fake *FakeBridges) RemoveCallCount() int {
 	return len(fake.removeArgsForCall)
 }
 
+func (fake *FakeBridges) RemoveCalls(stub func(domain.Bridge) error) {
+	fake.removeMutex.Lock()
+	defer fake.removeMutex.Unlock()
+	fake.RemoveStub = stub
+}
+
 func (fake *FakeBridges) RemoveArgsForCall(i int) domain.Bridge {
 	fake.removeMutex.RLock()
 	defer fake.removeMutex.RUnlock()
-	return fake.removeArgsForCall[i].bridge
+	argsForCall := fake.removeArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeBridges) RemoveReturns(result1 error) {
+	fake.removeMutex.Lock()
+	defer fake.removeMutex.Unlock()
 	fake.RemoveStub = nil
 	fake.removeReturns = struct {
 		result1 error
@@ -145,6 +229,8 @@ func (fake *FakeBridges) RemoveReturns(result1 error) {
 }
 
 func (fake *FakeBridges) RemoveReturnsOnCall(i int, result1 error) {
+	fake.removeMutex.Lock()
+	defer fake.removeMutex.Unlock()
 	fake.RemoveStub = nil
 	if fake.removeReturnsOnCall == nil {
 		fake.removeReturnsOnCall = make(map[int]struct {
@@ -158,7 +244,8 @@ func (fake *FakeBridges) RemoveReturnsOnCall(i int, result1 error) {
 
 func (fake *FakeBridges) RemoveAndCloseAll() {
 	fake.removeAndCloseAllMutex.Lock()
-	fake.removeAndCloseAllArgsForCall = append(fake.removeAndCloseAllArgsForCall, struct{}{})
+	fake.removeAndCloseAllArgsForCall = append(fake.removeAndCloseAllArgsForCall, struct {
+	}{})
 	fake.recordInvocation("RemoveAndCloseAll", []interface{}{})
 	fake.removeAndCloseAllMutex.Unlock()
 	if fake.RemoveAndCloseAllStub != nil {
@@ -172,10 +259,17 @@ func (fake *FakeBridges) RemoveAndCloseAllCallCount() int {
 	return len(fake.removeAndCloseAllArgsForCall)
 }
 
+func (fake *FakeBridges) RemoveAndCloseAllCalls(stub func()) {
+	fake.removeAndCloseAllMutex.Lock()
+	defer fake.removeAndCloseAllMutex.Unlock()
+	fake.RemoveAndCloseAllStub = stub
+}
+
 func (fake *FakeBridges) Size() uint {
 	fake.sizeMutex.Lock()
 	ret, specificReturn := fake.sizeReturnsOnCall[len(fake.sizeArgsForCall)]
-	fake.sizeArgsForCall = append(fake.sizeArgsForCall, struct{}{})
+	fake.sizeArgsForCall = append(fake.sizeArgsForCall, struct {
+	}{})
 	fake.recordInvocation("Size", []interface{}{})
 	fake.sizeMutex.Unlock()
 	if fake.SizeStub != nil {
@@ -184,7 +278,8 @@ func (fake *FakeBridges) Size() uint {
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.sizeReturns.result1
+	fakeReturns := fake.sizeReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeBridges) SizeCallCount() int {
@@ -193,7 +288,15 @@ func (fake *FakeBridges) SizeCallCount() int {
 	return len(fake.sizeArgsForCall)
 }
 
+func (fake *FakeBridges) SizeCalls(stub func() uint) {
+	fake.sizeMutex.Lock()
+	defer fake.sizeMutex.Unlock()
+	fake.SizeStub = stub
+}
+
 func (fake *FakeBridges) SizeReturns(result1 uint) {
+	fake.sizeMutex.Lock()
+	defer fake.sizeMutex.Unlock()
 	fake.SizeStub = nil
 	fake.sizeReturns = struct {
 		result1 uint
@@ -201,6 +304,8 @@ func (fake *FakeBridges) SizeReturns(result1 uint) {
 }
 
 func (fake *FakeBridges) SizeReturnsOnCall(i int, result1 uint) {
+	fake.sizeMutex.Lock()
+	defer fake.sizeMutex.Unlock()
 	fake.SizeStub = nil
 	if fake.sizeReturnsOnCall == nil {
 		fake.sizeReturnsOnCall = make(map[int]struct {
@@ -212,57 +317,11 @@ func (fake *FakeBridges) SizeReturnsOnCall(i int, result1 uint) {
 	}{result1}
 }
 
-func (fake *FakeBridges) Contains(bridge domain.Bridge) bool {
-	fake.containsMutex.Lock()
-	ret, specificReturn := fake.containsReturnsOnCall[len(fake.containsArgsForCall)]
-	fake.containsArgsForCall = append(fake.containsArgsForCall, struct {
-		bridge domain.Bridge
-	}{bridge})
-	fake.recordInvocation("Contains", []interface{}{bridge})
-	fake.containsMutex.Unlock()
-	if fake.ContainsStub != nil {
-		return fake.ContainsStub(bridge)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.containsReturns.result1
-}
-
-func (fake *FakeBridges) ContainsCallCount() int {
-	fake.containsMutex.RLock()
-	defer fake.containsMutex.RUnlock()
-	return len(fake.containsArgsForCall)
-}
-
-func (fake *FakeBridges) ContainsArgsForCall(i int) domain.Bridge {
-	fake.containsMutex.RLock()
-	defer fake.containsMutex.RUnlock()
-	return fake.containsArgsForCall[i].bridge
-}
-
-func (fake *FakeBridges) ContainsReturns(result1 bool) {
-	fake.ContainsStub = nil
-	fake.containsReturns = struct {
-		result1 bool
-	}{result1}
-}
-
-func (fake *FakeBridges) ContainsReturnsOnCall(i int, result1 bool) {
-	fake.ContainsStub = nil
-	if fake.containsReturnsOnCall == nil {
-		fake.containsReturnsOnCall = make(map[int]struct {
-			result1 bool
-		})
-	}
-	fake.containsReturnsOnCall[i] = struct {
-		result1 bool
-	}{result1}
-}
-
 func (fake *FakeBridges) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.containsMutex.RLock()
+	defer fake.containsMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	fake.removeMutex.RLock()
@@ -271,8 +330,6 @@ func (fake *FakeBridges) Invocations() map[string][][]interface{} {
 	defer fake.removeAndCloseAllMutex.RUnlock()
 	fake.sizeMutex.RLock()
 	defer fake.sizeMutex.RUnlock()
-	fake.containsMutex.RLock()
-	defer fake.containsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

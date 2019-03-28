@@ -35,10 +35,17 @@ func (fake *FakeMonitor) MonitorCallCount() int {
 	return len(fake.monitorArgsForCall)
 }
 
+func (fake *FakeMonitor) MonitorCalls(stub func(<-chan interface{})) {
+	fake.monitorMutex.Lock()
+	defer fake.monitorMutex.Unlock()
+	fake.MonitorStub = stub
+}
+
 func (fake *FakeMonitor) MonitorArgsForCall(i int) <-chan interface{} {
 	fake.monitorMutex.RLock()
 	defer fake.monitorMutex.RUnlock()
-	return fake.monitorArgsForCall[i].arg1
+	argsForCall := fake.monitorArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeMonitor) Invocations() map[string][][]interface{} {

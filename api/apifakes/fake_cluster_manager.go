@@ -10,21 +10,22 @@ import (
 type FakeClusterManager struct {
 	AsJSONStub        func() api.ClusterJSON
 	asJSONMutex       sync.RWMutex
-	asJSONArgsForCall []struct{}
-	asJSONReturns     struct {
+	asJSONArgsForCall []struct {
+	}
+	asJSONReturns struct {
 		result1 api.ClusterJSON
 	}
 	asJSONReturnsOnCall map[int]struct {
 		result1 api.ClusterJSON
 	}
-	EnableTrafficStub        func(string)
-	enableTrafficMutex       sync.RWMutex
-	enableTrafficArgsForCall []struct {
-		arg1 string
-	}
 	DisableTrafficStub        func(string)
 	disableTrafficMutex       sync.RWMutex
 	disableTrafficArgsForCall []struct {
+		arg1 string
+	}
+	EnableTrafficStub        func(string)
+	enableTrafficMutex       sync.RWMutex
+	enableTrafficArgsForCall []struct {
 		arg1 string
 	}
 	invocations      map[string][][]interface{}
@@ -34,7 +35,8 @@ type FakeClusterManager struct {
 func (fake *FakeClusterManager) AsJSON() api.ClusterJSON {
 	fake.asJSONMutex.Lock()
 	ret, specificReturn := fake.asJSONReturnsOnCall[len(fake.asJSONArgsForCall)]
-	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct{}{})
+	fake.asJSONArgsForCall = append(fake.asJSONArgsForCall, struct {
+	}{})
 	fake.recordInvocation("AsJSON", []interface{}{})
 	fake.asJSONMutex.Unlock()
 	if fake.AsJSONStub != nil {
@@ -43,7 +45,8 @@ func (fake *FakeClusterManager) AsJSON() api.ClusterJSON {
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.asJSONReturns.result1
+	fakeReturns := fake.asJSONReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeClusterManager) AsJSONCallCount() int {
@@ -52,7 +55,15 @@ func (fake *FakeClusterManager) AsJSONCallCount() int {
 	return len(fake.asJSONArgsForCall)
 }
 
+func (fake *FakeClusterManager) AsJSONCalls(stub func() api.ClusterJSON) {
+	fake.asJSONMutex.Lock()
+	defer fake.asJSONMutex.Unlock()
+	fake.AsJSONStub = stub
+}
+
 func (fake *FakeClusterManager) AsJSONReturns(result1 api.ClusterJSON) {
+	fake.asJSONMutex.Lock()
+	defer fake.asJSONMutex.Unlock()
 	fake.AsJSONStub = nil
 	fake.asJSONReturns = struct {
 		result1 api.ClusterJSON
@@ -60,6 +71,8 @@ func (fake *FakeClusterManager) AsJSONReturns(result1 api.ClusterJSON) {
 }
 
 func (fake *FakeClusterManager) AsJSONReturnsOnCall(i int, result1 api.ClusterJSON) {
+	fake.asJSONMutex.Lock()
+	defer fake.asJSONMutex.Unlock()
 	fake.AsJSONStub = nil
 	if fake.asJSONReturnsOnCall == nil {
 		fake.asJSONReturnsOnCall = make(map[int]struct {
@@ -69,30 +82,6 @@ func (fake *FakeClusterManager) AsJSONReturnsOnCall(i int, result1 api.ClusterJS
 	fake.asJSONReturnsOnCall[i] = struct {
 		result1 api.ClusterJSON
 	}{result1}
-}
-
-func (fake *FakeClusterManager) EnableTraffic(arg1 string) {
-	fake.enableTrafficMutex.Lock()
-	fake.enableTrafficArgsForCall = append(fake.enableTrafficArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	fake.recordInvocation("EnableTraffic", []interface{}{arg1})
-	fake.enableTrafficMutex.Unlock()
-	if fake.EnableTrafficStub != nil {
-		fake.EnableTrafficStub(arg1)
-	}
-}
-
-func (fake *FakeClusterManager) EnableTrafficCallCount() int {
-	fake.enableTrafficMutex.RLock()
-	defer fake.enableTrafficMutex.RUnlock()
-	return len(fake.enableTrafficArgsForCall)
-}
-
-func (fake *FakeClusterManager) EnableTrafficArgsForCall(i int) string {
-	fake.enableTrafficMutex.RLock()
-	defer fake.enableTrafficMutex.RUnlock()
-	return fake.enableTrafficArgsForCall[i].arg1
 }
 
 func (fake *FakeClusterManager) DisableTraffic(arg1 string) {
@@ -113,10 +102,48 @@ func (fake *FakeClusterManager) DisableTrafficCallCount() int {
 	return len(fake.disableTrafficArgsForCall)
 }
 
+func (fake *FakeClusterManager) DisableTrafficCalls(stub func(string)) {
+	fake.disableTrafficMutex.Lock()
+	defer fake.disableTrafficMutex.Unlock()
+	fake.DisableTrafficStub = stub
+}
+
 func (fake *FakeClusterManager) DisableTrafficArgsForCall(i int) string {
 	fake.disableTrafficMutex.RLock()
 	defer fake.disableTrafficMutex.RUnlock()
-	return fake.disableTrafficArgsForCall[i].arg1
+	argsForCall := fake.disableTrafficArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeClusterManager) EnableTraffic(arg1 string) {
+	fake.enableTrafficMutex.Lock()
+	fake.enableTrafficArgsForCall = append(fake.enableTrafficArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("EnableTraffic", []interface{}{arg1})
+	fake.enableTrafficMutex.Unlock()
+	if fake.EnableTrafficStub != nil {
+		fake.EnableTrafficStub(arg1)
+	}
+}
+
+func (fake *FakeClusterManager) EnableTrafficCallCount() int {
+	fake.enableTrafficMutex.RLock()
+	defer fake.enableTrafficMutex.RUnlock()
+	return len(fake.enableTrafficArgsForCall)
+}
+
+func (fake *FakeClusterManager) EnableTrafficCalls(stub func(string)) {
+	fake.enableTrafficMutex.Lock()
+	defer fake.enableTrafficMutex.Unlock()
+	fake.EnableTrafficStub = stub
+}
+
+func (fake *FakeClusterManager) EnableTrafficArgsForCall(i int) string {
+	fake.enableTrafficMutex.RLock()
+	defer fake.enableTrafficMutex.RUnlock()
+	argsForCall := fake.enableTrafficArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeClusterManager) Invocations() map[string][][]interface{} {
@@ -124,10 +151,10 @@ func (fake *FakeClusterManager) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.asJSONMutex.RLock()
 	defer fake.asJSONMutex.RUnlock()
-	fake.enableTrafficMutex.RLock()
-	defer fake.enableTrafficMutex.RUnlock()
 	fake.disableTrafficMutex.RLock()
 	defer fake.disableTrafficMutex.RUnlock()
+	fake.enableTrafficMutex.RLock()
+	defer fake.enableTrafficMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

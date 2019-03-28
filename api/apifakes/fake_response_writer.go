@@ -9,8 +9,9 @@ import (
 type FakeResponseWriter struct {
 	HeaderStub        func() http.Header
 	headerMutex       sync.RWMutex
-	headerArgsForCall []struct{}
-	headerReturns     struct {
+	headerArgsForCall []struct {
+	}
+	headerReturns struct {
 		result1 http.Header
 	}
 	headerReturnsOnCall map[int]struct {
@@ -41,7 +42,8 @@ type FakeResponseWriter struct {
 func (fake *FakeResponseWriter) Header() http.Header {
 	fake.headerMutex.Lock()
 	ret, specificReturn := fake.headerReturnsOnCall[len(fake.headerArgsForCall)]
-	fake.headerArgsForCall = append(fake.headerArgsForCall, struct{}{})
+	fake.headerArgsForCall = append(fake.headerArgsForCall, struct {
+	}{})
 	fake.recordInvocation("Header", []interface{}{})
 	fake.headerMutex.Unlock()
 	if fake.HeaderStub != nil {
@@ -50,7 +52,8 @@ func (fake *FakeResponseWriter) Header() http.Header {
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.headerReturns.result1
+	fakeReturns := fake.headerReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeResponseWriter) HeaderCallCount() int {
@@ -59,7 +62,15 @@ func (fake *FakeResponseWriter) HeaderCallCount() int {
 	return len(fake.headerArgsForCall)
 }
 
+func (fake *FakeResponseWriter) HeaderCalls(stub func() http.Header) {
+	fake.headerMutex.Lock()
+	defer fake.headerMutex.Unlock()
+	fake.HeaderStub = stub
+}
+
 func (fake *FakeResponseWriter) HeaderReturns(result1 http.Header) {
+	fake.headerMutex.Lock()
+	defer fake.headerMutex.Unlock()
 	fake.HeaderStub = nil
 	fake.headerReturns = struct {
 		result1 http.Header
@@ -67,6 +78,8 @@ func (fake *FakeResponseWriter) HeaderReturns(result1 http.Header) {
 }
 
 func (fake *FakeResponseWriter) HeaderReturnsOnCall(i int, result1 http.Header) {
+	fake.headerMutex.Lock()
+	defer fake.headerMutex.Unlock()
 	fake.HeaderStub = nil
 	if fake.headerReturnsOnCall == nil {
 		fake.headerReturnsOnCall = make(map[int]struct {
@@ -97,7 +110,8 @@ func (fake *FakeResponseWriter) Write(arg1 []byte) (int, error) {
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.writeReturns.result1, fake.writeReturns.result2
+	fakeReturns := fake.writeReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeResponseWriter) WriteCallCount() int {
@@ -106,13 +120,22 @@ func (fake *FakeResponseWriter) WriteCallCount() int {
 	return len(fake.writeArgsForCall)
 }
 
+func (fake *FakeResponseWriter) WriteCalls(stub func([]byte) (int, error)) {
+	fake.writeMutex.Lock()
+	defer fake.writeMutex.Unlock()
+	fake.WriteStub = stub
+}
+
 func (fake *FakeResponseWriter) WriteArgsForCall(i int) []byte {
 	fake.writeMutex.RLock()
 	defer fake.writeMutex.RUnlock()
-	return fake.writeArgsForCall[i].arg1
+	argsForCall := fake.writeArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeResponseWriter) WriteReturns(result1 int, result2 error) {
+	fake.writeMutex.Lock()
+	defer fake.writeMutex.Unlock()
 	fake.WriteStub = nil
 	fake.writeReturns = struct {
 		result1 int
@@ -121,6 +144,8 @@ func (fake *FakeResponseWriter) WriteReturns(result1 int, result2 error) {
 }
 
 func (fake *FakeResponseWriter) WriteReturnsOnCall(i int, result1 int, result2 error) {
+	fake.writeMutex.Lock()
+	defer fake.writeMutex.Unlock()
 	fake.WriteStub = nil
 	if fake.writeReturnsOnCall == nil {
 		fake.writeReturnsOnCall = make(map[int]struct {
@@ -152,10 +177,17 @@ func (fake *FakeResponseWriter) WriteHeaderCallCount() int {
 	return len(fake.writeHeaderArgsForCall)
 }
 
+func (fake *FakeResponseWriter) WriteHeaderCalls(stub func(int)) {
+	fake.writeHeaderMutex.Lock()
+	defer fake.writeHeaderMutex.Unlock()
+	fake.WriteHeaderStub = stub
+}
+
 func (fake *FakeResponseWriter) WriteHeaderArgsForCall(i int) int {
 	fake.writeHeaderMutex.RLock()
 	defer fake.writeHeaderMutex.RUnlock()
-	return fake.writeHeaderArgsForCall[i].arg1
+	argsForCall := fake.writeHeaderArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeResponseWriter) Invocations() map[string][][]interface{} {

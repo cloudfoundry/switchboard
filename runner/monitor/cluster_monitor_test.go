@@ -21,6 +21,7 @@ import (
 )
 
 const healthcheckTimeout = 500 * time.Millisecond
+const eventuallyTimeout = 3 * time.Second
 
 var _ = Describe("ClusterMonitor", func() {
 	var (
@@ -39,6 +40,8 @@ var _ = Describe("ClusterMonitor", func() {
 		clusterMonitor = nil
 
 		logger = lagertest.NewTestLogger("ClusterMonitor test")
+
+		SetDefaultEventuallyTimeout(eventuallyTimeout)
 
 		backend1 = domain.NewBackend(
 			"backend-1",

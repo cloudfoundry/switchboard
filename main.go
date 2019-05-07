@@ -96,7 +96,7 @@ func main() {
 
 		inactiveNodeBridgeRunner := bridge.NewRunner(
 			rootConfig.Proxy.InactiveMysqlPort,
-			rootConfig.Proxy.ShutdownDelay(),
+			0,
 			logger.Session("inactive-bridge-runner"),
 		)
 

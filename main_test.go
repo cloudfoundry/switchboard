@@ -184,6 +184,7 @@ var _ = Describe("Switchboard", func() {
 			HealthcheckTimeoutMillis: 500,
 			Port:                     proxyPort,
 			InactiveMysqlPort:        proxyInactiveNodePort,
+			ShutdownDelaySeconds:     5,
 		}
 
 		apiConfig = config.API{
@@ -235,7 +236,7 @@ var _ = Describe("Switchboard", func() {
 	})
 
 	AfterEach(func() {
-		ginkgomon.Interrupt(process, 5*time.Second)
+		ginkgomon.Interrupt(process, 10*time.Second)
 	})
 
 	Context("when switchboard starts successfully", func() {

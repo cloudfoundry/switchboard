@@ -81,7 +81,7 @@ func (b *Backend) SeverConnections() {
 }
 
 func (b *Backend) SetHealthy() {
-	if !b.healthy {
+	if !b.Healthy() {
 		b.logger.Info("Previously unhealthy backend became healthy.", lager.Data{"backend": b.AsJSON()})
 	}
 
@@ -91,7 +91,7 @@ func (b *Backend) SetHealthy() {
 }
 
 func (b *Backend) SetUnhealthy() {
-	if b.healthy {
+	if b.Healthy() {
 		b.logger.Info("Previously healthy backend became unhealthy.", lager.Data{"backend": b.AsJSON()})
 	}
 

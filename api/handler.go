@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
-//go:generate counterfeiter -o apifakes/fake_response_writer.go /usr/local/opt/go/libexec/src/net/http/server.go ResponseWriter
+//go:generate counterfeiter -o apifakes/fake_response_writer.go net/http.ResponseWriter
 func NewHandler(
 	clusterManager ClusterManager,
 	backends []*domain.Backend,

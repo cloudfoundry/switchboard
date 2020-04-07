@@ -25,7 +25,7 @@ gulp.task('serve-assets', function() {
 
 
 gulp.task('app-assets-vendor', function() {
-  return gulp.src('vendor/pui-v1.4.0/**/*')
+  return gulp.src('js-vendor/pui-v1.4.0/**/*')
     .pipe(plugins.copy('static', {prefix: 2}));
 });
 

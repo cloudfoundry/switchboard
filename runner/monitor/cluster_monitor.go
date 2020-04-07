@@ -191,7 +191,7 @@ func (c *ClusterMonitor) determineStateFromBackend(backend *domain.Backend, clie
 					"backend":  backend.AsJSON(),
 					"endpoint": url,
 					"resp":     fmt.Sprintf("%#v", resp),
-					"err":      err,
+					"err":      err.Error(),
 				},
 			)
 		}

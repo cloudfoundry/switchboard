@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-//go:generate counterfeiter . Bridge
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Bridge
 type Bridge interface {
 	Connect()
 	Close()

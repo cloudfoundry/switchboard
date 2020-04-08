@@ -10,7 +10,7 @@ import (
 
 var BridgeProvider = NewBridge
 
-//go:generate counterfeiter . Bridges
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Bridges
 type Bridges interface {
 	Create(clientConn, backendConn net.Conn) Bridge
 	Remove(bridge Bridge) error

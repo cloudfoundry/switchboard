@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-//go:generate counterfeiter . ClusterManager
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 .  ClusterManager
 type ClusterManager interface {
 	AsJSON() ClusterJSON
 	EnableTraffic(string)

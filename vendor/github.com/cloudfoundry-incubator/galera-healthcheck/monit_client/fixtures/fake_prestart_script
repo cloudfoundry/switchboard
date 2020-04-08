@@ -1,9 +1,0 @@
-#!/bin/bash
-
-if [[ -n "${DISABLE_SST}" ]]; then
-  echo "SST is disabled"
-else
-  echo "SST is enabled"
-fi
-
-echo "INTERRUPT_NOTIFY_CMD=${INTERRUPT_NOTIFY_CMD}"

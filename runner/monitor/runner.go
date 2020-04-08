@@ -6,7 +6,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-//go:generate counterfeiter . Monitor
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Monitor
 type Monitor interface {
 	Monitor(<-chan interface{})
 }

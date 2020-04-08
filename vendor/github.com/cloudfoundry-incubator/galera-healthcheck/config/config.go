@@ -5,11 +5,12 @@ import (
 	"flag"
 	"fmt"
 
-	"code.cloudfoundry.org/cflager"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/galera-healthcheck/domain"
+	"code.cloudfoundry.org/lager/lagerflags"
 	"github.com/pivotal-cf-experimental/service-config"
 	"gopkg.in/validator.v2"
+
+	"github.com/cloudfoundry-incubator/galera-healthcheck/domain"
 )
 
 type Config struct {
@@ -19,7 +20,6 @@ type Config struct {
 	Port                  int         `yaml:"Port" validate:"nonzero"`
 	AvailableWhenDonor    bool        `yaml:"AvailableWhenDonor"`
 	AvailableWhenReadOnly bool        `yaml:"AvailableWhenReadOnly"`
-	PidFile               string      `yaml:"PidFile" validate:"nonzero"`
 	Logger                lager.Logger
 	MysqldPath            string                `yaml:"MysqldPath" validate:"nonzero"`
 	MyCnfPath             string                `yaml:"MyCnfPath" validate:"nonzero"`
@@ -34,16 +34,13 @@ type DBConfig struct {
 }
 
 type MonitConfig struct {
-	Host                    string `yaml:"Host" validate:"nonzero"`
-	User                    string `yaml:"User" validate:"nonzero"`
-	Port                    int    `yaml:"Port" validate:"nonzero"`
-	Password                string `yaml:"Password" validate:"nonzero"`
-	MysqlStateFilePath      string `yaml:"MysqlStateFilePath"`
-	BootstrapFilePath       string `yaml:"BootstrapFilePath"`
-	BootstrapLogFilePath    string `yaml:"BootstrapLogFilePath"`
-	ServiceName             string `yaml:"ServiceName" validate:"nonzero"`
-	EnableSstMarkerFilePath string `yaml:"EnableSstMarkerFilePath"`
-	SstInterruptNotifyCmd   string `yaml:"SstInterruptNotifyCmd"`
+	Host                          string `yaml:"Host" validate:"nonzero"`
+	User                          string `yaml:"User" validate:"nonzero"`
+	Port                          string `yaml:"Port" validate:"nonzero"`
+	Password                      string `yaml:"Password" validate:"nonzero"`
+	MysqlStateFilePath            string `yaml:"MysqlStateFilePath"`
+	ServiceName                   string `yaml:"ServiceName" validate:"nonzero"`
+	GaleraInitStatusServerAddress string `yaml:"GaleraInitStatusServerAddress" validate:"nonzero"`
 }
 
 type SidecarEndpointConfig struct {
@@ -76,13 +73,13 @@ func NewConfig(osArgs []string) (*Config, error) {
 	serviceConfig := service_config.New()
 	flags := flag.NewFlagSet(binaryName, flag.ExitOnError)
 
-	cflager.AddFlags(flags)
+	lagerflags.AddFlags(flags)
 
 	serviceConfig.AddFlags(flags)
 	serviceConfig.AddDefaults(defaultConfig())
 	flags.Parse(configurationOptions)
 
-	rootConfig.Logger, _ = cflager.New("Galera Healthcheck")
+	rootConfig.Logger, _ = lagerflags.NewFromConfig(binaryName, lagerflags.ConfigFromFlags())
 
 	err := serviceConfig.Read(&rootConfig)
 	return &rootConfig, err

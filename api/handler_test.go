@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -o apifakes/fake_response_writer.go net/http.ResponseWriter
+
 var _ = Describe("Handler", func() {
 	var (
 		handler          http.Handler

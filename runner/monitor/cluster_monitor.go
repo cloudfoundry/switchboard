@@ -16,7 +16,7 @@ import (
 	"github.com/cloudfoundry-incubator/switchboard/domain"
 )
 
-//go:generate counterfeiter . UrlGetter
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . UrlGetter
 type UrlGetter interface {
 	Get(url string) (*http.Response, error)
 }

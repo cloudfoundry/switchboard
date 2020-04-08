@@ -1,5 +1,0 @@
-#!/bin/bash
-
-goversion=1.7
-
-GOPATH="/usr/local/Cellar/go/${goversion}/libexec/:${GOPATH}" go generate $(go list ./... | grep -v /vendor/)

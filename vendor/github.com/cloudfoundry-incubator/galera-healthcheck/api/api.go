@@ -1,45 +1,44 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"code.cloudfoundry.org/lager"
 
-	"encoding/json"
+	"github.com/tedsuo/rata"
 
 	"github.com/cloudfoundry-incubator/galera-healthcheck/api/middleware"
 	"github.com/cloudfoundry-incubator/galera-healthcheck/config"
 	"github.com/cloudfoundry-incubator/galera-healthcheck/domain"
-	"github.com/tedsuo/rata"
 )
 
-//go:generate counterfeiter . ReqHealthChecker
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ReqHealthChecker
 type ReqHealthChecker interface {
 	CheckReq(*http.Request) (string, error)
 }
 
-//go:generate counterfeiter . HealthChecker
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . HealthChecker
 type HealthChecker interface {
 	Check() (string, error)
 }
 
-//go:generate counterfeiter . StateSnapshotter
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . StateSnapshotter
 type StateSnapshotter interface {
 	State() (domain.DBState, error)
 }
 
-//go:generate counterfeiter . MonitClient
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . MonitClient
 type MonitClient interface {
 	StartServiceBootstrap(req *http.Request) (string, error)
 	StartServiceJoin(req *http.Request) (string, error)
 	StartServiceSingleNode(req *http.Request) (string, error)
 	StopService(req *http.Request) (string, error)
 	GetStatus(req *http.Request) (string, error)
-	GetLogger(req *http.Request) lager.Logger
 }
 
-//go:generate counterfeiter . SequenceNumberChecker
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SequenceNumberChecker
 type SequenceNumberChecker interface {
 	Check(req *http.Request) (string, error)
 }

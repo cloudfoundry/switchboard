@@ -6,7 +6,7 @@ code.cloudfoundry.org/lager/lagerflags
 code.cloudfoundry.org/lager/lagertest
 # github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40
 github.com/bmizerany/pat
-# github.com/cloudfoundry-incubator/galera-healthcheck v0.0.0-20200408122843-125976a09c4c
+# github.com/cloudfoundry-incubator/galera-healthcheck v0.0.0-20200710224631-9a101aa82b61
 ## explicit
 github.com/cloudfoundry-incubator/galera-healthcheck/api
 github.com/cloudfoundry-incubator/galera-healthcheck/api/middleware
@@ -83,13 +83,14 @@ github.com/tedsuo/rata
 # golang.org/x/mod v0.2.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
+# golang.org/x/net v0.0.0-20200707034311-ab3426394381
+## explicit
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 # golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.3
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -128,8 +129,9 @@ golang.org/x/xerrors/internal
 gopkg.in/fsnotify.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
-# gopkg.in/validator.v2 v2.0.0-20191107172027-c3144fdedc21
+# gopkg.in/validator.v2 v2.0.0-20200605151824-2b28d334fa05
 ## explicit
 gopkg.in/validator.v2
-# gopkg.in/yaml.v2 v2.2.8
+# gopkg.in/yaml.v2 v2.3.0
+## explicit
 gopkg.in/yaml.v2

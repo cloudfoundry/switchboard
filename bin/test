@@ -13,6 +13,8 @@ function get_cpu_count() {
   fi
 }
 
+cd "${my_dir}/.." || exit 1
+
 echo -e "\nVetting packages for potential issues..."
 "${my_dir}/govet"
 
@@ -25,12 +27,9 @@ if [[ "$(get_cpu_count)" -ge "4" && "${OS}" == "Darwin" ]]; then
   GINKGO_FLAGS="${GINKGO_FLAGS} -p"
 fi
 
-pushd "${my_dir}/.." > /dev/null
-  # shellcheck disable=SC2086
-  ginkgo ${GINKGO_FLAGS} "$@"
+# shellcheck disable=SC2086
+go run github.com/onsi/ginkgo/ginkgo ${GINKGO_FLAGS} "$@"
+let "result+=$?"
 
-  let "result+=$?"
-
-  echo -e "\nExit Code: $result"
-  exit $result
-popd > /dev/null
+echo -e "\nExit Code: $result"
+exit $result

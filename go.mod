@@ -5,8 +5,8 @@ go 1.14
 require (
 	code.cloudfoundry.org/lager v2.0.0+incompatible
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
-	github.com/cloudfoundry-incubator/galera-healthcheck v0.0.0-20210413215624-7ae0e1b32154
-	github.com/fsnotify/fsnotify v1.5.0 // indirect
+	github.com/cloudfoundry-incubator/galera-healthcheck v0.0.0-20210824173504-1ceac3424420
+	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.2.3
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect

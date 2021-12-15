@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type httpsEnforcer struct {
@@ -17,7 +18,8 @@ func NewHttpsEnforcer(forceHttps bool) Middleware {
 
 func (h httpsEnforcer) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if !h.forceHttps || req.Header.Get("X-Forwarded-Proto") == "https" {
+		header := req.Header.Get("X-Forwarded-Proto")
+		if !h.forceHttps || h.isHttps(header) {
 			next.ServeHTTP(rw, req)
 			return
 		}
@@ -34,4 +36,14 @@ func (h httpsEnforcer) Wrap(next http.Handler) http.Handler {
 
 		http.Redirect(rw, req, redirectTo.String(), http.StatusFound)
 	})
+}
+
+func (h httpsEnforcer) isHttps(header string) bool {
+	isHttps := true
+	for _, v := range strings.Split(header, ",") {
+		if v != "https" {
+			isHttps = false
+		}
+	}
+	return isHttps
 }

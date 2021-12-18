@@ -71,7 +71,7 @@ var _ = Describe("HttpsEnforcer", func() {
 		})
 	})
 
-	Context("Without https header", func() {
+	Context("With a http-only header", func() {
 		BeforeEach(func() {
 			request, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
 			request.Header.Set("X-Forwarded-Proto", "http")
@@ -101,5 +101,44 @@ var _ = Describe("HttpsEnforcer", func() {
 				Expect(fakeHandler.ServeHTTPCallCount()).To(Equal(1))
 			})
 		})
+	})
+
+	// TODO: Reactor above & below to re-use copy/pasted assertions
+	Context("With an blank X-Forwarded-Proto header", func() {
+		BeforeEach(func() {
+			request, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
+			request.Header.Set("X-Forwarded-Proto", "")
+		})
+		It("does not call next middleware", func() {
+			wrappedMiddleware.ServeHTTP(writer, request)
+
+			Expect(fakeHandler.ServeHTTPCallCount()).To(BeZero())
+		})
+
+		It("redirects to https", func() {
+			wrappedMiddleware.ServeHTTP(writer, request)
+
+			Expect(writer.Code).To(Equal(http.StatusFound))
+			Expect(writer.HeaderMap.Get("Location")).To(Equal("https://localhost/foo/bar"))
+		})
+	})
+
+	Context("With an non-existent X-Forwarded-Proto header", func() {
+		BeforeEach(func() {
+			request, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
+		})
+		It("does not call next middleware", func() {
+			wrappedMiddleware.ServeHTTP(writer, request)
+
+			Expect(fakeHandler.ServeHTTPCallCount()).To(BeZero())
+		})
+
+		It("redirects to https", func() {
+			wrappedMiddleware.ServeHTTP(writer, request)
+
+			Expect(writer.Code).To(Equal(http.StatusFound))
+			Expect(writer.HeaderMap.Get("Location")).To(Equal("https://localhost/foo/bar"))
+		})
+
 	})
 })

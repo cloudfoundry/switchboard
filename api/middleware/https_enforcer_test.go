@@ -56,6 +56,17 @@ var _ = Describe("HttpsEnforcer", func() {
 
 			Expect(fakeHandler.ServeHTTPCallCount()).To(Equal(1))
 		})
+		When("with leading whitespace between header values", func() {
+			BeforeEach(func() {
+				request, _ = http.NewRequest("GET", "https://localhost/foo/bar", nil)
+				request.Header.Set("X-Forwarded-Proto", "https, https")
+			})
+			It("calls next middleware", func() {
+				wrappedMiddleware.ServeHTTP(writer, request)
+
+				Expect(fakeHandler.ServeHTTPCallCount()).To(Equal(1))
+			})
+		})
 	})
 
 	Context("With mixed https, http header", func() {
@@ -67,7 +78,7 @@ var _ = Describe("HttpsEnforcer", func() {
 		It("does not call next middleware", func() {
 			wrappedMiddleware.ServeHTTP(writer, request)
 
-			Expect(fakeHandler.ServeHTTPCallCount()).To(Equal(0))
+			Expect(fakeHandler.ServeHTTPCallCount()).To(BeZero())
 		})
 	})
 

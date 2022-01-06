@@ -41,7 +41,7 @@ func (h httpsEnforcer) Wrap(next http.Handler) http.Handler {
 func (h httpsEnforcer) isHttps(header string) bool {
 	isHttps := true
 	for _, v := range strings.Split(header, ",") {
-		if v != "https" {
+		if strings.TrimSpace(v) != "https" {
 			isHttps = false
 		}
 	}
